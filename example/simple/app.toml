@@ -34,4 +34,12 @@ report_data_config="kv_of_consul(kits.simple.report_data)"
 host="kv_of_consul(common.zipkin.host)"
 
 
+[discovery]
+enable_static = false
+static_services=[
+    "auth_service 127.0.0.1:10630",
+    "product_service 127.0.0.1:1923 127.0.0.1:2023"
+]
+
+
 
