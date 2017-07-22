@@ -2,10 +2,6 @@
 [golang]
 max_cpu_num=3
 
-[consul]
-host="127.0.0.1:8500"
-key=""
-
 [service1]
 name="simple-service1"
 id="kits_simple_service1_80"
@@ -43,8 +39,10 @@ report_data_config="kv_of_consul(kits.simple.report_data)"
 host="kv_of_consul(common.zipkin.host)"
 
 [discovery]
-enable_static = true
 enable_consul = true
+consul_host="127.0.0.1:8500"
+
+enable_static = true
 static_services=[
     "auth_service 127.0.0.1:10630",
     "product_service 127.0.0.1:1923 127.0.0.1:2023"

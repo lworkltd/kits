@@ -15,6 +15,3 @@ type Zipkin struct {
 
 type Discovery struct {
 }
-
-type Consul struct {
-}
