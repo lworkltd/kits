@@ -30,4 +30,8 @@ sync_interval=10s
 max_symbols=1024
 report_data_config="kv_of_consul(kits.simple.report_data)"
 
+[zipkin]
+host="kv_of_consul(common.zipkin.host)"
+
+
 
