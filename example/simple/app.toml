@@ -6,16 +6,26 @@ max_cpu_num=3
 host="127.0.0.1:8500"
 key=""
 
-[service]
-name="simple"
+[service1]
+name="simple-service1"
+id="kits_simple_service1_80"
+host=":80"
+reportable=true
+report_host="ip_of_interface(eth0)"
+tags=["master","v1.2.3"]
+error_prefix="kits_simple_service1_"
+
+[service2]
+name="simple-service2"
 id="kits_simple_8080"
 host=":8080"
 reportable=true
 report_host="ip_of_interface(eth0)"
-tags=["master","v1.2.3"]
+tags=["master","v0.2.1"]
 error_prefix="kits_simple_"
 handle_pprof = true
 handle_pprof_prefix="/abcdefg"
+
 
 [mongo]
 url="amqp://root:abc123@127.0.0.1:27017/admin"
