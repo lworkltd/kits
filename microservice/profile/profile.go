@@ -4,29 +4,29 @@ type Profile interface {
 	Init()
 }
 
-type BaseProfile struct {
+type Base struct {
 	GoMaxProcs float64 `toml:"go_max_procs"`
 }
 
-type MongoProfile struct {
+type Mongo struct {
 	Url string `toml:"url"`
 }
 
-type RedisProfile struct {
+type Redis struct {
 	Url      string `toml:"url"`
 	Password string `toml:"password"`
 	DB       int    `toml:"select_db"`
 }
 
-type MysqlProfile struct {
+type Mysql struct {
 	Url string `toml:"url"`
 }
 
-type ConsulProfile struct {
+type Consul struct {
 	Url string `toml:"url"`
 }
 
-type ServiceProfile struct {
+type Service struct {
 	Name       string `toml:"name"`
 	Id         string `toml:"id"`
 	Host       string `toml:"host"`
@@ -43,4 +43,25 @@ type ServiceProfile struct {
 
 	Pprof_enabled     bool   `toml:"pprof_enabled"`
 	Pprof_path_prefix string `toml:"pprof_path_prefix"`
+}
+
+type Discovery struct {
+	EnableConsul   bool     `json:"enable_consul"`
+	EnableStatic   bool     `json:"enable_static"`
+	StaticServices []string `json:"static_service"`
+}
+
+type Svc struct {
+	LoadBanlanceMode string `json:"load_balance_mode"`
+	HystrixEnabled   bool   `json:"hytrix_enabled"`
+	TracingEnabled   bool   `json:"traceing_enabled"`
+	LoggerEnabled    bool   `json:"logger_enabled"`
+}
+
+type Hystrix struct {
+	Url string `json:"url"`
+}
+
+type Zipkin struct {
+	Url string `json:"url"`
 }

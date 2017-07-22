@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/BurntSushi/toml"
-	"lwork.com/kits/utils/tags"
+	"github.com/lvhuat/kits/pkgs/tags"
 )
 
 type ProfileParser interface {
@@ -223,9 +223,20 @@ func parseEnv0(v reflect.Value, parseStatus *parseStatus, fd *folder) (err error
 	return nil
 }
 
-func Parse(f string, v interface{}) error {
+type Plan struct {
+	ConsulKv bool
+}
+
+type ParseMeta struct {
+}
+
+func Parse(f string, v interface{}) (*Plan, *ParseMeta, error) {
 	parser := &profileParserImpl{
 		f: f,
 	}
-	return parser.Parse(v)
+	if err := parser.Parse(v); err != nil {
+		return nil, nil, err
+	}
+
+	return &Plan{}, nil, nil
 }

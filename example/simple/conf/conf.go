@@ -1,17 +1,34 @@
 package conf
 
-type Application struct {
-	MongoUrl string `env:"mongo.url" toml:"mongo.url"`
+import (
+	"github.com/lvhuat/kits/microservice/discovery"
+	"github.com/lvhuat/kits/microservice/profile"
+)
+
+type Profile struct {
+	Base    profile.Base
+	Service profile.Service
+	Redis   profile.Redis
+	Mongo   profile.Mongo
+	Mysql   profile.Mysql
+	Consul  profile.Consul
 }
 
-type Mongo struct {
-}
+var config Profile
 
-type Redis struct {
-}
+func Parse(f ...string) error {
+	tf := "app.toml"
+	if len(f) > 0 {
+		tf = f[0]
+	}
 
-type Zipkin struct {
-}
+	plan, meta, err := profile.Parse(tf, &config)
+	if err != nil {
+		return err
+	}
 
-type Discovery struct {
+	if plan.ConsulKv {
+		discovery.NewConsulClient(config.Consul.Url)
+	}
+	return nil
 }

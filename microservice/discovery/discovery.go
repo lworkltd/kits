@@ -97,7 +97,7 @@ type DiscoveryOption struct {
 }
 
 // InitDisconvery 初始化服务发现
-func InitDisconvery(option *DiscoveryOption) error {
+func InitDiscovery(option *DiscoveryOption) error {
 	dis := &DiscoverImpl{}
 	dis.static = NewStaticDiscoverer(option.StaticServices)
 	if option.ConsulHost != "" {

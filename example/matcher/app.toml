@@ -1,3 +1,4 @@
+
 [base]
 max_cpu_num=3
 
@@ -28,18 +29,15 @@ report_data_config="kv_of_consul(kits.simple.report_data)"
 [zipkin]
 host="kv_of_consul(common.zipkin.host)"
 
-[consul]
-consul_host="127.0.0.1:8500"
-
 [discovery]
 enable_consul = true
+consul_host="127.0.0.1:8500"
+
 enable_static = true
 static_services=[
     "auth_service 127.0.0.1:10630",
     "product_service 127.0.0.1:1923 127.0.0.1:2023"
 ]
 
-[svc]
-load_balance_mode = "round-robin"
-tracing_enabled = true
-hytrix_enabled = true
+
+

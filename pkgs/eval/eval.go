@@ -11,3 +11,9 @@ var defaultEval Eval
 func Value(s string) (string, error) {
 	return defaultEval.Value(s)
 }
+
+type EvalString string
+
+func (typ EvalString) Eval() (string, error) {
+	return Value(string(typ))
+}

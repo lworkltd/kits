@@ -31,17 +31,17 @@ url="amqp://root:abc123@127.0.0.1:27017/admin"  # mongo的地址
 #### [service]
 ```
 [service]
-name="simple-service2"              # 注册服务名称
-id="kits_simple_8080"               # 注册服务ID
-host=":8080"                        # 服务监听端口
-reportable=true                     # 服务是否上报
-report_ip="ip_of_interface(eth0)"   # 上报地址
-report_ip=8080                      # 上报端口
-tags=["master","v0.2.1"]            # 上报tag
-error_prefix="kits_simple_"         # 服务返回错误码前缀
-report_health=true                  # 是否上报安全检查
-pprof_enable = true                 # 服务是否启用pprof
-pprof_path_prefix="/abcdefg"        # pprof地址前缀
+name="simple-service2"              # 注册服务名称，必填
+id="kits_simple_8080"               # 注册服务ID，默认服务名称+上报端口
+host=":8080"                        # 服务监听端口，默认":80"
+reportable=true                     # 服务是否上报, 默认上报
+report_ip="ip_of_interface(eth0)"   # 上报地址，默认ip_of_interface(eth0)
+report_ip=8080                      # 上报端口，上报端口
+tags=["master","v0.2.1"]            # 上报tag，可选
+error_prefix="kits_simple_"         # 服务返回错误码前缀，必填
+report_health=true                  # 是否上报安全检查，心跳检查
+pprof_enable=true                   # 服务是否启用pprof，默认关闭
+pprof_path_prefix="/abcdefg"        # pprof地址前缀，默认无前缀
 ```
 
 #### [consul]
