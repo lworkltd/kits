@@ -13,6 +13,16 @@ type Engine struct {
 	dv         DiscoveryFunc
 	serviceMap map[string]IService
 	mutex      sync.RWMutex
+	lbMode     string
+	useTracing bool
+	useHystrix bool
+}
+
+func (engine *Engine) Init(option *Option) error {
+	engine.dv = option.Discover
+	engine.lbMode = option.LoadBalanceMode
+
+	return nil
 }
 
 // Service 获取一个服务
@@ -23,21 +33,35 @@ func (engine *Engine) Service(name string) IService {
 
 	if !exsit {
 		service = engine.newService(name, engine.dv)
+		engine.mutex.Lock()
 		engine.serviceMap[name] = service
+		engine.mutex.Unlock()
 	}
 
 	return service
 }
 
-// SetDiscovery 设置服务发现函数
-func (engine *Engine) SetDiscovery(f DiscoveryFunc) {
-	engine.dv = f
+// Addr 获取一个匿名服务
+func (engine *Engine) Addr(addr string) IService {
+	return engine.newAddr(addr)
 }
 
+// newAddr 创建一个服务
 func (engine *Engine) newService(serviceName string, discovery DiscoveryFunc) IService {
 	return &ServiceImpl{
-		disconvery: discovery,
+		discover:   discovery,
 		name:       serviceName,
+		useTracing: engine.useTracing,
+		useHystrix: egine.useHystrix,
+	}
+}
+
+// newAddr 创建固定IP的匿名服务
+func (engine *Engine) newAddr(addr string) IService {
+	discover := func(string) ([]string, error) { return []string{addr}, nil }
+	return &ServiceImpl{
+		discover: discover,
+		name:     addr,
 	}
 }
 

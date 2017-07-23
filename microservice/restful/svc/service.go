@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"lwork.com/kits/utils/co"
+	"github.com/lvhuat/kits/pkgs/co"
 )
 
 // ServiceImpl 是用来获取服务器地址，并创建调用的
@@ -13,7 +13,9 @@ type ServiceImpl struct {
 	wellCount      co.Int64
 	totalCallCount co.Int64
 	name           string
-	disconvery     DiscoveryFunc
+	discover       DiscoveryFunc
+	useTracing     bool
+	useHystrix     bool
 }
 
 // 选择服务节点
@@ -43,31 +45,31 @@ func (service *ServiceImpl) remote() (string, error) {
 }
 
 // Get 使用GET方法请求
-func (service *ServiceImpl) Get(path string) IClient {
+func (service *ServiceImpl) Get(path string) Client {
 	remote, err := service.remote()
 	return newRest(service, "GET", path, remote, err)
 }
 
 // Post 使用POST方法请求
-func (service *ServiceImpl) Post(path string) IClient {
+func (service *ServiceImpl) Post(path string) Client {
 	remote, err := service.remote()
 	return newRest(service, "POST", path, remote, err)
 }
 
 // Put 使用PUT方法请求
-func (service *ServiceImpl) Put(path string) IClient {
+func (service *ServiceImpl) Put(path string) Client {
 	remote, err := service.remote()
 	return newRest(service, "PUT", path, remote, err)
 }
 
 // Delete 使用DELETE方法请求
-func (service *ServiceImpl) Delete(path string) IClient {
+func (service *ServiceImpl) Delete(path string) Client {
 	remote, err := service.remote()
 	return newRest(service, "DELETE", path, remote, err)
 }
 
 // Method 使用指定方法请求
-func (service *ServiceImpl) Method(method, path string) IClient {
+func (service *ServiceImpl) Method(method, path string) Client {
 	remote, err := service.remote()
 	return newRest(service, method, path, remote, err)
 }
@@ -77,7 +79,7 @@ func (service *ServiceImpl) Name() string {
 	return service.name
 }
 
-func newRest(service IService, method string, path string, remote string, err error) IClient {
+func newRest(service IService, method string, path string, remote string, err error) Client {
 	client := &Client{
 		createTime:   time.Now(),
 		service:      service,

@@ -17,7 +17,15 @@ func parsePath(path string, r map[string]string) (string, error) {
 	return ret, nil
 }
 
-func createURL(path string, querys map[string][]string) (string, error) {
+func makeUrl(sche, host, path string, querys map[string][]string) (string, error) {
+	b := make([]byte, 0, len(sche)+len(host)+len(path)+3+len(querys)*10)
+	buffer := bytes.NewBuffer(b)
+
+	buffer.WriteString(sche)
+	buffer.WriteString("://")
+	buffer.WriteString(host)
+	buffer.WriteString(path)
+
 	qv := url.Values{}
 	for key, array := range querys {
 		for _, value := range array {
@@ -25,12 +33,14 @@ func createURL(path string, querys map[string][]string) (string, error) {
 		}
 	}
 
-	queryString := qv.Encode()
+	queryString := qv.Encode() // more performace? like appendEncode(&buffer,qv)
+
 	if queryString != "" {
-		path = path + "?" + queryString
+		buffer.WriteByte('?')
+		buffer.WriteString(queryString)
 	}
 
-	return path, nil
+	return buffer.String(), nil
 }
 
 func cutBytes(body []byte, max int) []byte {
