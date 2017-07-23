@@ -10,7 +10,7 @@ service
 type Response struct {
 	ResultCode int `json:"result_code"`
 }
-type Reqeust struct {
+type Request struct {
 	Name string `json:"name"`
 	Age  int    `json:"age"`
 }
@@ -43,7 +43,7 @@ _, err := service.Name("service-name").Post("/v1/country/{country}/city/{city}/s
 		"Registration-Personnel": "anna.liu",
 		"statistical-auth-code":  "023432",
 	}).
-	Json(&Reqeust{Name: "小华", Age: 123}).
+	Json(&Request{Name: "小华", Age: 123}).
 	Context(context.Background()).
 	Exec(&response)
 if err != nil {
