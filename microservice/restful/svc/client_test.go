@@ -79,7 +79,7 @@ func Test_client_exec(t *testing.T) {
 		name: "test-service",
 	}
 	var response Response
-	err := service.Post("/v1/country/{country}/city/{city}/street/{street}").
+	_, err := service.Post("/v1/country/{country}/city/{city}/street/{street}").
 		Route("street", "longjiangroad").
 		Routes(map[string]string{
 			"country": "china",

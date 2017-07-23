@@ -42,7 +42,7 @@ type Client interface {
 	Route(string, string) Client         // 添加路径参数
 	Routes(map[string]string) Client     // 添加路径参数
 	Json(interface{}) Client             // 添加Json消息体
-	Exec(interface{}) error              // 执行请求
+	Exec(interface{}) (int, error)       // 执行请求
 	Context(context.Context) Client      // 上下文
 }
 
