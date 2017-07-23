@@ -13,38 +13,44 @@ discovery 包
 使用方法
 ----
 ```
-// 初始化
-InitDisconvery(&DiscoveryOption{
-    ConsulHost: "10.25.100.164:8500",
-})
+csl, err := consul.New("10.25.100.164:8500")
+if err != nil {
+    panic(err)
+}
 
-// 键值查询
+Init(&Option{
+    ConsulClient: csl,
+})
 key := "kits/unittest/hello"
-value, e := KeyValue(key)
+value, _, e := csl.KeyValue("kits/unittest/hello")
 if e != nil || value != "world" {
-    fmt.Errorf("key %s in consul,expect %v,get %s,err=%v", key, "world", value, e)
+    log.Errorf("key %s in consul,expect %v,get %s,err=%v", key, "world", value, e)
     return
 }
 
-o := &RegisterOption{
+o := &consul.RegisterOption{
     Name: "kits-test-server",
     Id:   "kits-test-server-001",
     Ip:   "localhost",
     Port: 11111,
 }
-// 注册服务
-Register(o)
 
-// 服务发现
+Register(o)
 remotes, err := Discover(o.Name)
 if err != nil || len(remotes) != 1 {
-    fmt.Errorf("expect 1 server got %v ,err=%v", len(remotes), err)
+    log.Errorf("expect 1 server got %v ,err=%v", len(remotes), err)
+    return
 }
-
 if remotes[0] != fmt.Sprintf("%s:%d", o.Ip, o.Port) {
-    fmt.Errorf("expect localhost:11111 server got %v", remotes[0])
+    log.Errorf("expect localhost:11111 server got %v", remotes[0])
+    return
 }
 
-// 删除服务注册
 Unregister(o)
+
+remotes, err = Discover(o.Name)
+if err != nil || len(remotes) != 1 {
+    log.Errorf("expect 0 server got %v ,err=%v", len(remotes), err)
+    return
+}
 ```

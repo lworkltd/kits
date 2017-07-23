@@ -2,23 +2,15 @@ package discovery
 
 import (
 	"fmt"
-)
 
-type RegisterOption struct {
-	Ip       string
-	Port     int
-	CheckUrl string
-	Name     string
-	Id       string
-	Tags     []string
-}
+	"github.com/lvhuat/kits/helper/consul"
+)
 
 // Discoverer 定义了服务发现的接口
 type Discoverer interface {
 	Discover(service string) ([]string, error)
-	Register(option *RegisterOption) error
-	Unregister(option *RegisterOption) error
-	KeyValue(key string) (string, error)
+	Register(option *consul.RegisterOption) error
+	Unregister(option *consul.RegisterOption) error
 }
 
 var defaultDiscoverer Discoverer
@@ -30,7 +22,7 @@ func Discover(service string) ([]string, error) {
 
 // DiscoverImpl 是服务发现的实现
 type DiscoverImpl struct {
-	consul *ConsulClient
+	consul *consul.ConsulClient
 	static *StaticDiscoverer
 }
 
@@ -51,7 +43,7 @@ func (discover *DiscoverImpl) Discover(service string) ([]string, error) {
 }
 
 // Register 注册服务
-func (discover *DiscoverImpl) Register(option *RegisterOption) error {
+func (discover *DiscoverImpl) Register(option *consul.RegisterOption) error {
 	if discover.consul == nil {
 		return fmt.Errorf("consul not initalize yet")
 	}
@@ -59,7 +51,7 @@ func (discover *DiscoverImpl) Register(option *RegisterOption) error {
 }
 
 // Unregister 删除服务
-func (discover *DiscoverImpl) Unregister(option *RegisterOption) error {
+func (discover *DiscoverImpl) Unregister(option *consul.RegisterOption) error {
 	if discover.consul == nil {
 		return fmt.Errorf("consul not initalize yet")
 	}
@@ -67,33 +59,28 @@ func (discover *DiscoverImpl) Unregister(option *RegisterOption) error {
 }
 
 // KeyValue 返回一个consul的key值
-func (discover *DiscoverImpl) KeyValue(key string) (string, error) {
+func (discover *DiscoverImpl) KeyValue(key string) (string, bool, error) {
 	if discover.consul == nil {
-		return "", fmt.Errorf("consul not initalize yet")
+		return "", false, fmt.Errorf("consul not initalize yet")
 	}
 
 	return discover.consul.KeyValue(key)
 }
 
 // Register 发现服务
-func Register(option *RegisterOption) error {
+func Register(option *consul.RegisterOption) error {
 	return defaultDiscoverer.Register(option)
 }
 
-// KeyValue 获取键值
-func KeyValue(key string) (string, error) {
-	return defaultDiscoverer.KeyValue(key)
-}
-
 // Unregister 删除服务注册
-func Unregister(option *RegisterOption) error {
+func Unregister(option *consul.RegisterOption) error {
 	return defaultDiscoverer.Unregister(option)
 }
 
 // DiscoveryOption 初始化服务发现的
 type Option struct {
 	StaticServices []*StaticService
-	ConsulClient   *ConsulClient
+	ConsulClient   *consul.ConsulClient
 }
 
 // InitDisconvery 初始化服务发现

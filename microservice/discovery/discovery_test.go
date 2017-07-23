@@ -3,20 +3,23 @@ package discovery
 import (
 	"fmt"
 	"testing"
+
+	"github.com/lvhuat/kits/helper/consul"
 )
 
 func TestInitDisconvery(t *testing.T) {
-	InitDisconvery(&DiscoveryOption{
-		ConsulHost: "10.25.100.164:8500",
+	csl, err := consul.New("10.25.100.164:8500")
+	Init(&Option{
+		ConsulClient: csl,
 	})
 	key := "kits/unittest/hello"
-	value, e := KeyValue("kits/unittest/hello")
+	value, _, e := csl.KeyValue("kits/unittest/hello")
 	if e != nil || value != "world" {
 		t.Errorf("key %s in consul,expect %v,get %s,err=%v", key, "world", value, e)
 		return
 	}
 
-	o := &RegisterOption{
+	o := &consul.RegisterOption{
 		Name: "kits-test-server",
 		Id:   "kits-test-server-001",
 		Ip:   "localhost",
