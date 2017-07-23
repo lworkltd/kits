@@ -2,9 +2,9 @@ eval
 -----
 获取一个表达式的值
 
-比如：  
+使用
+---------
 ```
-eval.Value(ip_of_interface(eth0)) // 获取网卡的ip
-eval.Value(mtu_of_interface(eth0)) // 获取网卡的mtu
-eval.Value(hosts_of_services(fw-product)) // 获取服务的hosts
+eval.Value("$(ip_of_interface eth0)")
+eval.Value("$(kv_of_consul common.mongo.url)") 
 ```
