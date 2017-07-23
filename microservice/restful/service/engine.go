@@ -18,6 +18,7 @@ type engine struct {
 	useCircuit bool
 }
 
+// Init 初始化引擎
 func (engine *engine) Init(option *Option) error {
 	engine.dv = option.Discover
 	engine.lbMode = option.LoadBalanceMode

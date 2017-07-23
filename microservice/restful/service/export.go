@@ -8,7 +8,6 @@ import (
 type DiscoveryFunc func(name string) ([]string, error)
 
 // Option 用于初始化引擎的参数
-
 type (
 	Option struct {
 		Discover        DiscoveryFunc
@@ -52,17 +51,18 @@ type (
 
 var eng Engine = newEngine()
 
-// 初始化
+// Init 初始化
 func Init(option *Option) error {
 	return eng.Init(option)
 }
 
-// Service 返回服务器
+// Name 返回服务器
 // More examples please see <<README.md>>
 func Name(name string) Service {
 	return eng.Service(name)
 }
 
+// Addr 返回一个临时服务
 func Addr(addr string) Service {
 	return eng.Addr(addr)
 }
