@@ -12,10 +12,13 @@ import (
 	"github.com/lvhuat/kits/pkgs/tags"
 )
 
+// ProfileParser 配置解析器
+// 配置解析器可以按配置文件,环境变量，写死的配置的顺序去加载配置
 type ProfileParser interface {
 	Parse(reflect.Value) error
 }
 
+// ProfileField 每个配置点的信息
 type ProfileField struct {
 	t         string
 	text      string
@@ -23,12 +26,14 @@ type ProfileField struct {
 	valueType string
 }
 
+// kv 保存在环境变量中配置的键值和数据类型信息
 type kv struct {
 	k  string
 	v  string
 	vt string
 }
 
+// folder 保存使用环境变量配置的中间元数据
 type folder struct {
 	kvs   []kv
 	fds   []*folder
@@ -36,6 +41,7 @@ type folder struct {
 	lo    string
 }
 
+// parseStatus 是解析过程中的状态记录器
 type parseStatus struct {
 	meta  map[string]*ProfileField
 	route []string
@@ -43,6 +49,7 @@ type parseStatus struct {
 	root folder
 }
 
+// addField 添加一个项目
 func (status *parseStatus) addField(l *ProfileField) {
 	if status.meta == nil {
 		status.meta = make(map[string]*ProfileField, 30)
@@ -54,10 +61,17 @@ func (status *parseStatus) addField(l *ProfileField) {
 	status.meta[l.route] = l
 }
 
+// zoomIn 进入一个配置项目
 func (status *parseStatus) zoomIn(n string) {
 	status.route = append(status.route, n)
 }
 
+// zoomOut 退出当前配置项目，回到父项目
+func (status *parseStatus) zoomOut(n string) {
+	status.route = status.route[:len(status.route)-1]
+}
+
+// routes 当前配置点的路径
 func (status *parseStatus) routes(n string) string {
 	s := strings.Join(status.route, ".")
 	if s == "" {
@@ -66,14 +80,12 @@ func (status *parseStatus) routes(n string) string {
 	return s + "." + n
 }
 
-func (status *parseStatus) zoomOut(n string) {
-	status.route = status.route[:len(status.route)-1]
-}
-
+// profileParserImpl 解析器的具体实现
 type profileParserImpl struct {
 	f string
 }
 
+// Parse 实现服务配置的解析
 func (parser *profileParserImpl) Parse(v interface{}) error {
 	_, err := toml.DecodeFile(parser.f, v)
 	if err != nil {
@@ -91,6 +103,7 @@ var (
 	profileType = reflect.TypeOf(new(Profile)).Elem()
 )
 
+// parseDefault 解析Stub Value入口
 func parseDefault(v interface{}, parseStatus *parseStatus) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -106,6 +119,7 @@ func parseDefault(v interface{}, parseStatus *parseStatus) (err error) {
 	return nil
 }
 
+// parseDefault0 解析默认值实现
 func parseDefault0(v reflect.Value, parseStatus *parseStatus) {
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -115,6 +129,7 @@ func parseDefault0(v reflect.Value, parseStatus *parseStatus) {
 		if field.Kind() == reflect.Interface {
 			field = field.Elem()
 		}
+		// 判断是否实现了接口
 		if p, ok := field.Addr().Interface().(Profile); ok {
 			p.Init()
 		}
@@ -139,9 +154,10 @@ func parseDefault0(v reflect.Value, parseStatus *parseStatus) {
 }
 
 func isQuoteField(vt string) bool {
-	return vt == "String" || vt == "time.Date" || vt == "time.Duration"
+	return vt == "String" || vt == "time.Time" || vt == "time.Duration"
 }
 
+// folderToText 使用环境变量的配置生成一个toml文件
 func folderToText(buffer *bytes.Buffer, fd *folder) {
 	if fd.lo != "" {
 		buffer.WriteString(fmt.Sprintf("[%s]\n", fd.lo))
@@ -160,6 +176,7 @@ func folderToText(buffer *bytes.Buffer, fd *folder) {
 	}
 }
 
+// parseEnv 解析环境变量入口
 func parseEnv(v interface{}, parseStatus *parseStatus) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -171,11 +188,11 @@ func parseEnv(v interface{}, parseStatus *parseStatus) (err error) {
 	}()
 	parseEnv0(reflect.ValueOf(v), parseStatus, &parseStatus.root)
 	folderToText(&parseStatus.Buffer, &parseStatus.root)
-	fmt.Printf(parseStatus.Buffer.String())
 	_, err = toml.Decode(parseStatus.Buffer.String(), v)
 	return err
 }
 
+// parseEnv0 解析环境变量实现
 func parseEnv0(v reflect.Value, parseStatus *parseStatus, fd *folder) (err error) {
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -223,13 +240,19 @@ func parseEnv0(v reflect.Value, parseStatus *parseStatus, fd *folder) (err error
 	return nil
 }
 
+// 从配置中分析的执行计划数据
+// 比如部分配置是使用consul加载，则需要在初始化consul之后才能完善配置
+// TODO:然而并没有实现
 type Plan struct {
 	ConsulKv bool
 }
 
+// ParseMeta 配置加载的中间数据，也许打印什么的时候有用
+// TODO:然而并没有实现
 type ParseMeta struct {
 }
 
+// Parse 是解析配置的外部入口
 func Parse(f string, v interface{}) (*Plan, *ParseMeta, error) {
 	parser := &profileParserImpl{
 		f: f,
