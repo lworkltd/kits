@@ -87,6 +87,10 @@ type profileParserImpl struct {
 
 // Parse 实现服务配置的解析
 func (parser *profileParserImpl) Parse(v interface{}) error {
+	if err := parseInit(v, &parseStatus{}); err != nil {
+		return fmt.Errorf("parse init failed:%v", err)
+	}
+
 	_, err := toml.DecodeFile(parser.f, v)
 	if err != nil {
 		return fmt.Errorf("parse %s failed:%v", parser.f, err)
@@ -131,7 +135,7 @@ func parseDefault0(v reflect.Value, parseStatus *parseStatus) {
 		}
 		// 判断是否实现了接口
 		if p, ok := field.Addr().Interface().(Profile); ok {
-			p.Init()
+			p.AfterParse()
 		}
 		fieldTag := v.Type().Field(i).Tag
 		tagName := fieldTag.Get("toml")
@@ -145,6 +149,56 @@ func parseDefault0(v reflect.Value, parseStatus *parseStatus) {
 		if field.Kind() == reflect.Struct {
 			parseStatus.zoomIn(tag)
 			parseDefault0(field, parseStatus)
+			parseStatus.zoomOut(tag)
+			continue
+		}
+
+		parseStatus.addField(&ProfileField{t: "default", route: parseStatus.routes(tag)})
+	}
+}
+
+// parseDefault 解析Stub Value入口
+func parseInit(v interface{}, parseStatus *parseStatus) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if s, ok := r.(string); ok {
+				err = errors.New(s)
+			}
+			panic(r)
+		}
+	}()
+
+	parseInit0(reflect.ValueOf(v), parseStatus)
+
+	return nil
+}
+
+// parseDefault0 解析默认值实现
+func parseInit0(v reflect.Value, parseStatus *parseStatus) {
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		if field.Kind() == reflect.Interface {
+			field = field.Elem()
+		}
+		// 判断是否实现了接口
+		if p, ok := field.Addr().Interface().(Profile); ok {
+			p.BeforeParse()
+		}
+		fieldTag := v.Type().Field(i).Tag
+		tagName := fieldTag.Get("toml")
+		if tagName == "" {
+			tagName = v.Type().Field(i).Name
+		}
+		tag, _ := tags.Parse(tagName)
+		if tag == "-" {
+			continue
+		}
+		if field.Kind() == reflect.Struct {
+			parseStatus.zoomIn(tag)
+			parseInit0(field, parseStatus)
 			parseStatus.zoomOut(tag)
 			continue
 		}

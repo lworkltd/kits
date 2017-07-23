@@ -15,11 +15,18 @@ type TestDefaultItem struct {
 	M       []string
 	N       int32
 	R       int             `toml:"r_123_xcvf"`
+	S       int             `toml:"s"`
 	Weather []string        `toml:"weather"`
 	Groups  [][]interface{} `toml:"groups"`
 }
 
-func (ts *TestDefaultItem) Init() {
+func (ts *TestDefaultItem) BeforeParse() {
+	ts.M = []string{"abc", "123"}
+	ts.N = 1
+	ts.S = 22
+}
+
+func (ts *TestDefaultItem) AfterParse() {
 	ts.M = []string{"abc", "123"}
 	ts.N = 100
 }
@@ -50,9 +57,11 @@ func Test_profileParserImpl_Parse(t *testing.T) {
 			if err := tt.parser.Parse(tt.args.v); (err != nil) != tt.wantErr {
 				t.Errorf("profileParserImpl.Parse() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
 			if tdc.N != 100 {
-				t.Errorf("profileParserImpl.Parse() tdc.N = %v, expect %v", tdc.N, 321)
+				t.Errorf("profileParserImpl.Parse() tdc.N = %v, expect %v", tdc.N, 100)
 			}
+
 			if tdc.R != 1234 {
 				t.Errorf("profileParserImpl.Parse() tdc.N = %v, expect %v", tdc.R, 1234)
 			}
@@ -124,6 +133,45 @@ func Test_parseEnv(t *testing.T) {
 			if equal := reflect.DeepEqual(tdc.Weather, []string{"spring", "winter"}); !equal {
 				t.Errorf("parseEnv() tdc.Weather = %v, expect %v", tdc.Weather, []string{"spring", "winter"})
 			}
+		})
+	}
+}
+
+func Test_parseInit(t *testing.T) {
+	type args struct {
+		v           interface{}
+		parseStatus *parseStatus
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := parseInit(tt.args.v, tt.args.parseStatus); (err != nil) != tt.wantErr {
+				t.Errorf("parseInit() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_parseInit0(t *testing.T) {
+	type args struct {
+		v           reflect.Value
+		parseStatus *parseStatus
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parseInit0(tt.args.v, tt.args.parseStatus)
 		})
 	}
 }
