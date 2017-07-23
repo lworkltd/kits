@@ -20,12 +20,6 @@ if err != nil {
 Init(&Option{
     ConsulClient: csl,
 })
-key := "kits/unittest/hello"
-value, _, e := csl.KeyValue("kits/unittest/hello")
-if e != nil || value != "world" {
-    log.Errorf("key %s in consul,expect %v,get %s,err=%v", key, "world", value, e)
-    return
-}
 
 o := &consul.RegisterOption{
     Name: "kits-test-server",
