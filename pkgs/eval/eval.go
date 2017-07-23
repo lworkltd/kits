@@ -11,7 +11,7 @@ type Eval interface {
 	Value(string) (string, error)
 }
 
-var defaultEval Eval
+var defaultEval Eval = &evalImpl{}
 
 // Value 获取一个表达式的值
 func Value(s string) (string, error) {
@@ -21,7 +21,7 @@ func Value(s string) (string, error) {
 type evalImpl struct {
 }
 
-func (impl evalImpl) Eval(desc string) (str string, err error) {
+func (impl evalImpl) Value(desc string) (str string, err error) {
 	index := strings.Index(desc, "$(")
 	if index < 0 {
 		return desc, nil

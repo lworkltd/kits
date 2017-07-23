@@ -227,14 +227,92 @@ func Test_evalImpl_Eval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotStr, err := tt.impl.Eval(tt.args.desc)
+			gotStr, err := tt.impl.Value(tt.args.desc)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("evalImpl.Eval() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("evalImpl.Value() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if gotStr != tt.wantStr {
-				t.Errorf("evalImpl.Eval() = %v, want %v", gotStr, tt.wantStr)
+				t.Errorf("evalImpl.Value() = %v, want %v", gotStr, tt.wantStr)
 			}
+		})
+	}
+}
+
+func TestValue(t *testing.T) {
+	type args struct {
+		s string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "bad_syntax2",
+			args: args{
+				s: "12345",
+			},
+			want:    "12345",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Value(tt.args.s)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Value() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Value() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_evalImpl_Value(t *testing.T) {
+	type args struct {
+		desc string
+	}
+	tests := []struct {
+		name    string
+		impl    evalImpl
+		args    args
+		wantStr string
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotStr, err := tt.impl.Value(tt.args.desc)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("evalImpl.Value() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotStr != tt.wantStr {
+				t.Errorf("evalImpl.Value() = %v, want %v", gotStr, tt.wantStr)
+			}
+		})
+	}
+}
+
+func TestRegisterKeyValueExecutor(t *testing.T) {
+	type args struct {
+		name string
+		f    func(string) (string, bool, error)
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			RegisterKeyValueExecutor(tt.args.name, tt.args.f)
 		})
 	}
 }
