@@ -1,4 +1,4 @@
-package discovery
+package discover
 
 import "github.com/lvhuat/kits/helper/consul"
 

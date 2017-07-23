@@ -1,4 +1,4 @@
-package discovery
+package discover
 
 type StaticService struct {
 	Name  string
