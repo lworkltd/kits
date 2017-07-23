@@ -16,7 +16,7 @@ type Request struct {
 }
 service.Init(&service.Option{
 	Discover: func(name string) ([]string, error) {
-		if name == "" {
+		if name == "service-name" {
 			return []string{"127.0.0.1:26403"}, nil
 		}
 		return nil, fmt.Errorf("service not found")
