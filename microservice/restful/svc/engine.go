@@ -15,7 +15,7 @@ type Engine struct {
 	mutex      sync.RWMutex
 	lbMode     string
 	useTracing bool
-	useHystrix bool
+	useCircuit bool
 }
 
 func (engine *Engine) Init(option *Option) error {
@@ -52,7 +52,7 @@ func (engine *Engine) newService(serviceName string, discovery DiscoveryFunc) IS
 		discover:   discovery,
 		name:       serviceName,
 		useTracing: engine.useTracing,
-		useHystrix: egine.useHystrix,
+		useCircuit: engine.useCircuit,
 	}
 }
 

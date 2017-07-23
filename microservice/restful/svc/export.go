@@ -2,8 +2,6 @@ package svc
 
 import (
 	"context"
-
-	"github.com/golang/protobuf/proto"
 )
 
 // DiscoveryFunc 服务发现的函数
@@ -14,7 +12,7 @@ type Option struct {
 	Discover        DiscoveryFunc
 	LoadBalanceMode string
 	UseTracing      bool
-	UseHystrix      bool
+	UseCircuit      bool
 }
 
 // IEngine 引擎
@@ -44,7 +42,6 @@ type Client interface {
 	Route(string, string) Client         // 添加路径参数
 	Routes(map[string]string) Client     // 添加路径参数
 	Json(interface{}) Client             // 添加Json消息体
-	Proto(proto.Message) Client          // 添加Proto对象
 	Exec(interface{}) error              // 执行请求
 	Context(context.Context) Client      // 上下文
 }

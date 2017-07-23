@@ -100,7 +100,11 @@ func (parser *profileParserImpl) Parse(v interface{}) error {
 		return fmt.Errorf("parse env failed:%v", err)
 	}
 
-	return parseDefault(v, &parseStatus{})
+	if err := parseDefault(v, &parseStatus{}); err != nil {
+		return fmt.Errorf("parse check failed:%v", err)
+	}
+
+	return nil
 }
 
 var (

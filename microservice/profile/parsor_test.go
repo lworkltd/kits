@@ -27,7 +27,7 @@ func (ts *TestDefaultItem) BeforeParse() {
 }
 
 func (ts *TestDefaultItem) AfterParse() {
-	ts.M = []string{"abc", "123"}
+	ts.M = []string{"abc", "124"}
 	ts.N = 100
 }
 
@@ -68,6 +68,7 @@ func Test_profileParserImpl_Parse(t *testing.T) {
 		})
 	}
 }
+
 func Test_parseDefault(t *testing.T) {
 	var tdc TestDefaultConfig
 	type args struct {

@@ -38,7 +38,20 @@ type Mysql struct {
 // 如果你要使用Consul相关的eval操作，那么本配置是必须，否则在执行类似
 // kv_of_consul等eval的时候将无法成功
 type Consul struct {
-	Url string `toml:"url"`
+	Url             string `toml:"url"`
+	AutoSyncEnabled bool   `toml:"auto_sync_enabled"`
+}
+
+func (consul *Consul) BeforeParse() {
+	consul.AutoSyncEnabled = true
+}
+
+func (consul *Consul) AfterParse() {
+	if consul.Url == "" {
+		logrus.WithFields(logrus.Fields{
+			"profile": "Consul",
+		}).Error("Url is empty")
+	}
 }
 
 // Service 用于初始化服务的配置
@@ -118,7 +131,10 @@ func (logger *Logger) AfterParse() {}
 
 // Hystrix 熔断和异常请求的配置
 type Hystrix struct {
-	Url string `json:"url"`
+	Url                   string `toml:"url"`
+	Timeout               int    `toml:"timeout"`
+	MaxConcurrentRequests int    `toml:"max_concurrent_request"`
+	ErrorPercentThreshold int    `toml:"error_percent_threshold"`
 }
 
 func (hystrix *Hystrix) BeforeParse() {}

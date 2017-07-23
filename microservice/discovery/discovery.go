@@ -91,23 +91,16 @@ func Unregister(option *RegisterOption) error {
 }
 
 // DiscoveryOption 初始化服务发现的
-type DiscoveryOption struct {
+type Option struct {
 	StaticServices []*StaticService
-	ConsulHost     string
+	ConsulClient   *ConsulClient
 }
 
 // InitDisconvery 初始化服务发现
-func InitDiscovery(option *DiscoveryOption) error {
+func Init(option *Option) error {
 	dis := &DiscoverImpl{}
 	dis.static = NewStaticDiscoverer(option.StaticServices)
-	if option.ConsulHost != "" {
-		err := InitConsul(option.ConsulHost)
-		if err != nil {
-			return fmt.Errorf("no discovery server failed:%v", err)
-		}
-	}
-	dis.consul = defaultConsulClient
-
+	dis.consul = option.ConsulClient
 	defaultDiscoverer = dis
 
 	return nil

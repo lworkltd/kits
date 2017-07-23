@@ -8,6 +8,20 @@ config
 ----
 
 
+使用方法
 ----
-待完善
-1.toml子级尚未支持
+1.准备好你的app.toml
+2.准备你的Profile结构
+```
+type Profile struct {
+	Base    profile.Base
+	Service profile.Service
+	Redis   profile.Redis
+	Mongo   profile.Mongo
+	Mysql   profile.Mysql
+	Consul  profile.Consul
+}
+```
+
+3.profile.Parse("app.toml")
+

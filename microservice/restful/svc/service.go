@@ -15,18 +15,19 @@ type ServiceImpl struct {
 	name           string
 	discover       DiscoveryFunc
 	useTracing     bool
-	useHystrix     bool
+	useCircuit     bool
 }
 
 // 选择服务节点
 func (service *ServiceImpl) remote() (string, error) {
-	index := service.totalCallCount.Add(1)
+	index := service.totalCallCount.Get()
+	defer service.totalCallCount.Add(1)
 
-	if service.disconvery == nil {
+	if service.discover == nil {
 		return "", fmt.Errorf("service %s not found", service.name)
 	}
 
-	remotes, err := service.disconvery(service.name)
+	remotes, err := service.discover(service.name)
 	if err != nil {
 		return "", fmt.Errorf("discovery service %s failed", service.name)
 	}
@@ -40,32 +41,29 @@ func (service *ServiceImpl) remote() (string, error) {
 		return remotes[0], nil
 	}
 
+	use := index % int64(l)
 	// 通过轮询策略来访问
-	return remotes[index%int64(l)], nil
+	return remotes[use], nil
 }
 
 // Get 使用GET方法请求
 func (service *ServiceImpl) Get(path string) Client {
-	remote, err := service.remote()
-	return newRest(service, "GET", path, remote, err)
+	return service.Method("GET", path)
 }
 
 // Post 使用POST方法请求
 func (service *ServiceImpl) Post(path string) Client {
-	remote, err := service.remote()
-	return newRest(service, "POST", path, remote, err)
+	return service.Method("POST", path)
 }
 
 // Put 使用PUT方法请求
 func (service *ServiceImpl) Put(path string) Client {
-	remote, err := service.remote()
-	return newRest(service, "PUT", path, remote, err)
+	return service.Method("PUT", path)
 }
 
 // Delete 使用DELETE方法请求
 func (service *ServiceImpl) Delete(path string) Client {
-	remote, err := service.remote()
-	return newRest(service, "DELETE", path, remote, err)
+	return service.Method("DELETE", path)
 }
 
 // Method 使用指定方法请求
@@ -80,11 +78,11 @@ func (service *ServiceImpl) Name() string {
 }
 
 func newRest(service IService, method string, path string, remote string, err error) Client {
-	client := &Client{
+	client := &client{
 		createTime:   time.Now(),
 		service:      service,
-		pathFormat:   path,
-		requestHost:  remote,
+		path:         path,
+		host:         remote,
 		sche:         "http",
 		errInProcess: err,
 		method:       method,

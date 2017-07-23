@@ -98,18 +98,18 @@ func (client *ConsulClient) Discover(name string) ([]string, error) {
 }
 
 // KeyValue 从consul获取一个key值
-func (client *ConsulClient) KeyValue(key string) (string, error) {
+func (client *ConsulClient) KeyValue(key string) (string, bool, error) {
 	pair, _, err := client.cli.KV().Get(key, nil)
 
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	if pair == nil {
-		return "", fmt.Errorf("key not found")
+		return "", false, nil
 	}
 
-	return string(pair.Value), err
+	return string(pair.Value), true, err
 }
 
 // 循环地去读取已经访问过的服务
@@ -221,4 +221,8 @@ func InitConsul(host string) error {
 	})
 
 	return err
+}
+
+func SetDefault(client *ConsulClient) {
+	defaultConsulClient = client
 }

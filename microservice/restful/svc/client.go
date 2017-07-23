@@ -120,6 +120,10 @@ func (client *client) Query(queryName, queryValue string) Client {
 }
 
 func (client *client) QueryArray(queryName string, queryValues ...string) Client {
+	if client.errInProcess != nil {
+		return client
+	}
+
 	if client.querys == nil {
 		client.querys = map[string][]string{
 			queryName: queryValues,
@@ -134,12 +138,21 @@ func (client *client) QueryArray(queryName string, queryValues ...string) Client
 	return client
 }
 
-func (client *client) Querys(querys map[string][]string) Client {
+func (client *client) Querys(queryValues map[string][]string) Client {
 	if client.errInProcess != nil {
 		return client
 	}
 
-	client.querys = querys
+	if client.querys == nil {
+		client.querys = make(map[string][]string, len(queryValues))
+		return client
+	}
+
+	for key, qs := range queryValues {
+		querys := client.querys[key]
+		querys = append(querys, qs...)
+		client.querys[key] = querys
+	}
 
 	return client
 }
@@ -168,7 +181,7 @@ func (client *client) Routes(routes map[string]string) Client {
 		client.routes = make(map[string]string, len(routes))
 	}
 
-	for routeName, route := range client.routes {
+	for routeName, route := range routes {
 		client.routes[routeName] = route
 	}
 
@@ -212,6 +225,7 @@ func (client *client) Context(ctx context.Context) Client {
 func (client *client) Exec(out interface{}) error {
 	if client.useTracing {
 		span, ctx := opentracing.StartSpanFromContext(client.ctx, client.tracingName())
+		client.ctx = ctx
 		defer span.Finish()
 	}
 
@@ -219,11 +233,9 @@ func (client *client) Exec(out interface{}) error {
 		return client.exec(out)
 	}
 
-	err := hystrix.Do(client.circuitName(), func() error {
+	return hystrix.Do(client.circuitName(), func() error {
 		return client.exec(out)
 	}, nil)
-
-	return nil
 }
 
 func (client *client) exec(out interface{}) error {
@@ -304,10 +316,10 @@ func (client *client) exec(out interface{}) error {
 
 	client.logFields["response_payload_len"] = len(rsp)
 
-	err = json.Unmarshal(rsp, &out)
+	err = json.Unmarshal(rsp, out)
 	if err != nil {
 		client.logFields["error"] = err
-		client.logFields["rsp_content"] = string(cutBytes(rsp, 1024))
+		client.logFields["content"] = string(cutBytes(rsp, 4096))
 		return fmt.Errorf("Marshal result body failed")
 	}
 
