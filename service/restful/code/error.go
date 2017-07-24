@@ -5,7 +5,7 @@ import (
 )
 
 type Error interface {
-	Error() string   // 用于保持与std.error兼容,格式:code,message
+	error
 	Code() string    // 错误码
 	Message() string // 错误信息
 }

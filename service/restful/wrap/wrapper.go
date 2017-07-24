@@ -59,6 +59,34 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 	}
 }
 
+func (wrapper *Wrapper) Handle(method string, eng *gin.Engine, path string, f WrappedFunc) {
+	eng.Handle(method, path, wrapper.Wrap(f))
+}
+
+func (wrapper *Wrapper) Get(eng *gin.Engine, path string, f WrappedFunc) {
+	wrapper.Handle("GET", eng, path, f)
+}
+
+func (wrapper *Wrapper) Patch(eng *gin.Engine, path string, f WrappedFunc) {
+	wrapper.Handle("POST", eng, path, f)
+}
+
+func (wrapper *Wrapper) Post(eng *gin.Engine, path string, f WrappedFunc) {
+	wrapper.Handle("DELETE", eng, path, f)
+}
+
+func (wrapper *Wrapper) Put(eng *gin.Engine, path string, f WrappedFunc) {
+	wrapper.Handle("PUT", eng, path, f)
+}
+
+func (wrapper *Wrapper) Options(eng *gin.Engine, path string, f WrappedFunc) {
+	wrapper.Handle("OPTIONS", eng, path, f)
+}
+
+func (wrapper *Wrapper) Head(eng *gin.Engine, path string, f WrappedFunc) {
+	wrapper.Handle("HEAD", eng, path, f)
+}
+
 // Error 失败并且打印指定实例
 func (wrapper *Wrapper) Error(mcode int, m interface{}) Response {
 	r := wrapper.pool.Get().(*WrappedResponse)
@@ -92,7 +120,7 @@ func (wrapper *Wrapper) Errorf(mcode int, format string, args ...interface{}) Re
 // FromError 通过Error创建一个实例
 func (wrapper *Wrapper) FromError(cerr code.Error) Response {
 	r := wrapper.pool.Get().(*WrappedResponse)
-	r.result = cerr != nil
+	r.result = (cerr == nil)
 	r.message = cerr.Message()
 	r.mcode = cerr.Code()
 
