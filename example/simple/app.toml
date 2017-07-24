@@ -1,5 +1,16 @@
 [base]
-max_cpu_num=3
+go_max_procs=3
+
+[logger]
+format="json"
+level="warn"
+time_format="RFC3399"
+hooks=[
+    ["Airbrake","123","xyz","production"],
+    ["Syslog","udp","localhost:514","info",""],
+    ["SelfDefined","arg1","arg2","arg3"]
+]
+
 
 [service]
 name="simple-service2"
@@ -16,7 +27,7 @@ handle_pprof_prefix="/abcdefg"
 url="amqp://root:abc123@127.0.0.1:27017/admin"
 
 [redis]
-host="kv_of_consul(kits.sample.redis.host)"
+url="kv_of_consul(kits.sample.redis.host)"
 password="abc123"
 db=1
 

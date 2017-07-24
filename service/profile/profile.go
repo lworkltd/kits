@@ -119,8 +119,10 @@ func (svc *Svc) AfterParse() {}
 // Logger 日志配置
 // 在几乎所有的服务或工具当中，这个配置项目都不应该缺席
 type Logger struct {
-	Format string `json:"format"` // 日志的格式
-	Level  string `json:"level"`
+	Format     string   `json:"format"` // 日志的格式
+	Level      string   `json:"level"`
+	TimeTormat string   `json:"time_format"`
+	Hooks      []string `json:"hooks"`
 }
 
 func (logger *Logger) BeforeParse() {
