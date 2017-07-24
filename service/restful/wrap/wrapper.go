@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lvhuat/kits/service/restful/code"
 )
 
 // Wrapper 用于对请求返回结果进行封装的类
@@ -31,7 +32,7 @@ func NewWrapper(mcodePrefix string) *Wrapper {
 }
 
 // WrappedFunc 是用于封装GIN HTTP接口返回为通用接口的函数定义
-type WrappedFunc func(ctx *gin.Context) IResponse
+type WrappedFunc func(ctx *gin.Context) Response
 
 // Wrap 为gin的回调接口增加了固定的返回值，当程序收到处理结果的时候会将返回值封装一层再发送到网络
 func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
@@ -59,7 +60,7 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 }
 
 // Error 失败并且打印指定实例
-func (wrapper *Wrapper) Error(mcode int, m interface{}) IResponse {
+func (wrapper *Wrapper) Error(mcode int, m interface{}) Response {
 	r := wrapper.pool.Get().(*WrappedResponse)
 	r.result = false
 	r.message = fmt.Sprint(m)
@@ -69,7 +70,7 @@ func (wrapper *Wrapper) Error(mcode int, m interface{}) IResponse {
 }
 
 // Errorln 失败并且打印指定实例列表
-func (wrapper *Wrapper) Errorln(mcode int, ms ...interface{}) IResponse {
+func (wrapper *Wrapper) Errorln(mcode int, ms ...interface{}) Response {
 	r := wrapper.pool.Get().(*WrappedResponse)
 	r.result = false
 	r.message = fmt.Sprint(ms...)
@@ -79,7 +80,7 @@ func (wrapper *Wrapper) Errorln(mcode int, ms ...interface{}) IResponse {
 }
 
 // Errorf 失败并且按格式打印指定内容
-func (wrapper *Wrapper) Errorf(mcode int, format string, args ...interface{}) IResponse {
+func (wrapper *Wrapper) Errorf(mcode int, format string, args ...interface{}) Response {
 	r := wrapper.pool.Get().(*WrappedResponse)
 	r.result = false
 	r.message = fmt.Sprintf(format, args...)
@@ -88,11 +89,21 @@ func (wrapper *Wrapper) Errorf(mcode int, format string, args ...interface{}) IR
 	return r
 }
 
+// FromError 通过Error创建一个实例
+func (wrapper *Wrapper) FromError(cerr code.Error) Response {
+	r := wrapper.pool.Get().(*WrappedResponse)
+	r.result = cerr != nil
+	r.message = cerr.Message()
+	r.mcode = cerr.Code()
+
+	return r
+}
+
 // Done 成功并且返回数据
 // 如果什么都不传，则不返回数据
 // 如果传递数据，则取第一个数据作为data
 // 因此，此处并不建议使用多个值作为参数，如果你想返回一个数组，那么你就直接把数据作为第一个参数
-func (wrapper *Wrapper) Done(v ...interface{}) IResponse {
+func (wrapper *Wrapper) Done(v ...interface{}) Response {
 	var data interface{}
 	if len(v) > 1 {
 		panic("bad parameter length, please pass parameter less than one")

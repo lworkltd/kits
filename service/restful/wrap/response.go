@@ -1,7 +1,7 @@
 package wrap
 
-// IResponse 是基于API响应通用封装结构所需字段的一个通用接口
-type IResponse interface {
+// Response 是基于API响应通用封装结构所需字段的一个通用接口
+type Response interface {
 	Result() bool
 	Message() string
 	Mcode() string

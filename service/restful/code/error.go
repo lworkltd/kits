@@ -65,3 +65,10 @@ func NewPrefixln(prefix, code string, args ...interface{}) Error {
 		message: fmt.Sprintln(args...),
 	}
 }
+
+func NewError(code string, err error) Error {
+	return &errorImpl{
+		code:    code,
+		message: err.Error(), //
+	}
+}
