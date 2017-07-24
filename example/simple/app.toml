@@ -13,13 +13,20 @@ hooks=[
 
 
 [service]
-name="simple-service2"
-id="kits_simple_8080"
 host=":8080"
+path_prefix="myservice"
+mcode_profix="kits_simple_"
+
+trace_enabled=true
+access_log_enabled=true
+
 reportable=true
-report_host="ip_of_interface(eth0)"
-tags=["master","v0.2.1"]
-error_prefix="kits_simple_"
+report_ip="ip_of_interface(eth0)"
+report_tags=["master","v0.2.1"]
+report_health=true
+report_name="simple-service2"
+report_id="kits_simple_8080"
+
 handle_pprof = true
 handle_pprof_prefix="/abcdefg"
 
@@ -32,7 +39,7 @@ password="abc123"
 db=1
 
 [application]
-sync_interval=10s
+sync_interval="10s"
 max_symbols=1024
 report_data_config="kv_of_consul(kits.simple.report_data)"
 
@@ -41,6 +48,7 @@ host="kv_of_consul(common.zipkin.host)"
 
 [consul]
 consul_host="127.0.0.1:8500"
+auto_sync_enabled = true
 
 [discovery]
 enable_consul = true
@@ -49,6 +57,13 @@ static_services=[
     "auth_service 127.0.0.1:10630",
     "product_service 127.0.0.1:1923 127.0.0.1:2023"
 ]
+
+[hystrix]
+statsd_url="192.168.0.234:8125"
+timeout=1000
+max_concurrent_request=200
+error_percent_threshold=20
+
 
 [svc]
 load_balance_mode = "round-robin"

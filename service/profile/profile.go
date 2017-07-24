@@ -61,7 +61,7 @@ type Service struct {
 	PathPrefix  string `toml:"path_prefix"`  // 接口前缀
 	McodeProfix string `toml:"mcode_profix"` // API错误码前缀
 
-	TraceEnabled     bool `toml:"trace_enable"`       // 启用OpenTrace,需要Zipkin配置
+	TraceEnabled     bool `toml:"trace_enabled"`      // 启用OpenTrace,需要Zipkin配置
 	AccessLogEnabled bool `toml:"access_log_enabled"` // 访问日志启用
 
 	Reportable  bool     `toml:"reportable"`    // 启用上报
@@ -133,7 +133,7 @@ func (logger *Logger) AfterParse() {}
 
 // Hystrix 熔断和异常请求的配置
 type Hystrix struct {
-	Url                   string `toml:"url"`
+	Url                   string `toml:"statsd_url"`
 	Timeout               int    `toml:"timeout"`
 	MaxConcurrentRequests int    `toml:"max_concurrent_request"`
 	ErrorPercentThreshold int    `toml:"error_percent_threshold"`
