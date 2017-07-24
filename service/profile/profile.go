@@ -100,7 +100,7 @@ type Discovery struct {
 	StaticServices []string `json:"static_service"` // 静态服务配置,格式：["{serviceName} addr1 [addr2...]"]
 }
 
-// Svc服务调用相关的配置
+// Invoker服务调用相关的配置
 type Invoker struct {
 	LoadBanlanceMode string `json:"load_balance_mode"` // 负载均衡模式
 	HystrixEnabled   bool   `json:"hytrix_enabled"`    // 启用Hystrix,需配置Hystrix才会生效
@@ -112,9 +112,9 @@ func (invoker *Invoker) BeforeParse() {
 	invoker.LoadBanlanceMode = "round-robin"
 	invoker.HystrixEnabled = true
 	invoker.TracingEnabled = true
-	svc.LoggerEnabled = true
+	invoker.LoggerEnabled = true
 }
-func (svc *Invoker) AfterParse() {}
+func (invoker *Invoker) AfterParse() {}
 
 // Logger 日志配置
 // 在几乎所有的服务或工具当中，这个配置项目都不应该缺席

@@ -9,6 +9,7 @@ hooks=[
     ["Airbrake","123","xyz","production"],
     ["Syslog","udp","localhost:514","info",""],
     ["SelfDefined","arg1","arg2","arg3"]
+    ["FileHook",">=warn|fileline|server.error.log","<=info|server.info.log"]
 ]
 
 

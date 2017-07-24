@@ -3,8 +3,8 @@ package conf
 import (
 	"strings"
 
-	"github.com/lvhuat/kits/microservice/discovery"
-	"github.com/lvhuat/kits/microservice/profile"
+	"github.com/lvhuat/kits/service/discover"
+	"github.com/lvhuat/kits/service/profile"
 )
 
 type Profile struct {
@@ -14,7 +14,7 @@ type Profile struct {
 	Mongo     profile.Mongo
 	Mysql     profile.Mysql
 	Consul    profile.Consul
-	Svc       profile.Svc
+	Invoker   profile.Invoker
 	Logger    profile.Logger
 	Hystrix   profile.Hystrix
 	Zipkin    profile.Zipkin
