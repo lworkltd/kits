@@ -23,6 +23,7 @@ type ConsulClient struct {
 type serviceCache struct {
 	t     time.Time
 	hosts []string
+	ids   []string
 	r     time.Time
 	err   error
 	from  string
@@ -79,7 +80,7 @@ func (client *ConsulClient) Unregister(option *RegisterOption) error {
 }
 
 // Discover 从consul发现一个服务
-func (client *ConsulClient) Discover(name string) ([]string, error) {
+func (client *ConsulClient) Discover(name string) ([]string, []string, error) {
 	client.mutex.RLock()
 	service, exist := client.serviceCache[name]
 	client.mutex.RUnlock()
@@ -87,7 +88,7 @@ func (client *ConsulClient) Discover(name string) ([]string, error) {
 	if !exist {
 		s, err := client.service(name)
 		if err != nil {
-			return []string{}, err
+			return nil, nil, err
 		}
 
 		// 有一定的可能会重复查询
@@ -97,13 +98,13 @@ func (client *ConsulClient) Discover(name string) ([]string, error) {
 		service = s
 	}
 	if service.err != nil {
-		return []string{}, fmt.Errorf("Get service %s from consul failed:%v", name, service.err)
+		return nil, nil, fmt.Errorf("Get service %s from consul failed:%v", name, service.err)
 	}
 
 	// 记录获取服务信息的时间
 	service.r = time.Now()
 
-	return service.hosts, nil
+	return service.hosts, service.ids, nil
 }
 
 // KeyValue 从consul获取一个key值
@@ -182,13 +183,16 @@ func (client *ConsulClient) service(service string) (*serviceCache, error) {
 	}
 
 	hosts := make([]string, len(entrys))
+	ids := make([]string, len(entrys))
 	for index, entry := range entrys {
 		hosts[index] = fmt.Sprintf("%s:%d", entry.Service.Address, entry.Service.Port)
+		ids[index] = entry.Service.ID
 	}
 
 	return &serviceCache{
 		t:     time.Now(),
 		hosts: hosts,
+		ids:   ids,
 		from:  "consul",
 	}, nil
 }
