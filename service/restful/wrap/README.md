@@ -19,35 +19,47 @@ Http框架采用的是gin
 ---------
 
 ```
-const{
-    FailedCode = 10010    
-}
+FailedCode := 10010
 
-type Data struct{
+type Data struct {
     Name string
-    Age int
+    Age  int
 }
 
-wrapper := wrap.NewWraper("MYSERVICE_EXCEPTION_")
-func Foo(c *gin.Context) wrap.Response {
+wrapper := New("MYSERVICE_EXCEPTION_")
+foo := func(c *gin.Context) Response {
     routeError := c.Params.ByName("error")
-    if routeError = "yes"{
-        return wrapper.Errorf(
-            FailedCode,
-            "failed!routeError=%s",routeError,
-        )
+    if routeError == "yes" {
+        return wrapper.Errorf(FailedCode, "Foo failed! %v", routeError)
     }
 
-    return &wrapper.Done(&Data{
-        "Name":"Anna",
-        "Age":123,
+    ret := &Data{
+        Name: "Anna",
+        Age:  15,
+    }
+    return wrapper.Done(ret)
+}
+
+bar := func(c *gin.Context) Response {
+    routeError := c.Params.ByName("error")
+    if routeError == "yes" {
+        return wrapper.Error(FailedCode, "Bar Failed")
+    }
+
+    return wrapper.Done(&Data{
+        Name: "Petter",
+        Age:  32,
     })
 }
 
-func main() {
-	r := gin.Default()
-	wrapper.Get(r,"/request", wrapper.Wrap(Foo))
-    v2 := router.Group("/v2")
-	r.Run() // listen and serve on 0.0.0.0:8080
-}
+r := gin.Default()
+wrapper.Get(r, "/foo", foo)
+
+v2 := r.Group("/v2")
+wrapper.Post(v2, "/bar", bar)
+wrapper.Get(v2, "/bar", bar)
+wrapper.Put(v2, "/bar", bar)
+wrapper.Options(v2, "/bar", bar)
+wrapper.Patch(v2, "/bar", bar)
+wrapper.Head(v2, "/bar", bar)
 ```

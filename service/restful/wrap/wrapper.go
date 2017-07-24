@@ -20,7 +20,7 @@ type Wrapper struct {
 }
 
 // NewWrapper 创建一个新的wrapper
-func NewWrapper(mcodePrefix string) *Wrapper {
+func New(mcodePrefix string) *Wrapper {
 	return &Wrapper{
 		mcodePrefix: mcodePrefix,
 		pool: sync.Pool{
@@ -33,6 +33,10 @@ func NewWrapper(mcodePrefix string) *Wrapper {
 
 // WrappedFunc 是用于封装GIN HTTP接口返回为通用接口的函数定义
 type WrappedFunc func(ctx *gin.Context) Response
+
+type HttpServer interface {
+	Handle(string, string, ...gin.HandlerFunc) gin.IRoutes
+}
 
 // Wrap 为gin的回调接口增加了固定的返回值，当程序收到处理结果的时候会将返回值封装一层再发送到网络
 func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
@@ -59,32 +63,32 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 	}
 }
 
-func (wrapper *Wrapper) Handle(method string, eng *gin.Engine, path string, f WrappedFunc) {
-	eng.Handle(method, path, wrapper.Wrap(f))
+func (wrapper *Wrapper) Handle(method string, srv HttpServer, path string, f WrappedFunc) {
+	srv.Handle(method, path, wrapper.Wrap(f))
 }
 
-func (wrapper *Wrapper) Get(eng *gin.Engine, path string, f WrappedFunc) {
-	wrapper.Handle("GET", eng, path, f)
+func (wrapper *Wrapper) Get(srv HttpServer, path string, f WrappedFunc) {
+	wrapper.Handle("GET", srv, path, f)
 }
 
-func (wrapper *Wrapper) Patch(eng *gin.Engine, path string, f WrappedFunc) {
-	wrapper.Handle("POST", eng, path, f)
+func (wrapper *Wrapper) Patch(srv HttpServer, path string, f WrappedFunc) {
+	wrapper.Handle("POST", srv, path, f)
 }
 
-func (wrapper *Wrapper) Post(eng *gin.Engine, path string, f WrappedFunc) {
-	wrapper.Handle("DELETE", eng, path, f)
+func (wrapper *Wrapper) Post(srv HttpServer, path string, f WrappedFunc) {
+	wrapper.Handle("DELETE", srv, path, f)
 }
 
-func (wrapper *Wrapper) Put(eng *gin.Engine, path string, f WrappedFunc) {
-	wrapper.Handle("PUT", eng, path, f)
+func (wrapper *Wrapper) Put(srv HttpServer, path string, f WrappedFunc) {
+	wrapper.Handle("PUT", srv, path, f)
 }
 
-func (wrapper *Wrapper) Options(eng *gin.Engine, path string, f WrappedFunc) {
-	wrapper.Handle("OPTIONS", eng, path, f)
+func (wrapper *Wrapper) Options(srv HttpServer, path string, f WrappedFunc) {
+	wrapper.Handle("OPTIONS", srv, path, f)
 }
 
-func (wrapper *Wrapper) Head(eng *gin.Engine, path string, f WrappedFunc) {
-	wrapper.Handle("HEAD", eng, path, f)
+func (wrapper *Wrapper) Head(srv HttpServer, path string, f WrappedFunc) {
+	wrapper.Handle("HEAD", srv, path, f)
 }
 
 // Error 失败并且打印指定实例

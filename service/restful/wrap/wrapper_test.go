@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/lvhuat/kits/service/restful/code"
 )
 
@@ -21,7 +22,7 @@ func TestWrapper_Done(t *testing.T) {
 		Data    interface{}
 	}{
 		{
-			wrapper: NewWrapper("MYSERVICE_"),
+			wrapper: New("MYSERVICE_"),
 			result:  true,
 			message: "",
 		},
@@ -48,7 +49,7 @@ func TestWrapper_FromError(t *testing.T) {
 		mcode   string
 	}{
 		{
-			wrapper: NewWrapper("MYSERVICE_"),
+			wrapper: New("MYSERVICE_"),
 			args: args{
 				cerr: code.New("XXX_XXX", "local"),
 			},
@@ -70,4 +71,50 @@ func TestWrapper_FromError(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_Server(t *testing.T) {
+	FailedCode := 10010
+
+	type Data struct {
+		Name string
+		Age  int
+	}
+
+	wrapper := New("MYSERVICE_EXCEPTION_")
+	foo := func(c *gin.Context) Response {
+		routeError := c.Params.ByName("error")
+		if routeError == "yes" {
+			return wrapper.Errorf(FailedCode, "Foo failed! %v", routeError)
+		}
+
+		ret := &Data{
+			Name: "Anna",
+			Age:  15,
+		}
+		return wrapper.Done(ret)
+	}
+
+	bar := func(c *gin.Context) Response {
+		routeError := c.Params.ByName("error")
+		if routeError == "yes" {
+			return wrapper.Error(FailedCode, "Bar Failed")
+		}
+
+		return wrapper.Done(&Data{
+			Name: "Petter",
+			Age:  32,
+		})
+	}
+
+	r := gin.Default()
+	wrapper.Get(r, "/foo", foo)
+
+	v2 := r.Group("/v2")
+	wrapper.Post(v2, "/bar", bar)
+	wrapper.Get(v2, "/bar", bar)
+	wrapper.Put(v2, "/bar", bar)
+	wrapper.Options(v2, "/bar", bar)
+	wrapper.Patch(v2, "/bar", bar)
+	wrapper.Head(v2, "/bar", bar)
 }
