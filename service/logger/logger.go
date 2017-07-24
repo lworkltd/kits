@@ -22,7 +22,6 @@ func NewEntry(l *logrus.Logger) *Entry {
 	}
 }
 
-var 
 var (
 	PositionKey = "where"
 )
@@ -32,7 +31,7 @@ func SetPositionKey(k string) {
 }
 
 func (entry *Entry) withLocation(n int) *Entry {
-	if entry.Entry.GetLevel() <= logrus.InfoLevel {
+	if entry.Entry.Level >= logrus.InfoLevel {
 		return entry
 	}
 
