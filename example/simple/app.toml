@@ -21,7 +21,7 @@ trace_enabled=true
 access_log_enabled=true
 
 reportable=true
-report_ip="ip_of_interface(eth0)"
+report_ip="${ip_of_interface eth0}"
 report_tags=["master","v0.2.1"]
 report_health=true
 report_name="simple-service2"
@@ -34,17 +34,17 @@ handle_pprof_prefix="/abcdefg"
 url="amqp://root:abc123@127.0.0.1:27017/admin"
 
 [redis]
-url="kv_of_consul(kits.sample.redis.host)"
+url="${kv_of_consul kits.sample.redis.host}"
 password="abc123"
 db=1
 
 [application]
 sync_interval="10s"
 max_symbols=1024
-report_data_config="kv_of_consul(kits.simple.report_data)"
+report_data_config="${kv_of_consul kits.simple.report_data}"
 
 [zipkin]
-host="kv_of_consul(common.zipkin.host)"
+host="${kv_of_consul common.zipkin.host}"
 
 [consul]
 consul_host="127.0.0.1:8500"
