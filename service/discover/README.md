@@ -12,7 +12,7 @@ discovery 包
 使用方法
 ----
 ```
-csl, err := consul.New("10.25.100.164:8500")
+csl, err := consul.New("your-consul-server)
 if err != nil {
     panic(err)
 }
