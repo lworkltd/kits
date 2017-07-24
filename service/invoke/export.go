@@ -45,7 +45,7 @@ type (
 		Json(interface{}) Client             // 添加Json消息体
 		Exec(interface{}) (int, error)       // 执行请求
 		Context(context.Context) Client      // 上下文
-		Failback(func() error) Client        // 失败触发器
+		Failback(func(error) error) Client   // 失败触发器
 	}
 )
 

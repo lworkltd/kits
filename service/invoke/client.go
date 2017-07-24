@@ -33,7 +33,7 @@ type client struct {
 	ctx        context.Context
 	useTracing bool
 	useCircuit bool
-	failback   func() error
+	failback   func(error) error
 }
 
 func (client *client) circuitName() string {
@@ -70,7 +70,7 @@ func (client *client) Tls() Client {
 	return client
 }
 
-func (client *client) Failback(func() error) Client {
+func (client *client) Failback(func(error) error) Client {
 	if client.errInProcess != nil {
 		return client
 	}
@@ -246,7 +246,7 @@ func (client *client) Exec(out interface{}) (int, error) {
 		s, err := client.exec(out)
 		status = s
 		return err
-	}, nil)
+	}, client.failback)
 
 	return status, err
 }
