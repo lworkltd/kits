@@ -20,9 +20,10 @@ type client struct {
 	createTime   time.Time
 	errInProcess error
 
-	method string
-	host   string
-	sche   string
+	method   string
+	host     string
+	sche     string
+	serverid string
 
 	headers map[string]string
 	routes  map[string]string
@@ -37,11 +38,11 @@ type client struct {
 }
 
 func (client *client) circuitName() string {
-	return client.service.Name() + "/" + client.path
+	return client.serverid
 }
 
 func (client *client) tracingName() string {
-	return client.service.Name() + "/" + client.path
+	return client.serverid
 }
 
 func (client *client) clear() {
@@ -251,21 +252,17 @@ func (client *client) Exec(out interface{}) (int, error) {
 	return status, err
 }
 
-func (client *client) exec(out interface{}) (int, error) {
-	if client.errInProcess != nil {
-		return 0, client.errInProcess
-	}
-
+func (client *client) build() (*http.Request, error) {
 	path, err := parsePath(client.path, client.routes)
 	if err != nil {
 		client.logFields["error"] = "resources parameter invalid"
 		client.logFields["routes"] = client.routes
-		return 0, err
+		return nil, err
 	}
 
 	if client.host == "" {
 		client.logFields["error"] = "no avaliable remote"
-		return 0, fmt.Errorf("Remote is emtpy")
+		return nil, fmt.Errorf("remote is emtpy")
 	}
 
 	url, err := makeUrl(client.sche, client.host, path, client.querys)
@@ -275,14 +272,14 @@ func (client *client) exec(out interface{}) (int, error) {
 		client.logFields["remote"] = client.host
 		client.logFields["path"] = url
 		client.logFields["querys"] = client.querys
-		return 0, err
+		return nil, err
 	}
 
 	var reader *bytes.Reader
 	if client.payload != nil {
 		b, err := client.payload()
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		reader = bytes.NewReader(b)
 	}
@@ -290,7 +287,7 @@ func (client *client) exec(out interface{}) (int, error) {
 	request, err := http.NewRequest(client.method, url, reader)
 	if err != nil {
 		client.logFields["error"] = err
-		return 0, fmt.Errorf("Create HTTP request failed")
+		return nil, fmt.Errorf("create http request failed,%v", err)
 	}
 
 	if client.ctx != nil {
@@ -303,7 +300,19 @@ func (client *client) exec(out interface{}) (int, error) {
 		request.Header.Add(k, v)
 	}
 
+	return request, nil
+}
+
+func (client *client) exec(out interface{}) (int, error) {
+	if client.errInProcess != nil {
+		return 0, client.errInProcess
+	}
+
 	cli := &http.Client{}
+	request, err := client.build()
+	if err != nil {
+		return 0, err
+	}
 
 	resp, err := cli.Do(request)
 	if err != nil {
@@ -312,12 +321,12 @@ func (client *client) exec(out interface{}) (int, error) {
 	}
 
 	client.logFields["status"] = resp.StatusCode
-	client.logFields["status"] = resp.Status
+	client.logFields["status_code"] = resp.Status
 
 	if resp.StatusCode < http.StatusOK ||
 		resp.StatusCode >= http.StatusMultipleChoices {
 		client.logFields["error"] = "response status error"
-		return resp.StatusCode, fmt.Errorf("Reponse with bad status,%d", resp.StatusCode)
+		return resp.StatusCode, fmt.Errorf("reponse with bad status,%d", resp.StatusCode)
 	}
 
 	rsp, err := ioutil.ReadAll(resp.Body)
@@ -333,7 +342,7 @@ func (client *client) exec(out interface{}) (int, error) {
 	if err != nil {
 		client.logFields["error"] = err
 		client.logFields["content"] = string(cutBytes(rsp, 4096))
-		return 0, fmt.Errorf("Marshal result body failed")
+		return 0, fmt.Errorf("marshal result body failed")
 	}
 
 	return resp.StatusCode, nil

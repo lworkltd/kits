@@ -11,7 +11,8 @@ config
 使用方法
 ----
 1.准备好你的app.toml
-2.准备你的Profile结构
+2.准备你的Profile结构 
+
 ```
 type Profile struct {
 	Base    profile.Base

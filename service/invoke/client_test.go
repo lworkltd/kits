@@ -73,8 +73,8 @@ func Test_client_exec(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	service := &service{
-		discover: func(string) ([]string, error) {
-			return []string{"127.0.0.1:26403"}, nil
+		discover: func(string) ([]string, []string, error) {
+			return []string{"127.0.0.1:26403"}, []string{"service-id"}, nil
 		},
 		name: "test-service",
 	}

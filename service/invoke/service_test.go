@@ -7,54 +7,59 @@ import (
 
 func Testservice_remote(t *testing.T) {
 	svc := &service{
-		discover: func(string) ([]string, error) {
-			return []string{"127.0.0.1", "127.0.0.2"}, nil
+		discover: func(string) ([]string, []string, error) {
+			return []string{"127.0.0.1", "127.0.0.2"}, []string{"my-service-1", "my-service-2"}, nil
 		},
 	}
 	tests := []struct {
 		name    string
 		service *service
 		want    string
+		want1   string
 		wantErr bool
 	}{
 		{
 			name:    "firsttime",
 			service: svc,
 			want:    "127.0.0.1",
+			want1:   "my-service-1",
 		},
 		{
 			name:    "secondtime",
 			service: svc,
 			want:    "127.0.0.2",
+			want1:   "my-service-2",
 		},
 		{
 			name:    "thirdtime",
 			service: svc,
 			want:    "127.0.0.1",
+			want1:   "my-service-1",
 		},
 		{
 			name: "emtpy",
 			service: &service{
-				discover: func(string) ([]string, error) {
-					return []string{}, nil
+				discover: func(string) ([]string, []string, error) {
+					return []string{}, []string{}, nil
 				},
 			},
 			wantErr: true,
 		},
 		{
-			name: "emtpy",
+			name: "single",
 			service: &service{
-				discover: func(string) ([]string, error) {
-					return []string{"127.0.0.1:8080"}, nil
+				discover: func(string) ([]string, []string, error) {
+					return []string{"127.0.0.1:8080"}, []string{"service"}, nil
 				},
 			},
-			want: "127.0.0.1:8080",
+			want:  "127.0.0.1:8080",
+			want1: "service",
 		},
 		{
 			name: "error",
 			service: &service{
-				discover: func(string) ([]string, error) {
-					return []string{}, fmt.Errorf("service error")
+				discover: func(string) ([]string, []string, error) {
+					return []string{}, []string{}, fmt.Errorf("service error")
 				},
 			},
 			wantErr: true,
@@ -67,7 +72,7 @@ func Testservice_remote(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.service.remote()
+			got, got1, err := tt.service.remote()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("service.remote() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -75,14 +80,17 @@ func Testservice_remote(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("service.remote() = %v, want %v", got, tt.want)
 			}
+			if got1 != tt.want1 {
+				t.Errorf("service.remote() = %v, want1 %v", got, tt.want1)
+			}
 		})
 	}
 }
 
 func Test_newRest(t *testing.T) {
 	service := &service{
-		discover: func(string) ([]string, error) {
-			return []string{"127.0.0.1", "127.0.0.2"}, nil
+		discover: func(string) ([]string, []string, error) {
+			return []string{"127.0.0.1", "127.0.0.2"}, []string{"my-service-1", "my-service-2"}, nil
 		},
 		name:       "auth_service",
 		useTracing: true,
@@ -93,6 +101,7 @@ func Test_newRest(t *testing.T) {
 		method  string
 		path    string
 		remote  string
+		id      string
 		err     error
 	}
 	tests := []struct {
@@ -112,7 +121,7 @@ func Test_newRest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := newRest(tt.args.service, tt.args.method, tt.args.path, tt.args.remote, tt.args.err); got == nil {
+			if got := newRest(tt.args.service, tt.args.method, tt.args.path, tt.args.remote, tt.args.id, tt.args.err); got == nil {
 				t.Errorf("newRest() = nil")
 			}
 		})
@@ -133,8 +142,8 @@ func Testservice_Method(t *testing.T) {
 		{
 			name: "error",
 			service: &service{
-				discover: func(string) ([]string, error) {
-					return []string{"127.0.0.1:12304"}, nil
+				discover: func(string) ([]string, []string, error) {
+					return []string{"127.0.0.1:12304"}, []string{"service-id"}, nil
 				},
 			},
 			wantNil: false,
@@ -162,8 +171,8 @@ func Testservice_Get(t *testing.T) {
 		{
 			name: "error",
 			service: &service{
-				discover: func(string) ([]string, error) {
-					return []string{"127.0.0.1:12304"}, nil
+				discover: func(string) ([]string, []string, error) {
+					return []string{"127.0.0.1:12304"}, []string{"service-id"}, nil
 				},
 			},
 			wantNil: false,

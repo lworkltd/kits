@@ -13,11 +13,11 @@ type DiscoverImpl struct {
 }
 
 // Discover 发现服务
-func (discover *DiscoverImpl) Discover(service string) ([]string, error) {
+func (discover *DiscoverImpl) Discover(service string) ([]string, []string, error) {
 	if discover.static != nil {
 		remotes, _ := discover.static.Discover(service)
 		if len(remotes) != 0 {
-			return remotes, nil
+			return remotes, remotes, nil
 		}
 	}
 
@@ -25,7 +25,7 @@ func (discover *DiscoverImpl) Discover(service string) ([]string, error) {
 		return discover.consul.Discover(service)
 	}
 
-	return nil, fmt.Errorf("not avaliable discover")
+	return nil, nil, fmt.Errorf("not avaliable discover")
 }
 
 // Register 注册服务

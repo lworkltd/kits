@@ -5,7 +5,7 @@ import (
 )
 
 // DiscoveryFunc 服务发现的函数
-type DiscoveryFunc func(name string) ([]string, error)
+type DiscoveryFunc func(name string) ([]string, []string, error)
 
 // Option 用于初始化引擎的参数
 type (

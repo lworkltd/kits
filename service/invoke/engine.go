@@ -59,7 +59,9 @@ func (engine *engine) newService(serviceName string, discovery DiscoveryFunc) Se
 
 // newAddr 创建固定IP的匿名服务
 func (engine *engine) newAddr(addr string) Service {
-	discover := func(string) ([]string, error) { return []string{addr}, nil }
+	discover := func(string) ([]string, []string, error) {
+		return []string{addr}, []string{addr}, nil
+	}
 	return &service{
 		discover: discover,
 		name:     addr,
@@ -68,8 +70,8 @@ func (engine *engine) newAddr(addr string) Service {
 
 func newEngine() *engine {
 	return &engine{
-		dv: func(name string) ([]string, error) {
-			return nil, ErrDiscoveryNotConfig
+		dv: func(name string) ([]string, []string, error) {
+			return nil, nil, ErrDiscoveryNotConfig
 		},
 		serviceMap: make(map[string]Service, 10),
 	}

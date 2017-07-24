@@ -101,20 +101,20 @@ type Discovery struct {
 }
 
 // Svc服务调用相关的配置
-type Svc struct {
+type Invoker struct {
 	LoadBanlanceMode string `json:"load_balance_mode"` // 负载均衡模式
 	HystrixEnabled   bool   `json:"hytrix_enabled"`    // 启用Hystrix,需配置Hystrix才会生效
 	TracingEnabled   bool   `json:"traceing_enabled"`  // 启用Tracing，需配置Zipkin后有效
 	LoggerEnabled    bool   `json:"logger_enabled"`    // 启用日志打印，日志等级受控于
 }
 
-func (svc *Svc) BeforeParse() {
-	svc.LoadBanlanceMode = "round-robin"
-	svc.HystrixEnabled = true
-	svc.TracingEnabled = true
+func (invoker *Invoker) BeforeParse() {
+	invoker.LoadBanlanceMode = "round-robin"
+	invoker.HystrixEnabled = true
+	invoker.TracingEnabled = true
 	svc.LoggerEnabled = true
 }
-func (svc *Svc) AfterParse() {}
+func (svc *Invoker) AfterParse() {}
 
 // Logger 日志配置
 // 在几乎所有的服务或工具当中，这个配置项目都不应该缺席

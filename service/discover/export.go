@@ -4,7 +4,7 @@ import "github.com/lvhuat/kits/helper/consul"
 
 // Discoverer 定义了服务发现的接口
 type Discoverer interface {
-	Discover(service string) ([]string, error)
+	Discover(service string) ([]string, []string, error)
 	Register(option *consul.RegisterOption) error
 	Unregister(option *consul.RegisterOption) error
 }
@@ -12,7 +12,7 @@ type Discoverer interface {
 var defaultDiscoverer Discoverer
 
 // Discover 发现一个服务
-func Discover(service string) ([]string, error) {
+func Discover(service string) ([]string, []string, error) {
 	return defaultDiscoverer.Discover(service)
 }
 
