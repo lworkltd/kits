@@ -1,2 +1,5 @@
 debug
 *.test
+*.exe
+*.log
+.vscode
