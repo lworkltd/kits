@@ -1,4 +1,4 @@
-package logfmt
+package logutil
 
 import (
 	"bytes"
@@ -62,7 +62,7 @@ type TextFormatter struct {
 
 func (f *TextFormatter) init(entry *logrus.Entry) {
 	if entry.Logger != nil {
-		f.isTerminal = IsTerminal(entry.Logger.Out)
+		f.isTerminal = logrus.IsTerminal(entry.Logger.Out)
 	}
 }
 
@@ -90,7 +90,7 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	timestampFormat := f.TimestampFormat
 	if timestampFormat == "" {
-		timestampFormat = DefaultTimestampFormat
+		timestampFormat = logrus.DefaultTimestampFormat
 	}
 	if isColored {
 		f.printColored(b, entry, keys, timestampFormat)
@@ -111,14 +111,14 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func (f *TextFormatter) printColored(b *bytes.Buffer, entry *Entry, keys []string, timestampFormat string) {
+func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys []string, timestampFormat string) {
 	var levelColor int
 	switch entry.Level {
-	case DebugLevel:
+	case logrus.DebugLevel:
 		levelColor = gray
-	case WarnLevel:
+	case logrus.WarnLevel:
 		levelColor = yellow
-	case ErrorLevel, FatalLevel, PanicLevel:
+	case logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel:
 		levelColor = red
 	default:
 		levelColor = blue
