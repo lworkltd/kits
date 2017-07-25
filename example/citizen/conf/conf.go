@@ -4,11 +4,13 @@ import (
 	"strings"
 
 	"fmt"
+
 	"github.com/afex/hystrix-go/plugins"
 	hystrixplugins "github.com/afex/hystrix-go/plugins"
 	"github.com/lvhuat/kits/helper/consul"
 	"github.com/lvhuat/kits/pkgs/eval"
 	"github.com/lvhuat/kits/pkgs/ipnet"
+	"github.com/lvhuat/kits/pkgs/logutil"
 	"github.com/lvhuat/kits/service/discover"
 	"github.com/lvhuat/kits/service/invoke"
 	"github.com/lvhuat/kits/service/profile"
@@ -63,6 +65,10 @@ func makeStaticDiscover(lines []string) (func(string) ([]string, []string, error
 func (pro *Profile) Init(tomlFile string) error {
 	_, _, err := profile.Parse(tomlFile, pro)
 	if err != nil {
+		return err
+	}
+
+	if err := logutil.InitLoggerWithProfile(&pro.Logger); err != nil {
 		return err
 	}
 

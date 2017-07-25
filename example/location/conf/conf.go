@@ -5,12 +5,12 @@ import (
 
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/plugins"
 	hystrixplugins "github.com/afex/hystrix-go/plugins"
 	"github.com/lvhuat/kits/helper/consul"
 	"github.com/lvhuat/kits/pkgs/eval"
 	"github.com/lvhuat/kits/pkgs/ipnet"
+	"github.com/lvhuat/kits/pkgs/logutil"
 	"github.com/lvhuat/kits/service/discover"
 	"github.com/lvhuat/kits/service/invoke"
 	"github.com/lvhuat/kits/service/profile"
@@ -67,28 +67,8 @@ func (pro *Profile) Init(tomlFile string) error {
 		return err
 	}
 
-	// 日志
-	switch pro.Logger.Format {
-	case "json":
-		logrus.SetFormatter(&logrus.JSONFormatter{
-			TimestampFormat: pro.Logger.TimeFormat,
-		})
-		logrus.Debug("Use json format logger")
-	case "text", "":
-		logrus.SetFormatter(&logrus.TextFormatter{
-			DisableColors:   true,
-			TimestampFormat: pro.Logger.TimeFormat,
-		})
-		logrus.Debug("Use text format logger")
-	default:
-		return fmt.Errorf("unsupport logrus formatter type %s", pro.Logger.Format)
-	}
-	if pro.Logger.Level != "" {
-		logLevel, err := logrus.ParseLevel(pro.Logger.Level)
-		if err != nil {
-			return fmt.Errorf("cannot parse logger level %s", pro.Logger.Level)
-		}
-		logrus.SetLevel(logLevel)
+	if err := logutil.InitLoggerWithProfile(&pro.Logger); err != nil {
+		return err
 	}
 
 	consulClient, err := consul.New(pro.Consul.Url)
