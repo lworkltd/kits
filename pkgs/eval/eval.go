@@ -21,8 +21,9 @@ func Value(s string) (string, error) {
 type evalImpl struct {
 }
 
+// 获取结果
 func (impl evalImpl) Value(desc string) (str string, err error) {
-	index := strings.Index(desc, "$(")
+	index := strings.Index(desc, "${")
 	if index < 0 {
 		return desc, nil
 	}
@@ -43,8 +44,9 @@ func (impl evalImpl) Value(desc string) (str string, err error) {
 	return buffer.String(), nil
 }
 
+// 解析语句
 func executeDesc(buffer *bytes.Buffer, desc string) {
-	index := strings.Index(desc, "$(")
+	index := strings.Index(desc, "${")
 	if index < 0 {
 		buffer.WriteString(desc)
 		return
@@ -53,7 +55,7 @@ func executeDesc(buffer *bytes.Buffer, desc string) {
 		buffer.WriteString(desc[:index])
 		desc = desc[index:]
 	}
-	end := strings.Index(desc, ")")
+	end := strings.Index(desc, "}")
 	if end < 0 {
 		panic(fmt.Sprintf("bad syntax,expect need comma, from %v", desc))
 	}
@@ -78,6 +80,7 @@ func executeDesc(buffer *bytes.Buffer, desc string) {
 	}
 }
 
+// 调用器
 type ExecutorFunc func(...string) (string, bool, error)
 
 var executors map[string]ExecutorFunc
@@ -86,10 +89,12 @@ func init() {
 	executors = make(map[string]ExecutorFunc, 10)
 }
 
+// 注册调用器
 func RegisterExecutor(name string, executor ExecutorFunc) {
 	executors[name] = executor
 }
 
+// 注册键值调用
 func RegisterKeyValueExecutor(name string, f func(string) (string, bool, error)) {
 	executors[name] = SingleArgsExecutor(f)
 }
@@ -99,25 +104,32 @@ type executor struct {
 	args []string
 }
 
+// 解析语法，将语句拆分成调用和参数
 func parseDesc(desc string) (string, []string, error) {
 	desc = strings.TrimLeft(desc, " ")
 	if desc == "" {
 		return "", nil, fmt.Errorf("bad eval syntax")
 	}
-	words := strings.Split(desc, " ")
+	words := strings.Split(desc, ",")
 	var args []string
 	if len(words) > 1 {
 		args = words[1:]
 	}
-	return words[0], args, nil
+	for i, arg := range args {
+		args[i] = strings.TrimSpace(arg)
+	}
+	cmd := strings.TrimSpace(words[0])
+	return cmd, args, nil
 }
 
+// 注册无参调用
 func EmptyArgsExecutor(f func() (string, bool, error)) ExecutorFunc {
 	return func(...string) (string, bool, error) {
 		return f()
 	}
 }
 
+// 注册单参数调用
 func SingleArgsExecutor(f func(string) (string, bool, error)) ExecutorFunc {
 	return func(args ...string) (string, bool, error) {
 		if len(args) < 1 {
@@ -125,4 +137,11 @@ func SingleArgsExecutor(f func(string) (string, bool, error)) ExecutorFunc {
 		}
 		return f(args[0])
 	}
+}
+
+// 解析对象
+// 里面所有的字符串都会进行eval处理
+// 必须传递Ptr
+func Complete(v interface{}) error {
+	return complete(v)
 }

@@ -13,7 +13,8 @@ type Profile interface {
 
 // Base 是进程在运行时的配置
 type Base struct {
-	GoMaxProcs float64 `toml:"go_max_procs"` // 最大处理线程P的数量
+	GoMaxProcs int8   `toml:"go_max_procs"` // 最大处理线程P的数量
+	Mode       string `toml:"mode"`
 }
 
 // Mongo  用于初始化MongoDB的配置
@@ -38,7 +39,7 @@ type Mysql struct {
 // 如果你要使用Consul相关的eval操作，那么本配置是必须，否则在执行类似
 // kv_of_consul等eval的时候将无法成功
 type Consul struct {
-	Url             string `toml:"url"`
+	Url             string `toml:"endpoint"`
 	AutoSyncEnabled bool   `toml:"auto_sync_enabled"`
 }
 
@@ -57,7 +58,7 @@ func (consul *Consul) AfterParse() {
 // Service 用于初始化服务的配置
 // 如果
 type Service struct {
-	Host        string `toml:"host"`         // 服务前缀
+	Host        string `toml:"host"`         // 服务监听
 	PathPrefix  string `toml:"path_prefix"`  // 接口前缀
 	McodeProfix string `toml:"mcode_profix"` // API错误码前缀
 
@@ -95,22 +96,22 @@ func (service *Service) AfterParse() {
 }
 
 type Discovery struct {
-	EnableConsul   bool     `json:"enable_consul"`  // 启用Consul，仅使用Consul时有效
-	EnableStatic   bool     `json:"enable_static"`  // 启用静态服务发现
-	StaticServices []string `json:"static_service"` // 静态服务配置,格式：["{serviceName} addr1 [addr2...]"]
+	EnableConsul   bool     `json:"enable_consul"`   // 启用Consul，仅使用Consul时有效
+	EnableStatic   bool     `json:"enable_static"`   // 启用静态服务发现
+	StaticServices []string `json:"static_services"` // 静态服务配置,格式：["{serviceName} addr1 [addr2...]"]
 }
 
 // Invoker服务调用相关的配置
 type Invoker struct {
 	LoadBanlanceMode string `json:"load_balance_mode"` // 负载均衡模式
-	HystrixEnabled   bool   `json:"hytrix_enabled"`    // 启用Hystrix,需配置Hystrix才会生效
+	CircuitEnabled   bool   `json:"circuit_enabled"`   // 启用Hystrix,需配置Hystrix才会生效
 	TracingEnabled   bool   `json:"traceing_enabled"`  // 启用Tracing，需配置Zipkin后有效
 	LoggerEnabled    bool   `json:"logger_enabled"`    // 启用日志打印，日志等级受控于
 }
 
 func (invoker *Invoker) BeforeParse() {
 	invoker.LoadBanlanceMode = "round-robin"
-	invoker.HystrixEnabled = true
+	invoker.CircuitEnabled = true
 	invoker.TracingEnabled = true
 	invoker.LoggerEnabled = true
 }
@@ -119,10 +120,11 @@ func (invoker *Invoker) AfterParse() {}
 // Logger 日志配置
 // 在几乎所有的服务或工具当中，这个配置项目都不应该缺席
 type Logger struct {
-	Format     string   `json:"format"` // 日志的格式
-	Level      string   `json:"level"`
-	TimeTormat string   `json:"time_format"`
-	Hooks      []string `json:"hooks"`
+	Format     string     `json:"format"` // 日志的格式
+	Level      string     `json:"level"`
+	TimeTormat string     `json:"time_format"`
+	Hooks      [][]string `json:"hooks"`
+	Colorful   bool       `json:"colorful"`
 }
 
 func (logger *Logger) BeforeParse() {
@@ -133,7 +135,8 @@ func (logger *Logger) AfterParse() {}
 
 // Hystrix 熔断和异常请求的配置
 type Hystrix struct {
-	Url                   string `toml:"statsd_url"`
+	StatsdUrl             string `toml:"statsd_url"`
+	Prefix                string `toml:"prefix"`
 	Timeout               int    `toml:"timeout"`
 	MaxConcurrentRequests int    `toml:"max_concurrent_request"`
 	ErrorPercentThreshold int    `toml:"error_percent_threshold"`
@@ -141,10 +144,10 @@ type Hystrix struct {
 
 func (hystrix *Hystrix) BeforeParse() {}
 func (hystrix *Hystrix) AfterParse() {
-	if hystrix.Url == "" {
+	if hystrix.StatsdUrl == "" {
 		logrus.WithFields(logrus.Fields{
 			"profile": "Hystrix",
-		}).Warn("Url is still empty")
+		}).Warn("StatsdUrl is still empty")
 	}
 }
 

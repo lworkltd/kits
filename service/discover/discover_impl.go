@@ -8,21 +8,23 @@ import (
 
 // DiscoverImpl 是服务发现的实现
 type DiscoverImpl struct {
-	consul *consul.ConsulClient
-	static *StaticDiscoverer
+	seacher    func(string) ([]string, []string, error)
+	static     func(string) ([]string, []string, error)
+	register   func(*consul.RegisterOption) error
+	unregister func(*consul.RegisterOption) error
 }
 
 // Discover 发现服务
 func (discover *DiscoverImpl) Discover(service string) ([]string, []string, error) {
 	if discover.static != nil {
-		remotes, _ := discover.static.Discover(service)
+		remotes, _, _ := discover.static(service)
 		if len(remotes) != 0 {
 			return remotes, remotes, nil
 		}
 	}
 
-	if discover.consul != nil {
-		return discover.consul.Discover(service)
+	if discover.seacher != nil {
+		return discover.seacher(service)
 	}
 
 	return nil, nil, fmt.Errorf("not avaliable discover")
@@ -30,25 +32,18 @@ func (discover *DiscoverImpl) Discover(service string) ([]string, []string, erro
 
 // Register 注册服务
 func (discover *DiscoverImpl) Register(option *consul.RegisterOption) error {
-	if discover.consul == nil {
+	if discover.register == nil {
 		return fmt.Errorf("consul not initalize yet")
 	}
-	return discover.consul.Register(option)
+
+	return discover.unregister(option)
 }
 
 // Unregister 删除服务
 func (discover *DiscoverImpl) Unregister(option *consul.RegisterOption) error {
-	if discover.consul == nil {
-		return fmt.Errorf("consul not initalize yet")
-	}
-	return discover.consul.Unregister(option)
-}
-
-// KeyValue 返回一个consul的key值
-func (discover *DiscoverImpl) KeyValue(key string) (string, bool, error) {
-	if discover.consul == nil {
-		return "", false, fmt.Errorf("consul not initalize yet")
+	if discover.unregister == nil {
+		return fmt.Errorf("register not initalize yet")
 	}
 
-	return discover.consul.KeyValue(key)
+	return discover.register(option)
 }

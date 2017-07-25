@@ -1,0 +1,82 @@
+[base]
+go_max_procs=3
+mode="dev"
+
+[logger]
+format="json"
+level="warn"
+time_format="RFC3399"
+hooks=[
+    ["Airbrake","123","xyz","production"],
+    ["Syslog","udp","localhost:514","info",""],
+    ["SelfDefined","arg1","arg2","arg3"],
+    ["FileHook",">=warn|fileline|server.error.log","<=info|server.info.log"]
+]
+
+
+[service]
+host=":8080"
+path_prefix="myservice"
+mcode_profix="kits_simple_"
+
+trace_enabled=true
+access_log_enabled=true
+
+reportable=true
+report_ip="${ip_of_interface,}"
+report_tags=["master","v0.2.1"]
+report_health=true
+report_name="simple-service2"
+report_id="kits_simple_8080"
+
+handle_pprof = true
+handle_pprof_prefix="/abcdefg"
+
+[mongo]
+url="${kv_of_consul,kits/mongo/url-external}"
+
+[redis]
+url="${kv_of_consul,kits/redis/endpoint-external}"
+password="abc123"
+db=1
+
+[application]
+# TODO:xxxx
+
+[zipkin]
+host="${kv_of_consul,kits/zipkin/url-external}"
+
+[consul]
+endpoint="120.76.46.55:8500"
+auto_sync_enabled = true
+
+[discovery]
+enable_consul = true
+enable_static = true
+static_services=[
+    "rancher ${kv_of_consul,kits/rancher/url-external}",
+    "product_service 127.0.0.1:1923 127.0.0.1:2023"
+]
+
+[hystrix]
+statsd_url="${kv_of_consul,kits/statsd/url-external}"
+timeout=1000
+max_concurrent_request=200
+error_percent_threshold=20
+# service_circuits = [
+#     ["serviceA",1000,200,20,
+#         ["seviceA-id-1",1000,200,20],
+#         ["seviceA-id-2",1000,200,20]
+#     ],
+#     ["serviceB",-1,-1,-1,
+#         ["seviceA-id-1",1000,200,20],
+#         ["seviceA-id-2",1000,-1,20]
+#     ]
+# ]
+
+
+[invoker]
+load_balance_mode = "round-robin"
+tracing_enabled = true
+hytrix_enabled = true
+do_logger = true
