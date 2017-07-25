@@ -14,6 +14,7 @@ type (
 		LoadBalanceMode string
 		UseTracing      bool
 		UseCircuit      bool
+		DoLogger        bool
 	}
 
 	// IEngine 引擎

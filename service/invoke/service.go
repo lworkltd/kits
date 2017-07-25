@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/afex/hystrix-go/hystrix"
 	"github.com/lvhuat/kits/pkgs/co"
 )
 
@@ -16,6 +17,7 @@ type service struct {
 	discover       DiscoveryFunc
 	useTracing     bool
 	useCircuit     bool
+	circuitConfig  hystrix.CommandConfig
 }
 
 // 选择服务节点
@@ -37,13 +39,21 @@ func (service *service) remote() (string, string, error) {
 		return "", "", fmt.Errorf("service %s not found", service.name)
 	}
 
-	if l == 1 {
-		return remotes[0], ids[0], nil
+	var use int64
+	if l > 1 {
+		// 通过轮询策略来访问
+		// TODO:支持更多的策略
+		use = index % int64(l)
+	}
+	addr, id := remotes[use], ids[use]
+
+	if service.useCircuit {
+		if _, exist, _ := hystrix.GetCircuit(id); !exist {
+			hystrix.ConfigureCommand(id, service.circuitConfig)
+		}
 	}
 
-	use := index % int64(l)
-	// 通过轮询策略来访问
-	return remotes[use], ids[use], nil
+	return addr, id, nil
 }
 
 // Get 使用GET方法请求

@@ -28,15 +28,19 @@ func Unregister(option *consul.RegisterOption) error {
 
 // DiscoveryOption 初始化服务发现的
 type Option struct {
-	StaticServices []*StaticService
-	ConsulClient   *consul.ConsulClient
+	StaticFunc     func(string) ([]string, []string, error) // 静态服务
+	SearchFunc     func(string) ([]string, []string, error) // 发现服务
+	RegisterFunc   func(*consul.RegisterOption) error       // 注册服务
+	UnregisterFunc func(*consul.RegisterOption) error       // 注销服务
 }
 
 // InitDisconvery 初始化服务发现
 func Init(option *Option) error {
 	dis := &DiscoverImpl{}
-	dis.static = NewStaticDiscoverer(option.StaticServices)
-	dis.consul = option.ConsulClient
+	dis.static = option.StaticFunc
+	dis.seacher = option.SearchFunc
+	dis.register = option.RegisterFunc
+	dis.unregister = option.UnregisterFunc
 	defaultDiscoverer = dis
 
 	return nil
