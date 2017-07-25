@@ -1,4 +1,4 @@
-package logfmt
+package logutil
 
 import "github.com/Sirupsen/logrus"
 
