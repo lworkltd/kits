@@ -9,12 +9,15 @@ import (
 
 	"sync"
 
+	"errors"
 	"github.com/Sirupsen/logrus"
 	"github.com/hashicorp/consul/api"
 )
 
+var ErrConsulNotInit = errors.New("consul not init yet,please initilize with consul.InitConsul() or consul.SetClient()")
+
 // ConsulClient 服务发现
-type ConsulClient struct {
+type Client struct {
 	cli          *api.Client
 	mutex        sync.RWMutex
 	serviceCache map[string]*serviceCache
@@ -39,7 +42,7 @@ type RegisterOption struct {
 }
 
 // NewConsulClient 创建一个consul客户端
-func New(host string) (*ConsulClient, error) {
+func New(host string) (*Client, error) {
 	if !strings.HasPrefix(host, "http") && !strings.HasPrefix(host, "unix") {
 		host = "http://" + host
 	}
@@ -50,7 +53,7 @@ func New(host string) (*ConsulClient, error) {
 		return nil, err
 	}
 
-	consul := &ConsulClient{
+	consul := &Client{
 		cli:          cli,
 		serviceCache: make(map[string]*serviceCache, 10),
 	}
@@ -61,7 +64,7 @@ func New(host string) (*ConsulClient, error) {
 }
 
 // Register 向consul上报一个服务
-func (client *ConsulClient) Register(option *RegisterOption) error {
+func (client *Client) Register(option *RegisterOption) error {
 	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
 		ID:      option.Id,   // SERVICE_ID
 		Name:    option.Name, // 模块定义 fw_service
@@ -75,12 +78,12 @@ func (client *ConsulClient) Register(option *RegisterOption) error {
 }
 
 // Unregister 删除一个服务节点
-func (client *ConsulClient) Unregister(option *RegisterOption) error {
+func (client *Client) Unregister(option *RegisterOption) error {
 	return client.cli.Agent().ServiceDeregister(option.Id)
 }
 
 // Discover 从consul发现一个服务
-func (client *ConsulClient) Discover(name string) ([]string, []string, error) {
+func (client *Client) Discover(name string) ([]string, []string, error) {
 	client.mutex.RLock()
 	service, exist := client.serviceCache[name]
 	client.mutex.RUnlock()
@@ -108,7 +111,10 @@ func (client *ConsulClient) Discover(name string) ([]string, []string, error) {
 }
 
 // KeyValue 从consul获取一个key值
-func (client *ConsulClient) KeyValue(key string) (string, bool, error) {
+func (client *Client) KeyValue(key string) (string, bool, error) {
+	if client == nil || client.cli == nil {
+		return "", false, ErrConsulNotInit
+	}
 	pair, _, err := client.cli.KV().Get(key, nil)
 
 	if err != nil {
@@ -123,7 +129,7 @@ func (client *ConsulClient) KeyValue(key string) (string, bool, error) {
 }
 
 // 循环地去读取已经访问过的服务
-func (client *ConsulClient) loop() {
+func (client *Client) loop() {
 	for {
 		<-time.After(time.Minute)
 
@@ -161,7 +167,7 @@ func (client *ConsulClient) loop() {
 }
 
 // 获取一个健康的服务
-func (client *ConsulClient) service(service string) (*serviceCache, error) {
+func (client *Client) service(service string) (*serviceCache, error) {
 	entrys, _, err := client.cli.Health().Service(service, "", true, nil)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
@@ -198,7 +204,7 @@ func (client *ConsulClient) service(service string) (*serviceCache, error) {
 }
 
 // 合并服务信息
-func (client *ConsulClient) mergeServices(newServices map[string]*serviceCache) {
+func (client *Client) mergeServices(newServices map[string]*serviceCache) {
 	client.mutex.Lock()
 	defer client.mutex.Unlock()
 	for name, info := range newServices {
@@ -210,7 +216,7 @@ func (client *ConsulClient) mergeServices(newServices map[string]*serviceCache) 
 }
 
 // 合并服务信息
-func (client *ConsulClient) removeServices(names []string) {
+func (client *Client) removeServices(names []string) {
 	client.mutex.Lock()
 	defer client.mutex.Unlock()
 
@@ -219,7 +225,7 @@ func (client *ConsulClient) removeServices(names []string) {
 	}
 }
 
-var defaultConsulClient *ConsulClient
+var defaultClient *Client
 var doInitConsulOnce sync.Once
 
 // InitConsul 初始化consul
@@ -229,15 +235,15 @@ func InitConsul(host string) error {
 		return err
 	}
 
-	defaultConsulClient = cli
+	defaultClient = cli
 
 	return nil
 }
 
-func SetDefault(client *ConsulClient) {
-	defaultConsulClient = client
+func SetClient(client *Client) {
+	defaultClient = client
 }
 
-func Get() *ConsulClient {
-	return defaultConsulClient
+func Get() *Client {
+	return defaultClient
 }

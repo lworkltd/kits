@@ -11,13 +11,13 @@ type StaticDiscoverer struct {
 }
 
 // Discover 从consul发现一个服务
-func (staticDiscoverer *StaticDiscoverer) Discover(service string) ([]string, error) {
+func (staticDiscoverer *StaticDiscoverer) Discover(service string) ([]string, []string, error) {
 	s, exist := staticDiscoverer.serviceCache[service]
 	if !exist {
-		return []string{}, nil
+		return []string{}, []string{}, nil
 	}
 
-	return s.Hosts, nil
+	return s.Hosts, s.Hosts, nil
 }
 
 // NewStaticDiscoverer 创建一个服务实例

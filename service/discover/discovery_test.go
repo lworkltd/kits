@@ -10,7 +10,7 @@ import (
 func TestInitDisconvery(t *testing.T) {
 	csl, err := consul.New("10.25.100.164:8500")
 	Init(&Option{
-		ConsulClient: csl,
+		SearchFunc: csl.Discover,
 	})
 	key := "kits/unittest/hello"
 	value, _, e := csl.KeyValue("kits/unittest/hello")
@@ -27,7 +27,7 @@ func TestInitDisconvery(t *testing.T) {
 	}
 
 	Register(o)
-	remotes, err := Discover(o.Name)
+	remotes, _, err := Discover(o.Name)
 	if err != nil || len(remotes) != 1 {
 		t.Errorf("expect 1 server got %v ,err=%v", len(remotes), err)
 	}
@@ -37,7 +37,7 @@ func TestInitDisconvery(t *testing.T) {
 
 	Unregister(o)
 
-	remotes, err = Discover(o.Name)
+	remotes, _, err = Discover(o.Name)
 	if err != nil || len(remotes) != 1 {
 		t.Errorf("expect 0 server got %v ,err=%v", len(remotes), err)
 	}

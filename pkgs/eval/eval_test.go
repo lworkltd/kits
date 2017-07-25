@@ -1,6 +1,8 @@
 package eval
 
 import (
+	"fmt"
+	"github.com/lvhuat/kits/pkgs/jsonize"
 	"reflect"
 	"testing"
 )
@@ -19,7 +21,7 @@ func Test_parseDesc(t *testing.T) {
 		{
 			name: "normal",
 			args: args{
-				desc: "ip_of_interface x y z ",
+				desc: "ip_of_interface,x,y, z,",
 			},
 			want:    "ip_of_interface",
 			want1:   []string{"x", "y", "z", ""},
@@ -179,7 +181,7 @@ func Test_evalImpl_Eval(t *testing.T) {
 		{
 			name: "normal",
 			args: args{
-				desc: "$(ip_of_interface eth0):8080",
+				desc: "${ip_of_interface,eth0}:8080",
 			},
 			wantStr: "127.0.0.1:8080",
 			wantErr: false,
@@ -187,7 +189,7 @@ func Test_evalImpl_Eval(t *testing.T) {
 		{
 			name: "prefix",
 			args: args{
-				desc: "http://$(ip_of_interface eth0):8080$%@*@_)(8979723$(kv_of_consul key)",
+				desc: "http://${ip_of_interface,eth0}:8080$%@*@_)(8979723${kv_of_consul, key}",
 			},
 			wantStr: "http://127.0.0.1:8080$%@*@_)(8979723value",
 			wantErr: false,
@@ -203,7 +205,7 @@ func Test_evalImpl_Eval(t *testing.T) {
 		{
 			name: "executor_not_found",
 			args: args{
-				desc: "$(executor_not_found 123 123)",
+				desc: "${executor_not_found,123,123}",
 			},
 			wantStr: "",
 			wantErr: true,
@@ -211,7 +213,7 @@ func Test_evalImpl_Eval(t *testing.T) {
 		{
 			name: "bad_syntax",
 			args: args{
-				desc: "$(bad_syntax ",
+				desc: "${bad_syntax,",
 			},
 			wantStr: "",
 			wantErr: true,
@@ -219,7 +221,7 @@ func Test_evalImpl_Eval(t *testing.T) {
 		{
 			name: "bad_syntax2",
 			args: args{
-				desc: "$()",
+				desc: "${}",
 			},
 			wantStr: "",
 			wantErr: true,
@@ -268,6 +270,78 @@ func TestValue(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("Value() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestComplete(t *testing.T) {
+	RegisterKeyValueExecutor("valueof", func(key string) (string, bool, error) {
+		return key, true, nil
+	})
+	type SubItem struct {
+		Slice []string
+		Value string
+	}
+	type Service struct {
+		SubItem
+		SubItemPtr   *SubItem
+		SubItemField SubItem
+		Slice1       []string
+		String       string
+		Interface    interface{}
+	}
+	type args struct {
+		v interface{}
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    interface{}
+		wantErr bool
+	}{
+		{
+			args: args{
+				v: &Service{
+					SubItem: SubItem{
+						Value: "${valueof,123}",
+						Slice: []string{"apple", "${valueof,456}"},
+					},
+					SubItemField: SubItem{
+						Value: "${valueof,abcdefg123}",
+						Slice: []string{"apple", "${valueof,orange}"},
+					},
+					SubItemPtr: &SubItem{
+						Value: "${valueof,QWERTY}",
+						Slice: []string{"apple", "${valueof,orange}"},
+					},
+					Slice1: []string{"${valueof,ASDFGH}", "${valueof,*()_+}"},
+					String: "${valueof,zxcvbn}",
+				},
+			},
+			want: &Service{
+				SubItem: SubItem{
+					Value: "123",
+					Slice: []string{"apple", "456"},
+				},
+				SubItemField: SubItem{
+					Value: "abcdefg123",
+					Slice: []string{"apple", "orange"},
+				},
+				SubItemPtr: &SubItem{
+					Value: "${valueof,QWERTY}",
+					Slice: []string{"apple", "orange"},
+				},
+				Slice1: []string{"ASDFGH", "*()_+"},
+				String: "zxcvbn",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := Complete(tt.args.v); (err != nil) != tt.wantErr {
+				t.Errorf("Complete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			fmt.Printf("%s\n", jsonize.V(tt.args.v, true))
 		})
 	}
 }

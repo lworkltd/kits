@@ -6,69 +6,75 @@ import (
 
 type Error interface {
 	error
-	Code() string    // 错误码
-	Message() string // 错误信息
+	Code() int // 错误码
+	Mcode() string
 }
 
 type errorImpl struct {
 	message string
-	code    string
-	err     string
+	mcode   string
+	code    int
 }
 
 func (err *errorImpl) Error() string {
-	if err.err == "" {
-		err.err = fmt.Sprintf("%s,%s", err.code, err.message)
-	}
-
-	return err.err
-}
-
-func (err *errorImpl) Code() string {
-	return err.code
-}
-
-func (err *errorImpl) Message() string {
 	return err.message
 }
 
-func New(code, message string) Error {
+func (err *errorImpl) Code() int {
+	return err.code
+}
+
+func (err *errorImpl) Mcode() string {
+	return err.mcode
+}
+
+func New(code int, message string) Error {
 	return &errorImpl{
 		code:    code,
 		message: message,
 	}
 }
-func Newf(code, format string, args ...interface{}) Error {
+
+func Newf(code int, format string, args ...interface{}) Error {
 	return &errorImpl{
 		code:    code,
 		message: fmt.Sprintf(format, args...),
 	}
 }
 
-func Newln(code string, args ...interface{}) Error {
+func Newln(code int, args ...interface{}) Error {
 	return &errorImpl{
 		code:    code,
 		message: fmt.Sprintln(args...),
 	}
 }
 
-func NewPrefixf(prefix, code, format string, args ...interface{}) Error {
+func NewPrefixf(prefix string, code int, format string, args ...interface{}) Error {
 	return &errorImpl{
+		mcode:   fmt.Sprintf("%s_%d", prefix, code),
 		code:    code,
 		message: fmt.Sprintf(format, args...),
 	}
 }
 
-func NewPrefixln(prefix, code string, args ...interface{}) Error {
+func NewPrefixln(prefix string, code int, args ...interface{}) Error {
 	return &errorImpl{
+		mcode:   fmt.Sprintf("%s_%d", prefix, code),
 		code:    code,
 		message: fmt.Sprintln(args...),
 	}
 }
 
-func NewError(code string, err error) Error {
+func NewError(code int, err error) Error {
 	return &errorImpl{
 		code:    code,
 		message: err.Error(), //
+	}
+}
+
+func NewMcode(mcode string, msg string) Error {
+	return &errorImpl{
+		mcode:   mcode,
+		message: msg, //
 	}
 }
