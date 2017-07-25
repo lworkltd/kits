@@ -25,9 +25,9 @@ type Mongo struct {
 // Redis 用于初始化Redis数据库的配置
 //
 type Redis struct {
-	Url      string `toml:"url"`
+	Url      string `toml:"endpoints"`
 	Password string `toml:"password"`
-	DB       int    `toml:"select_db"`
+	DB       int    `toml:"db"`
 }
 
 // Mysql 用于初始化Mysql数据库的配置
@@ -124,7 +124,6 @@ type Logger struct {
 	Level      string     `json:"level"`
 	TimeTormat string     `json:"time_format"`
 	Hooks      [][]string `json:"hooks"`
-	Colorful   bool       `json:"colorful"`
 }
 
 func (logger *Logger) BeforeParse() {
