@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"fmt"
+
+	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/plugins"
 	hystrixplugins "github.com/afex/hystrix-go/plugins"
 	"github.com/lvhuat/kits/helper/consul"
@@ -63,6 +65,30 @@ func (pro *Profile) Init(tomlFile string) error {
 	_, _, err := profile.Parse(tomlFile, pro)
 	if err != nil {
 		return err
+	}
+
+	// 日志
+	switch pro.Logger.Format {
+	case "json":
+		logrus.SetFormatter(&logrus.JSONFormatter{
+			TimestampFormat: pro.Logger.TimeFormat,
+		})
+		logrus.Debug("Use json format logger")
+	case "text", "":
+		logrus.SetFormatter(&logrus.TextFormatter{
+			DisableColors:   true,
+			TimestampFormat: pro.Logger.TimeFormat,
+		})
+		logrus.Debug("Use text format logger")
+	default:
+		return fmt.Errorf("unsupport logrus formatter type %s", pro.Logger.Format)
+	}
+	if pro.Logger.Level != "" {
+		logLevel, err := logrus.ParseLevel(pro.Logger.Level)
+		if err != nil {
+			return fmt.Errorf("cannot parse logger level %s", pro.Logger.Level)
+		}
+		logrus.SetLevel(logLevel)
 	}
 
 	consulClient, err := consul.New(pro.Consul.Url)

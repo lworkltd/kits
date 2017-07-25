@@ -3,9 +3,10 @@ go_max_procs=3
 mode="dev"
 
 [logger]
-format="json"
-level="warn"
+format="text"
+level="debug"
 time_format="RFC3399"
+file="server.log"
 hooks=[
     ["Airbrake","123","xyz","production"],
     ["Syslog","udp","localhost:514","info",""],

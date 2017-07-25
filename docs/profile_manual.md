@@ -133,13 +133,14 @@ logger_enabled = true
 ```
 
 
-说明
+其他说明
 ----
 + **eval**  
 对于有些动态配置，比如consul的kv，网卡的ip等可以使用eval来解释配置的实际值
 ,但是要使用这种规则首先需要在代码中对实现接口,参考[Eval指引](../pkgs/eval/README.md)
 + **invoker.balance_mode**  
 目前支持`round-robin`
-+ **hystrix.service_circuits**
++ **hystrix.service_circuits**  
 对于不同服务甚至是服务ID的熔断配置，尚未实现
-+ **redis.endpoints** 如果你是集群用半角逗号分割你的地址
++ **redis.endpoints**   
+如果你是集群用半角逗号分割你的地址

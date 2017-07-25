@@ -122,7 +122,8 @@ func (invoker *Invoker) AfterParse() {}
 type Logger struct {
 	Format     string     `json:"format"` // 日志的格式
 	Level      string     `json:"level"`
-	TimeTormat string     `json:"time_format"`
+	File       string     `json:"file"`
+	TimeFormat string     `json:"time_format"`
 	Hooks      [][]string `json:"hooks"`
 }
 
