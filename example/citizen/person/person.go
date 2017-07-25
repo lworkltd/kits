@@ -2,6 +2,7 @@ package person
 
 import (
 	"context"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/lvhuat/kits/example/citizen/model"
 	loc "github.com/lvhuat/kits/example/location/model"
@@ -32,7 +33,10 @@ func GetPerson(cxt context.Context, age int8) ([]*PersonReatimeInfo, code.Error)
 		location := loc.Location{}
 		res := &invokeutil.Response{}
 		info.Location = location
-		status, invokeerr := invoke.Name("location").Get("/v1/location").Exec(res)
+		status, invokeerr := invoke.Name("location").
+			Get("/v1/location").
+			Query("id", person.Id).
+			Exec(res)
 		cerr := invokeutil.Unpkg("location", invokeerr, status, res, &location)
 		if cerr != nil {
 			logrus.WithFields(logrus.Fields{
