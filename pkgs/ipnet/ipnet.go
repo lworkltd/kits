@@ -12,7 +12,7 @@ func Ipv4(adapter string) (string, bool, error) {
 			return "", false, err
 		}
 		for _, addr := range addrs {
-			if ip, ok := addr.(*net.IPNet); ok && !ip.IP.IsLoopback() {
+			if ip, ok := addr.(*net.IPNet); ok && ip.IP.IsGlobalUnicast() {
 				if ipv4 := ip.IP.To4(); ipv4 != nil {
 					return ipv4.String(), true, nil
 				}
