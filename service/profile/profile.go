@@ -25,9 +25,8 @@ type Mongo struct {
 // Redis 用于初始化Redis数据库的配置
 //
 type Redis struct {
-	Url      string `toml:"endpoints"`
-	Password string `toml:"password"`
-	DB       int    `toml:"db"`
+	Endpoints string `toml:"endpoints"`
+	Password  string `toml:"password"`
 }
 
 // Mysql 用于初始化Mysql数据库的配置
