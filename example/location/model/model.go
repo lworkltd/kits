@@ -2,11 +2,12 @@ package model
 
 import (
 	"fmt"
+	"strconv"
+	"sync"
+
 	"github.com/go-redis/redis"
 	"github.com/lworkltd/kits/example/location/api/errcode"
 	"github.com/lworkltd/kits/service/restful/code"
-	"strconv"
-	"sync"
 )
 
 type Location struct {
@@ -36,7 +37,7 @@ func (sess *RedisSession) GetCitizenLocation(id string) (Location, code.Error) {
 	if err != nil {
 		return Location{}, code.NewError(errcode.ReadCacheFailed, err)
 	}
-	location.Latitude = stringToFloat(v["latitude"], 0)
+	location.Longitude = stringToFloat(v["longitude"], 0)
 	location.Latitude = stringToFloat(v["latitude"], 0)
 
 	return location, nil
