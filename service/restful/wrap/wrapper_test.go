@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lvhuat/kits/service/restful/code"
+	"github.com/lworkltd/kits/service/restful/code"
 )
 
 func Test_Server(t *testing.T) {

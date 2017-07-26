@@ -3,7 +3,7 @@ package discover
 import (
 	"fmt"
 
-	"github.com/lvhuat/kits/helper/consul"
+	"github.com/lworkltd/kits/helper/consul"
 )
 
 // DiscoverImpl 是服务发现的实现

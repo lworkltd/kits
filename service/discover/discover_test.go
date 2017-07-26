@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lvhuat/kits/helper/consul"
+	"github.com/lworkltd/kits/helper/consul"
 )
 
 func TestInitDiscovery(t *testing.T) {

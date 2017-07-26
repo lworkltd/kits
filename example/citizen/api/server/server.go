@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 	"github.com/gin-gonic/gin"
-	"github.com/lvhuat/kits/service/profile"
-	"github.com/lvhuat/kits/service/restful/wrap"
+	"github.com/lworkltd/kits/service/profile"
+	"github.com/lworkltd/kits/service/restful/wrap"
 )
 
 var wrapper *wrap.Wrapper

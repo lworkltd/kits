@@ -7,7 +7,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
-	"github.com/lvhuat/kits/service/restful/code"
+	"github.com/lworkltd/kits/service/restful/code"
 	"net/http"
 	"runtime/debug"
 	"time"

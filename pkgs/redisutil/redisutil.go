@@ -3,7 +3,7 @@ package redisutil
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/go-redis/redis"
-	"github.com/lvhuat/kits/service/profile"
+	"github.com/lworkltd/kits/service/profile"
 	"strings"
 )
 

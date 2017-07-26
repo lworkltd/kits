@@ -3,8 +3,8 @@ package model
 import (
 	"fmt"
 	"github.com/go-redis/redis"
-	"github.com/lvhuat/kits/example/location/api/errcode"
-	"github.com/lvhuat/kits/service/restful/code"
+	"github.com/lworkltd/kits/example/location/api/errcode"
+	"github.com/lworkltd/kits/service/restful/code"
 	"strconv"
 	"sync"
 )
