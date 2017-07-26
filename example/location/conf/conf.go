@@ -5,11 +5,13 @@ import (
 
 	"fmt"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/plugins"
 	hystrixplugins "github.com/afex/hystrix-go/plugins"
 	"github.com/lvhuat/kits/helper/consul"
 	"github.com/lvhuat/kits/pkgs/eval"
 	"github.com/lvhuat/kits/pkgs/ipnet"
+	"github.com/lvhuat/kits/pkgs/jsonize"
 	"github.com/lvhuat/kits/pkgs/logutil"
 	"github.com/lvhuat/kits/service/discover"
 	"github.com/lvhuat/kits/service/invoke"
@@ -109,7 +111,6 @@ func (pro *Profile) Init(tomlFile string) error {
 			Prefix:     pro.Hystrix.Prefix,
 		})
 	}
-
 	// Zipkin 调用追踪
 	if pro.Zipkin.Url != "" {
 		collector, err := zipkin.NewHTTPCollector(pro.Zipkin.Url)
@@ -154,8 +155,18 @@ func (pro *Profile) Init(tomlFile string) error {
 	return nil
 }
 
-// 根据自己需要对方放出配置项目
+func Dump() {
+	mutiline := logutil.IsMultiLineFormat(configuration.Logger.Format)
+	logrus.WithField("profile", jsonize.V(configuration, mutiline)).Info("Dump profile")
+}
 
+// 根据自己需要对方放出配置项目
+// 返回服务配置
 func GetService() *profile.Service {
 	return &configuration.Service
+}
+
+// 获取redis配置
+func GetRedis() *profile.Redis {
+	return &configuration.Redis
 }
