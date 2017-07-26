@@ -7,7 +7,7 @@ import (
 	"github.com/lvhuat/kits/helper/consul"
 )
 
-func TestInitDisconvery(t *testing.T) {
+func TestInitDiscovery(t *testing.T) {
 	csl, err := consul.New("10.25.100.164:8500")
 	Init(&Option{
 		SearchFunc: csl.Discover,
