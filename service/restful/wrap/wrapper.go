@@ -120,11 +120,11 @@ func (wrapper *Wrapper) Get(srv HttpServer, path string, f WrappedFunc) {
 }
 
 func (wrapper *Wrapper) Patch(srv HttpServer, path string, f WrappedFunc) {
-	wrapper.Handle("POST", srv, path, f)
+	wrapper.Handle("PATCH", srv, path, f)
 }
 
 func (wrapper *Wrapper) Post(srv HttpServer, path string, f WrappedFunc) {
-	wrapper.Handle("DELETE", srv, path, f)
+	wrapper.Handle("POST", srv, path, f)
 }
 
 func (wrapper *Wrapper) Put(srv HttpServer, path string, f WrappedFunc) {
@@ -137,6 +137,10 @@ func (wrapper *Wrapper) Options(srv HttpServer, path string, f WrappedFunc) {
 
 func (wrapper *Wrapper) Head(srv HttpServer, path string, f WrappedFunc) {
 	wrapper.Handle("HEAD", srv, path, f)
+}
+
+func (wrapper *Wrapper) Delete(srv HttpServer, path string, f WrappedFunc) {
+	wrapper.Handle("DELETE", srv, path, f)
 }
 
 type LogParameter struct {
