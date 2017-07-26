@@ -2,13 +2,14 @@ package discoverutil
 
 import (
 	"fmt"
+	"net"
+	"strconv"
+	"strings"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/helper/consul"
 	"github.com/lworkltd/kits/service/discover"
 	"github.com/lworkltd/kits/service/profile"
-	"net"
-	"strconv"
-	"strings"
 )
 
 func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
@@ -59,6 +60,8 @@ func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
 					}).Warn("Service has same id,but endpoint changed")
 				}
 			}
+
+			//TODO:Warn which the same ip port belong to differet service
 		}
 	}
 
