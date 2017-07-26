@@ -53,4 +53,5 @@ func Test_Server(t *testing.T) {
 	wrapper.Options(v2, "/bar", bar)
 	wrapper.Patch(v2, "/bar", bar)
 	wrapper.Head(v2, "/bar", bar)
+	wrapper.Delete(v2, "/bar", bar)
 }
