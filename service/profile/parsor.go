@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/BurntSushi/toml"
-	"github.com/lvhuat/kits/pkgs/tags"
+	"github.com/lworkltd/kits/pkgs/tags"
 )
 
 // ProfileParser 配置解析器

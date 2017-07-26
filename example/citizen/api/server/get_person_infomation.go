@@ -2,9 +2,9 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/lvhuat/kits/example/citizen/api/errcode"
-	"github.com/lvhuat/kits/example/citizen/person"
-	"github.com/lvhuat/kits/service/restful/code"
+	"github.com/lworkltd/kits/example/citizen/api/errcode"
+	"github.com/lworkltd/kits/example/citizen/person"
+	"github.com/lworkltd/kits/service/restful/code"
 	"strconv"
 )
 

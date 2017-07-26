@@ -2,13 +2,13 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/lvhuat/kits/example/location/api/errcode"
-	"github.com/lvhuat/kits/example/location/position"
-	"github.com/lvhuat/kits/pkgs/discoverutil"
-	"github.com/lvhuat/kits/pkgs/ginutil"
-	"github.com/lvhuat/kits/service/profile"
-	"github.com/lvhuat/kits/service/restful/code"
-	"github.com/lvhuat/kits/service/restful/wrap"
+	"github.com/lworkltd/kits/example/location/api/errcode"
+	"github.com/lworkltd/kits/example/location/position"
+	"github.com/lworkltd/kits/pkgs/discoverutil"
+	"github.com/lworkltd/kits/pkgs/ginutil"
+	"github.com/lworkltd/kits/service/profile"
+	"github.com/lworkltd/kits/service/restful/code"
+	"github.com/lworkltd/kits/service/restful/wrap"
 )
 
 var wrapper *wrap.Wrapper

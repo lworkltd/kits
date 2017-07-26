@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/lvhuat/kits/service/profile"
+	"github.com/lworkltd/kits/service/profile"
 )
 
 func InitLoggerWithProfile(cfg *profile.Logger) error {

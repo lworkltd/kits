@@ -3,9 +3,9 @@ package discoverutil
 import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"github.com/lvhuat/kits/helper/consul"
-	"github.com/lvhuat/kits/service/discover"
-	"github.com/lvhuat/kits/service/profile"
+	"github.com/lworkltd/kits/helper/consul"
+	"github.com/lworkltd/kits/service/discover"
+	"github.com/lworkltd/kits/service/profile"
 	"net"
 	"strconv"
 	"strings"
