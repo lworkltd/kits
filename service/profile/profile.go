@@ -64,12 +64,11 @@ type Service struct {
 	TraceEnabled     bool `toml:"trace_enabled"`      // 启用OpenTrace,需要Zipkin配置
 	AccessLogEnabled bool `toml:"access_log_enabled"` // 访问日志启用
 
-	Reportable  bool     `toml:"reportable"`    // 启用上报
-	ReportIp    string   `toml:"report_ip"`     // 上报IP
-	ReportTags  []string `toml:"report_tags"`   // 上报的标签
-	ReportHeach bool     `toml:"report_health"` // 启用健康检查
-	ReportName  string   `toml:"report_name"`   // 上报名字
-	ReportId    string   `toml:"report_id"`     // 上报的ID
+	Reportable bool     `toml:"reportable"`  // 启用上报
+	ReportIp   string   `toml:"report_ip"`   // 上报IP
+	ReportTags []string `toml:"report_tags"` // 上报的标签
+	ReportName string   `toml:"report_name"` // 上报名字
+	ReportId   string   `toml:"report_id"`   // 上报的ID
 
 	PprofEnabled    bool   `toml:"pprof_enabled"`     // 启用PPROF
 	PprofPathPrefix string `toml:"pprof_path_prefix"` // PPROF的路径前缀,
@@ -80,7 +79,6 @@ func (service *Service) BeforeParse() {
 	service.AccessLogEnabled = true
 	service.Reportable = true
 	service.ReportIp = "ip_of_first_interface()"
-	service.ReportHeach = true
 	service.PprofEnabled = true
 }
 
@@ -98,6 +96,18 @@ type Discovery struct {
 	EnableConsul   bool     `json:"enable_consul"`   // 启用Consul，仅使用Consul时有效
 	EnableStatic   bool     `json:"enable_static"`   // 启用静态服务发现
 	StaticServices []string `json:"static_services"` // 静态服务配置,格式：["{serviceName} addr1 [addr2...]"]
+}
+
+func (discovery *Discovery) BeforeParse() {
+	discovery.EnableConsul = true
+	discovery.EnableStatic = true
+	discovery.StaticServices = []string{}
+}
+
+func (discovery *Discovery) AfterParse() {
+	if !discovery.EnableConsul && !discovery.EnableStatic {
+		logrus.Warn("No discovery method enabled")
+	}
 }
 
 // Invoker服务调用相关的配置
