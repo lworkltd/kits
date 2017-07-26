@@ -65,7 +65,7 @@ func Testservice_remote(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "nil_disconver",
+			name:    "nil_discover",
 			service: &service{},
 			wantErr: true,
 		},
