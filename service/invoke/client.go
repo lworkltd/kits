@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/golang/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
@@ -26,8 +27,8 @@ type client struct {
 	serverid string
 
 	headers map[string]string
-	routes  map[string]string
 	querys  map[string][]string
+	routes  map[string]string
 	payload func() ([]byte, error)
 
 	logFields  map[string]interface{}
@@ -232,22 +233,43 @@ func (client *client) Context(ctx context.Context) Client {
 }
 
 func (client *client) Exec(out interface{}) (int, error) {
-	var status int
 	if client.useTracing {
 		span, ctx := opentracing.StartSpanFromContext(client.ctx, client.tracingName())
 		client.ctx = ctx
 		defer span.Finish()
 	}
 
+	var err error
+	var status int
 	if !client.useCircuit {
-		return client.exec(out)
+		status, err = client.exec(out)
+	} else {
+		err = hystrix.Do(client.circuitName(), func() error {
+			s, err := client.exec(out)
+			status = s
+			return err
+		}, client.failback)
 	}
 
-	err := hystrix.Do(client.circuitName(), func() error {
-		s, err := client.exec(out)
-		status = s
-		return err
-	}, client.failback)
+	if doLogger {
+		fileds := logrus.Fields{
+			"service":    client.service,
+			"service_id": client.serverid,
+			"method":     client.method,
+			"path":       client.path,
+			"querys":     client.querys,
+			"headers":    client.headers,
+			"routes":     client.routes,
+			"endpoint":   client.host,
+			"cost":       time.Since(client.createTime),
+		}
+
+		if err != nil {
+			logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
+		} else {
+			logrus.WithFields(fileds).Error("Invoke service done")
+		}
+	}
 
 	return status, err
 }
@@ -275,7 +297,7 @@ func (client *client) build() (*http.Request, error) {
 		return nil, err
 	}
 
-	var reader *bytes.Reader
+	reader := &bytes.Reader{}
 	if client.payload != nil {
 		b, err := client.payload()
 		if err != nil {
