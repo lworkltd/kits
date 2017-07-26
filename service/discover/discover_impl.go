@@ -33,17 +33,17 @@ func (discover *DiscoverImpl) Discover(service string) ([]string, []string, erro
 // Register 注册服务
 func (discover *DiscoverImpl) Register(option *consul.RegisterOption) error {
 	if discover.register == nil {
-		return fmt.Errorf("consul not initalize yet")
+		return fmt.Errorf("service register not initialize yet")
 	}
 
-	return discover.unregister(option)
+	return discover.register(option)
 }
 
 // Unregister 删除服务
 func (discover *DiscoverImpl) Unregister(option *consul.RegisterOption) error {
 	if discover.unregister == nil {
-		return fmt.Errorf("register not initalize yet")
+		return fmt.Errorf("service unregister not initialize yet")
 	}
 
-	return discover.register(option)
+	return discover.unregister(option)
 }
