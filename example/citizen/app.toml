@@ -47,7 +47,7 @@ db=1
 host="${kv_of_consul,kits/zipkin/url-external}"
 
 [consul]
-endpoint="120.76.46.55:8500"
+endpoint=""
 auto_sync_enabled = true
 
 [discovery]
