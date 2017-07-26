@@ -6,6 +6,7 @@ import (
 	"github.com/lvhuat/kits/example/location/api/errcode"
 	"github.com/lvhuat/kits/service/restful/code"
 	"strconv"
+	"sync"
 )
 
 type Location struct {
@@ -13,6 +14,7 @@ type Location struct {
 	Latitude  float64 `json:"latitude"`
 }
 
+var onceInitSession sync.Once
 var redisSession *RedisSession
 
 type RedisSession struct {
@@ -38,6 +40,14 @@ func (sess *RedisSession) GetCitizenLocation(id string) (Location, code.Error) {
 	location.Latitude = stringToFloat(v["latitude"], 0)
 
 	return location, nil
+}
+
+func Setup(clusterClient *redis.ClusterClient) {
+	onceInitSession.Do(func() {
+		redisSession = &RedisSession{
+			ClusterClient: clusterClient,
+		}
+	})
 }
 
 func GetRedisSession() *RedisSession {

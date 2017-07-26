@@ -6,19 +6,19 @@ mode="dev"
 format="text"
 level="debug"
 time_format="RFC3399"
-file="server.log"
-hooks=[
-    ["Airbrake","123","xyz","production"],
-    ["Syslog","udp","localhost:514","info",""],
-    ["SelfDefined","arg1","arg2","arg3"],
-    ["FileHook",">=warn|fileline|server.error.log","<=info|server.info.log"]
-]
+# hooks=[
+#     ["Airbrake","123","xyz","production"],
+#     ["Syslog","udp","localhost:514","info",""],
+#     ["logstash","udp","localhost:9100","info",""],
+#     ["SelfDefined","arg1","arg2","arg3"],
+#     ["File",">=warn|fileline|server.error.log","<=info|server.info.log"]
+# ]
 
 
 [service]
 host=":8080"
-path_prefix="myservice"
-mcode_profix="kits_simple_"
+path_prefix=""
+mcode_profix="kits_location"
 
 trace_enabled=true
 access_log_enabled=true
@@ -37,9 +37,8 @@ handle_pprof_prefix="/abcdefg"
 url="${kv_of_consul,kits/mongo/url-external}"
 
 [redis]
-url="${kv_of_consul,kits/redis/endpoint-external}"
-password="abc123"
-db=1
+endpoints="${kv_of_consul,kits/redis/endpoint-external}"
+password="lw123456"
 
 [application]
 # TODO:xxxx
@@ -48,7 +47,7 @@ db=1
 host="${kv_of_consul,kits/zipkin/url-external}"
 
 [consul]
-endpoint="120.76.46.55:8500"
+endpoint=""
 auto_sync_enabled = true
 
 [discovery]

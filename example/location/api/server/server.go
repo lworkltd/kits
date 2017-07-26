@@ -30,8 +30,8 @@ func initService(_ *gin.Engine, option *profile.Service) error {
 }
 
 func Setup(option *profile.Service) error {
-	r := gin.Default()
-
+	r := gin.New()
+	r.Use(gin.Recovery())
 	if err := initService(r, option); err != nil {
 		return err
 	}
@@ -41,20 +41,20 @@ func Setup(option *profile.Service) error {
 		root = root.Group(option.PathPrefix)
 	}
 	v1 := root.Group("/v1")
-	wrapper.Get(v1, "/bar", GetCitizenLocation)
+	wrapper.Get(v1, "/location", GetCitizenLocation)
 
 	return r.Run(option.Host)
 }
 
 func checkIndentifyValid(id string) bool {
-	if len(id) != 15 || len(id) != 18 {
+	if len(id) != 15 && len(id) != 18 {
 		return false
 	}
 	return true
 }
 
 func GetCitizenLocation(ctx *gin.Context) (interface{}, code.Error) {
-	id := ctx.Params.ByName("id")
+	id := ctx.Query("id")
 	if id == "" {
 		return nil, code.Newf(errcode.LackParameter, "citizen identify required")
 	}
