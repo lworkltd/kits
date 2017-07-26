@@ -90,8 +90,11 @@ func (pro *Profile) Init(tomlFile string) error {
 
 	// Discover 服务发现
 	var discoverOption discover.Option
+	discoverOption.RegisterFunc = consulClient.Register
+	discoverOption.UnregisterFunc = consulClient.Unregister
 	if pro.Discover.EnableConsul {
 		discoverOption.SearchFunc = consulClient.Discover
+		logrus.Debug("consul discover enabled")
 	}
 	if pro.Discover.EnableStatic {
 		staticsDiscover, err := makeStaticDiscover(pro.Discover.StaticServices)
@@ -99,6 +102,7 @@ func (pro *Profile) Init(tomlFile string) error {
 			return err
 		}
 		discoverOption.StaticFunc = staticsDiscover
+		logrus.Debug("static discover enabled")
 	}
 	if err := discover.Init(&discoverOption); err != nil {
 		return err

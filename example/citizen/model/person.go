@@ -8,11 +8,11 @@ import (
 )
 
 type PersonInfo struct {
-	Id     string `bson:"_id"`
-	Name   string `bson:"name"`
-	Age    int8   `bson:"age"`
-	Nation string `bson:"nation"`
-	Phone  string `bson:"phone_number"`
+	Id     string `bson:"_id" json:"id"`
+	Name   string `bson:"name" json:"name"`
+	Age    int8   `bson:"age" json:"age"`
+	Nation string `bson:"nation" json:"nation"`
+	Phone  string `bson:"phone_number" json:"phone"`
 }
 
 type PersonCollection struct {
@@ -53,4 +53,17 @@ func (person *PersonCollection) GetPersonAgeGte(age int8) ([]*PersonInfo, code.E
 	}
 
 	return list, nil
+}
+
+func (person *PersonCollection) AddPerson(p *PersonInfo) code.Error {
+	sess := person.readSession()
+	defer sess.Close()
+
+	coll := person.collection(sess)
+
+	if err := coll.Insert(p); err != nil {
+		return code.NewError(errcode.DatabaseFaild, err)
+	}
+
+	return nil
 }
