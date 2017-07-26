@@ -9,7 +9,7 @@ import (
 )
 
 func getPersonInfo(ctx *gin.Context) (interface{}, code.Error) {
-	ageString := ctx.Params.ByName("age")
+	ageString := ctx.Query("age")
 	if ageString == "" {
 		return nil, code.New(errcode.LackParameters, "age is required")
 	}

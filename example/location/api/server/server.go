@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lvhuat/kits/example/location/api/errcode"
 	"github.com/lvhuat/kits/example/location/position"
+	"github.com/lvhuat/kits/pkgs/discoverutil"
 	"github.com/lvhuat/kits/pkgs/ginutil"
 	"github.com/lvhuat/kits/service/profile"
 	"github.com/lvhuat/kits/service/restful/code"
@@ -26,6 +27,8 @@ func initService(_ *gin.Engine, option *profile.Service) error {
 		// TODO:handle for pprof
 	}
 
+	return discoverutil.RegisterServerWithProfile("/ping", option)
+
 	return nil
 }
 
@@ -40,6 +43,12 @@ func Setup(option *profile.Service) error {
 	if option.PathPrefix != "" {
 		root = root.Group(option.PathPrefix)
 	}
+	root.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
+
 	v1 := root.Group("/v1")
 	wrapper.Get(v1, "/location", GetCitizenLocation)
 

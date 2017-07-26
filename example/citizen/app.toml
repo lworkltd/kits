@@ -3,8 +3,8 @@ go_max_procs=3
 mode="dev"
 
 [logger]
-format="json"
-level="warn"
+format="text"
+level="debug"
 time_format="RFC3399"
 hooks=[
     ["Airbrake","123","xyz","production"],
@@ -16,8 +16,8 @@ hooks=[
 
 [service]
 host=":8080"
-path_prefix="myservice"
-mcode_profix="kits_simple_"
+path_prefix="citizen"
+mcode_profix="kits_citizen"
 
 trace_enabled=true
 access_log_enabled=true
@@ -26,8 +26,8 @@ reportable=true
 report_ip="${ip_of_interface,}"
 report_tags=["master","v0.2.1"]
 report_health=true
-report_name="simple-service2"
-report_id="kits_simple_8080"
+report_name="kits-citizen"
+report_id="kits_citizen_8080"
 
 handle_pprof = true
 handle_pprof_prefix="/abcdefg"

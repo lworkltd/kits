@@ -4,6 +4,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/lvhuat/kits/example/citizen/api/server"
 	"github.com/lvhuat/kits/example/citizen/conf"
+	"github.com/lvhuat/kits/example/citizen/model"
+	"gopkg.in/mgo.v2"
 )
 
 func panicErr(err error) {
@@ -18,6 +20,16 @@ func main() {
 			"error": err,
 		}).Fatal("Failed to boot service")
 	}
+
+	conf.Dump()
+
+	session, err := mgo.Dial(conf.GetMongo().Url)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err,
+		}).Fatal("Failed to dail mongo")
+	}
+	model.Init(&model.Option{Session: session})
 
 	if err := server.Setup(conf.GetService()); err != nil {
 		logrus.WithFields(logrus.Fields{

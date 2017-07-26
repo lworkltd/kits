@@ -5,11 +5,13 @@ import (
 
 	"fmt"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/plugins"
 	hystrixplugins "github.com/afex/hystrix-go/plugins"
 	"github.com/lvhuat/kits/helper/consul"
 	"github.com/lvhuat/kits/pkgs/eval"
 	"github.com/lvhuat/kits/pkgs/ipnet"
+	"github.com/lvhuat/kits/pkgs/jsonize"
 	"github.com/lvhuat/kits/pkgs/logutil"
 	"github.com/lvhuat/kits/service/discover"
 	"github.com/lvhuat/kits/service/invoke"
@@ -159,4 +161,13 @@ func (pro *Profile) Init(tomlFile string) error {
 
 func GetService() *profile.Service {
 	return &configuration.Service
+}
+
+func GetMongo() *profile.Mongo {
+	return &configuration.Mongo
+}
+
+func Dump() {
+	mutiline := logutil.IsMultiLineFormat(configuration.Logger.Format)
+	logrus.WithField("profile", jsonize.V(configuration, mutiline)).Info("Dump profile")
 }

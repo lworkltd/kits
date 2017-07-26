@@ -27,7 +27,8 @@ func initService(_ *gin.Engine, option *profile.Service) error {
 }
 
 func Setup(option *profile.Service) error {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
 
 	if err := initService(r, option); err != nil {
 		return err
@@ -39,6 +40,7 @@ func Setup(option *profile.Service) error {
 	}
 	v1 := root.Group("/v1")
 	wrapper.Get(v1, "/citizen", getPersonInfo)
+	wrapper.Post(v1, "/citizen", postPersonInfo)
 
 	return r.Run(option.Host)
 }

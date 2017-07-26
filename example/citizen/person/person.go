@@ -33,11 +33,11 @@ func GetPerson(cxt context.Context, age int8) ([]*PersonReatimeInfo, code.Error)
 		location := loc.Location{}
 		res := &invokeutil.Response{}
 		info.Location = location
-		status, invokeerr := invoke.Name("location").
+		status, invokeerr := invoke.Name("kits-location").
 			Get("/v1/location").
 			Query("id", person.Id).
 			Exec(res)
-		cerr := invokeutil.Unpkg("location", invokeerr, status, res, &location)
+		cerr := invokeutil.Unpkg("kits-location", invokeerr, status, res, &location)
 		if cerr != nil {
 			logrus.WithFields(logrus.Fields{
 				"id":    person.Id,
@@ -49,4 +49,8 @@ func GetPerson(cxt context.Context, age int8) ([]*PersonReatimeInfo, code.Error)
 	}
 
 	return infos, nil
+}
+
+func AddPersion(cxt context.Context, p *model.PersonInfo) code.Error {
+	return model.Person().AddPerson(p)
 }

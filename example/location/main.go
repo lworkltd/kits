@@ -18,5 +18,7 @@ func main() {
 	client := redis.NewClusterClient(redisutil.Option(conf.GetRedis()))
 	model.Setup(client)
 
-	server.Setup(conf.GetService())
+	if err := server.Setup(conf.GetService()); err != nil {
+		panic(err)
+	}
 }

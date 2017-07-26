@@ -16,7 +16,7 @@ time_format="RFC3399"
 
 
 [service]
-host=":8080"
+host=":8081"
 path_prefix=""
 mcode_profix="kits_location"
 
@@ -26,9 +26,8 @@ access_log_enabled=true
 reportable=true
 report_ip="${ip_of_interface,}"
 report_tags=["master","v0.2.1"]
-report_health=true
-report_name="simple-service2"
-report_id="kits_simple_8080"
+report_name="kits-location"
+report_id="kits_location_8081"
 
 handle_pprof = true
 handle_pprof_prefix="/abcdefg"
@@ -47,7 +46,7 @@ password="lw123456"
 host="${kv_of_consul,kits/zipkin/url-external}"
 
 [consul]
-endpoint=""
+endpoint="120.76.46.55:8500"
 auto_sync_enabled = true
 
 [discovery]
