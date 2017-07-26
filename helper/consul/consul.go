@@ -171,8 +171,9 @@ func (client *Client) service(service string) (*serviceCache, error) {
 	entrys, _, err := client.cli.Health().Service(service, "", true, nil)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
-			"error": err,
-		}).Errorf("Get service from consul failed")
+			"error":   err,
+			"service": service,
+		}).Warn("Get service from consul failed")
 		return &serviceCache{
 			err: err,
 		}, err
@@ -181,8 +182,9 @@ func (client *Client) service(service string) (*serviceCache, error) {
 	if len(entrys) == 0 {
 		err := fmt.Errorf("not found health service on consul")
 		logrus.WithFields(logrus.Fields{
-			"error": err,
-		}).Errorf("Get service from consul failed")
+			"error":   err,
+			"service": service,
+		}).Warn("Get service from consul failed")
 		return &serviceCache{
 			err: err,
 		}, err
