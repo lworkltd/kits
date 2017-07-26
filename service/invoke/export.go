@@ -4,6 +4,8 @@ import (
 	"context"
 )
 
+var doLogger = true
+
 // DiscoveryFunc 服务发现的函数
 type DiscoveryFunc func(name string) ([]string, []string, error)
 
