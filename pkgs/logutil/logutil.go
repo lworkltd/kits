@@ -31,5 +31,10 @@ func InitLoggerWithProfile(cfg *profile.Logger) error {
 		logrus.SetLevel(logLevel)
 	}
 
+	// TODO: add hooks
 	return nil
+}
+
+func IsMultiLineFormat(fmt string) bool {
+	return fmt == "text"
 }
