@@ -61,26 +61,22 @@ func newSession(url string) (*Session, error) {
 	sess.keepAlive = true
 	sess.Closed = make(chan bool, 1)
 	go func() {
-		log.Debugln("[AMQP] Watch amqp for close events")
+		log.Debugln("Watch amqp for close events")
 	WATCH_LOOP:
 		for {
 			select {
 			case err := <-sess.closes:
 				if err != nil {
-					log.Debugln("[AMQP] AMQP close", err)
+					log.Debugln("AMQP close", err)
 				} else {
-					log.Debugln("[AMQP] AMQP close manually")
+					log.Debugln("AMQP close manually")
 				}
 				break WATCH_LOOP
 			case block := <-sess.blocks:
-				log.Debugln("[AMQP] AMQP block ", block)
+				log.Debugln("AMQP block ", block)
 				continue
 			}
 		}
-
-		// log.WithFields(log.Fields{
-		// 	"error": sess.Closed,
-		// }).Warnln("[AMQP] Closed")
 
 		sess.wait.Wait()
 		sess.Closed <- true
@@ -176,7 +172,7 @@ func (sess *Session) ConsumeQueue(fn func(*amqp.Delivery), queue string, cs map[
 	sess.wait.Add(1)
 	acount := 0
 	go func() {
-		log.WithField("queue", queue).Infof("[AMQP] Consume start")
+		log.WithField("queue", queue).Debugln("Consume start")
 		defer sess.wait.Done()
 		for msg := range messages {
 			if !autoAck {
@@ -189,7 +185,7 @@ func (sess *Session) ConsumeQueue(fn func(*amqp.Delivery), queue string, cs map[
 		log.WithFields(log.Fields{
 			"queue":                 queue,
 			"handled_message_count": acount,
-		}).Debugln("[AMQP] Handler close")
+		}).Debugln("Handle queue close")
 	}()
 
 	return nil
@@ -217,7 +213,7 @@ func (sess *Session) DelareExchange(name, kind string, cs map[string]bool) error
 	}
 
 	filterBooleanConfigs(&configs, "exchange/", cs, false)
-	log.Infof("delare exchange(%s,%s):%#v", name, kind, configs)
+	log.Debugf("delare exchange(%s,%s):%#v", name, kind, configs)
 	return sess.recvChannel.ExchangeDeclare(
 		name, kind,
 		configs["durable"],
@@ -314,22 +310,22 @@ func (sess *Session) PublishBytes(body []byte, exchange, queueOrKey string, args
 	log.WithFields(log.Fields{
 		"send_to":        queueOrKey,
 		"exchange":       exchange,
-		"content_type":   args["contenttype"],
-		"reply_to":       args["replyto"],
+		"content_type":   args["content_type"],
+		"reply_to":       args["reply_to"],
 		"timestamp":      time.Now().UTC(),
-		"correlation_id": args["correlationid"],
+		"correlation_id": args["cid"],
 		"expiration":     args["expiration"],
-	}).Info("[AMQP]Publish content")
+	}).Debug("Publish amqp content")
 	if err := sess.sendChannel.Publish(
 		exchange,
 		queueOrKey,
 		false, false,
 		amqp.Publishing{
-			ContentType:   args["contenttype"],
+			ContentType:   args["content_type"],
 			Body:          body,
-			ReplyTo:       args["replyto"],
+			ReplyTo:       args["reply_to"],
 			Timestamp:     time.Now().UTC(),
-			CorrelationId: args["correlationid"],
+			CorrelationId: args["cid"],
 			Expiration:    args["expiration"],
 		},
 	); err != nil {
