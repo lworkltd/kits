@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/lvhuat/kits/example/citizen/api/server"
-	"github.com/lvhuat/kits/example/citizen/conf"
-	"github.com/lvhuat/kits/example/citizen/model"
+	"github.com/lworkltd/kits/example/citizen/api/server"
+	"github.com/lworkltd/kits/example/citizen/conf"
+	"github.com/lworkltd/kits/example/citizen/model"
 	"gopkg.in/mgo.v2"
 )
 

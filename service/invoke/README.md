@@ -10,7 +10,7 @@ invoke
 import (
 	"context"
 	"fmt"
-	"github.com/lvhuat/kits/service/invoke"
+	"github.com/lworkltd/kits/service/invoke"
 )
 
 func main() {

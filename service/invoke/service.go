@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/afex/hystrix-go/hystrix"
-	"github.com/lvhuat/kits/pkgs/co"
+	"github.com/lworkltd/kits/pkgs/co"
 )
 
 // service 是用来获取服务器地址，并创建调用的

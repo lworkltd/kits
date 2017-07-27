@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/lvhuat/kits/example/citizen/model"
-	loc "github.com/lvhuat/kits/example/location/model"
-	"github.com/lvhuat/kits/pkgs/invokeutil"
-	"github.com/lvhuat/kits/service/invoke"
-	"github.com/lvhuat/kits/service/restful/code"
+	"github.com/lworkltd/kits/example/citizen/model"
+	loc "github.com/lworkltd/kits/example/location/model"
+	"github.com/lworkltd/kits/pkgs/invokeutil"
+	"github.com/lworkltd/kits/service/invoke"
+	"github.com/lworkltd/kits/service/restful/code"
 )
 
 type PersonReatimeInfo struct {
