@@ -1,8 +1,8 @@
 package model
 
 import (
-	"github.com/lvhuat/kits/example/citizen/api/errcode"
-	"github.com/lvhuat/kits/service/restful/code"
+	"github.com/lworkltd/kits/example/citizen/api/errcode"
+	"github.com/lworkltd/kits/service/restful/code"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )

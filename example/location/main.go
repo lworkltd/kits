@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/go-redis/redis"
-	"github.com/lvhuat/kits/example/location/api/server"
-	"github.com/lvhuat/kits/example/location/conf"
-	"github.com/lvhuat/kits/example/location/model"
-	"github.com/lvhuat/kits/pkgs/redisutil"
+	"github.com/lworkltd/kits/example/location/api/server"
+	"github.com/lworkltd/kits/example/location/conf"
+	"github.com/lworkltd/kits/example/location/model"
+	"github.com/lworkltd/kits/pkgs/redisutil"
 )
 
 func main() {

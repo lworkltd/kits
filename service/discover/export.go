@@ -1,6 +1,6 @@
 package discover
 
-import "github.com/lvhuat/kits/helper/consul"
+import "github.com/lworkltd/kits/helper/consul"
 
 // Discoverer 定义了服务发现的接口
 type Discoverer interface {

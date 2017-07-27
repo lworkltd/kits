@@ -21,7 +21,7 @@ Init(&Option{
     ConsulClient: csl,
 })
 
-o := &consul.RegisterOption{
+option := &consul.RegisterOption{
     Name: "kits-test-server",
     Id:   "kits-test-server-001",
     Ip:   "localhost",
