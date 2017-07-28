@@ -35,20 +35,27 @@ func NewRpcUtil(sess *Session, timeout time.Duration) *RpcUtil {
 }
 
 func (util *RpcUtil) SetupReplyQueue(name string) error {
-	handler := func(dli *amqp.Delivery) {
+	handler := func(deli *amqp.Delivery) {
+		if deli == nil {
+			return
+		}
+		if deli.CorrelationId == "" {
+			return
+		}
+
 		util.Lock()
-		record, ok := util.records[dli.CorrelationId]
+		record, ok := util.records[deli.CorrelationId]
 		util.Unlock()
 
 		if !ok {
 			return
 		}
 
-		record <- dli
+		record <- deli
 		close(record)
 
 		util.Lock()
-		delete(util.records, dli.CorrelationId)
+		delete(util.records, deli.CorrelationId)
 		util.Unlock()
 	}
 
