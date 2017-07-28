@@ -126,7 +126,7 @@ func (sess *Session) DeclareQueue(name string, cs map[string]bool) (*amqp.Queue,
 	configs := map[string]bool{
 		"durabale":   true,
 		"autodelete": false,
-		"exclusive":  true,
+		"exclusive":  false,
 		"nowait":     false,
 	}
 
@@ -206,9 +206,9 @@ func (sess *Session) DeclareAndHandleQueue(queue string, fn func(*amqp.Delivery)
 
 func (sess *Session) DelareExchange(name, kind string, cs map[string]bool) error {
 	configs := map[string]bool{
-		"durable":    false,
+		"durable":    true,
 		"autodelete": false,
-		"exclusive":  false,
+		"internal":   false,
 		"nowait":     false,
 	}
 
@@ -218,14 +218,14 @@ func (sess *Session) DelareExchange(name, kind string, cs map[string]bool) error
 		name, kind,
 		configs["durable"],
 		configs["autodelete"],
-		configs["exclusive"],
+		configs["internal"],
 		configs["nowait"],
 		nil,
 	)
 }
 
 func (sess *Session) HandleExchange(fn func(*amqp.Delivery), configs map[string]bool, bindQueue, exchange, kind string, routeKeys ...string) error {
-	if err := sess.DelareExchange(exchange, "topic", configs); err != nil {
+	if err := sess.DelareExchange(exchange, kind, configs); err != nil {
 		return err
 	}
 
@@ -234,6 +234,7 @@ func (sess *Session) HandleExchange(fn func(*amqp.Delivery), configs map[string]
 		return err
 	}
 
+	// TODO: add new setting bind/unbind with default false
 	if err := sess.BindKeys(queueInfo.Name, exchange, configs, routeKeys...); err != nil {
 		return err
 	}
