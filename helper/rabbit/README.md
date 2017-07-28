@@ -1,7 +1,6 @@
 rabbit
 ------------
-封对amqp的实用封装
-
+这是对[amqp](github.com/streadway/amqp)库的简单封装
 
 注意
 -----
@@ -48,12 +47,9 @@ rabbit
 -------
 ### 创建会话，所有的前提
 ```
-sess, err := rabbit.Dail("url-of-amqp")
+sess, err := rabbit.Dial("amqp://guest:quest@127.0.0.1/test")
 if err != nil {
-    logrus.WithFields(logrus.Fields{
-        "error": err,
-    }).Error("Dail amqp failed")
-    return
+    panic(err)
 }
 defer sess.Close()
 ```
@@ -64,91 +60,74 @@ defer sess.Close()
 
 ### 消费制定队列 
 ```
-handle := func(deli *amqp.Delivery) {
-    defer deli.Ack(false)
-    // TODO:xxx
+if _, err := sess.DeclareAndHandleQueue(
+    "handle-queue", queueHandler,
+    rabbit.MakeupSettings(
+        rabbit.NewQueueSettings().Durable(true).Exclusive(false).AutoDelete(true),
+        rabbit.NewConsumeSettings().AutoAck(true).Exclusive(false).NoLocal(false),
+    )); err != nil {
+    panic(err)
 }
-if err = sess.HandleQueue(
-    handle,
-    "name-of-queue",
-    map[string]bool{
-        "exchange/durable": true,
-        "queue/durable":    true,
-        "queue/nowait":     false,
-        "queue/exclusive":  false,
-        "bind/nowait":      false,
-        "consume/durable":  true,
-    }, // settings
-); err != nil {
-    logrus.WithFields(logrus.Fields{
-        "error": err,
-    }).Error("Handle queue failed")
-    return
+
+select {
+case <-sess.Closed:
 }
 ```
 
 ### 路由处理
 ```
-routingKeys := []string{
-    "food.fruit.*",
-    "food.vegetables.*",
+if _, err := sess.HandleExchange(
+    "queue-to-bind",
+    "exchange-name",
+    "topic",
+    exchangeHandler,
+    rabbit.MakeupSettings(
+        rabbit.NewExchangeSettings().Durable(true),
+        rabbit.NewQueueSettings().Durable(true).Exclusive(false).AutoDelete(true),
+        rabbit.NewConsumeSettings().AutoAck(true).Exclusive(false).NoLocal(false),
+    ), "fruit.*", "vegetables.*"); err != nil {
+    panic(err)
 }
 
-handle := func(deli *amqp.Delivery) {
-    defer deli.Ack(false)
-    // TODO:xxx
-}
-
-if err = sess.HandleExchange(
-    handle,
-    map[string]bool{
-        "exchange/durable": true,
-        "queue/durable":    true,
-        "queue/nowait":     false,
-        "queue/exclusive":  false,
-    }, // settings
-    "queue-message-route-to",
-    "PORT_DATA",    // exchange
-    "topic",        // exchange type
-    routingKeys..., // routing key
-); err != nil {
-    logrus.WithFields(logrus.Fields{
-        "error": err,
-    }).Error("Handle exchange failed")
-    return
+select {
+case <-sess.Closed:
 }
 ```
 
 ### RPC 调用
 ```
-rpcSess := rabbit.NewRPCUtil(sess, time.Minute)
-if err := rpcSess.SetupReplyQueue(""); err != nil {
+rpc := rabbit.NewRpcUtil(sess, time.Minute)
+if err := rpc.SetupReplyQueue(""); err != nil {
     panic(err)
 }
 
-body, err := proto.Marshal(&pb.Request{})
-if err != nil {
-    panic(err)
-}
-
-deli, err := rpcSess.PublishBytes(
-    body,
+delivery, err := rpc.Call(
+    []byte("hello"),
     "",
-    fmt.Sprintf("ANY.%s.*.%s", "filed1", "filed2"),
-    map[string]string{
-        "content_type": "name-of-request",
-    },
-)
-if err != nil {
+    "test-rpc-queue",
+    rabbit.OptionReplyTo("test-rpc-reply-queue"),
+)if err != nil {
     panic(err)
 }
 
-rsp := &pb.Response{}
-if err := proto.Unmarshal(deli.Body, rsp); err != nil {
-    logrus.WithFields(logrus.Fields{
-        "error": err,
-    }).Error("Bad response proto")
-    return
+fmt.Println("rpc replied:", string(delivery.Body))
+```
+
+### 推送
+```
+sess, err := rabbit.Dial("amqp://guest:quest@127.0.0.1/test")
+if err != nil {
+    panic(err)
 }
-// ...
+defer sess.Close()
+if err := sess.PublishString(
+    "good day today",
+    "exchange-to-publish",
+    "rontiny-key",
+    rabbit.OptionContentType("application/text"),
+    rabbit.OptionAppId("my-service-id"),
+    rabbit.OptionUserId("keto"),
+); err != nil {
+    panic(err)
+}
 ```
