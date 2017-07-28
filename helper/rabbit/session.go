@@ -2,12 +2,10 @@ package rabbit
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/proto"
 	"github.com/streadway/amqp"
 )
 
@@ -24,7 +22,7 @@ type Session struct {
 	Closed chan bool
 }
 
-func Dail(url string) (*Session, error) {
+func Dial(url string) (*Session, error) {
 	sess, err := newSession(url)
 	if err != nil {
 		return sess, err
@@ -61,26 +59,22 @@ func newSession(url string) (*Session, error) {
 	sess.keepAlive = true
 	sess.Closed = make(chan bool, 1)
 	go func() {
-		log.Debugln("[AMQP] Watch amqp for close events")
+		log.Debugln("Watch amqp for close events")
 	WATCH_LOOP:
 		for {
 			select {
 			case err := <-sess.closes:
 				if err != nil {
-					log.Debugln("[AMQP] AMQP close", err)
+					log.Debugln("AMQP close", err)
 				} else {
-					log.Debugln("[AMQP] AMQP close manually")
+					log.Debugln("AMQP close manually")
 				}
 				break WATCH_LOOP
 			case block := <-sess.blocks:
-				log.Debugln("[AMQP] AMQP block ", block)
+				log.Debugln("AMQP block ", block)
 				continue
 			}
 		}
-
-		// log.WithFields(log.Fields{
-		// 	"error": sess.Closed,
-		// }).Warnln("[AMQP] Closed")
 
 		sess.wait.Wait()
 		sess.Closed <- true
@@ -126,21 +120,16 @@ func (sess *Session) Qos(prefetchSize, prefectBytes int, global bool) error {
 	return sess.recvChannel.Qos(prefetchSize, prefectBytes, global)
 }
 
-func (sess *Session) DeclareQueue(name string, cs map[string]bool) (*amqp.Queue, error) {
-	configs := map[string]bool{
-		"durabale":   true,
-		"autodelete": false,
-		"exclusive":  true,
-		"nowait":     false,
-	}
+func (sess *Session) DeclareQueue(name string, settings map[string]bool) (*amqp.Queue, error) {
+	queueSettings := defaultQueueSettings()
 
-	filterBooleanConfigs(&configs, "queue/", cs, false)
+	filterBooleanConfigs(&queueSettings, queueSettingPrefix, settings, false)
 	queue, err := sess.recvChannel.QueueDeclare(
-		name,                  // name
-		configs["durabale"],   // durable
-		configs["autodelete"], // autoDelete
-		configs["exclusive"],  // exclusive
-		configs["nowait"],     // nowait
+		name, // name
+		queueSettings[settingDurable],    // durable
+		queueSettings[settingAutoDelete], // autoDelete
+		queueSettings[settingExclusive],  // exclusive
+		queueSettings[settingNoWait],     // nowait
 		nil,
 	)
 
@@ -151,32 +140,27 @@ func (sess *Session) DeclareQueue(name string, cs map[string]bool) (*amqp.Queue,
 	return &queue, nil
 }
 
-func (sess *Session) ConsumeQueue(fn func(*amqp.Delivery), queue string, cs map[string]bool) error {
-	configs := map[string]bool{
-		"autoack":   true,
-		"exclusive": false,
-		"nolocal":   false,
-		"nowait":    false,
-	}
+func (sess *Session) ConsumeQueue(fn func(*amqp.Delivery), queue string, settings map[string]bool) error {
+	consumeSettings := defaultConsumeSettings()
 
-	filterBooleanConfigs(&configs, "consume/", cs, false)
+	filterBooleanConfigs(&consumeSettings, consumeSettingPrefix, settings, false)
 	messages, err := sess.recvChannel.Consume(
 		queue,
 		"",
-		configs["autoack"],
-		configs["exclusive"],
-		configs["nolocal"],
-		configs["nowait"],
+		consumeSettings[settingAutoAck],
+		consumeSettings[settingExclusive],
+		consumeSettings[settingNoLocal],
+		consumeSettings[settingNoWait],
 		nil,
 	)
 	if err != nil {
 		return err
 	}
-	autoAck := configs["autoack"]
+	autoAck := consumeSettings[settingAutoAck]
 	sess.wait.Add(1)
 	acount := 0
 	go func() {
-		log.WithField("queue", queue).Infof("[AMQP] Consume start")
+		log.WithField("queue", queue).Debugln("Consume start")
 		defer sess.wait.Done()
 		for msg := range messages {
 			if !autoAck {
@@ -189,7 +173,7 @@ func (sess *Session) ConsumeQueue(fn func(*amqp.Delivery), queue string, cs map[
 		log.WithFields(log.Fields{
 			"queue":                 queue,
 			"handled_message_count": acount,
-		}).Debugln("[AMQP] Handler close")
+		}).Debugln("Handle queue close")
 	}()
 
 	return nil
@@ -208,28 +192,23 @@ func (sess *Session) DeclareAndHandleQueue(queue string, fn func(*amqp.Delivery)
 	return queueInfo, nil
 }
 
-func (sess *Session) DelareExchange(name, kind string, cs map[string]bool) error {
-	configs := map[string]bool{
-		"durable":    false,
-		"autodelete": false,
-		"exclusive":  false,
-		"nowait":     false,
-	}
+func (sess *Session) DelareExchange(name, kind string, settings map[string]bool) error {
+	exchangeSettings := defaultExchangeSettings()
 
-	filterBooleanConfigs(&configs, "exchange/", cs, false)
-	log.Infof("delare exchange(%s,%s):%#v", name, kind, configs)
+	filterBooleanConfigs(&exchangeSettings, exchangeSettingPrefix, settings, false)
+	log.Debugf("delare exchange(%s,%s):%#v", name, kind, exchangeSettings)
 	return sess.recvChannel.ExchangeDeclare(
 		name, kind,
-		configs["durable"],
-		configs["autodelete"],
-		configs["exclusive"],
-		configs["nowait"],
+		exchangeSettings[settingDurable],
+		exchangeSettings[settingAutoDelete],
+		exchangeSettings[settingInternal],
+		exchangeSettings[settingNoWait],
 		nil,
 	)
 }
 
-func (sess *Session) HandleExchange(fn func(*amqp.Delivery), configs map[string]bool, bindQueue, exchange, kind string, routeKeys ...string) error {
-	if err := sess.DelareExchange(exchange, "topic", configs); err != nil {
+func (sess *Session) HandleExchange(bindQueue, exchange, kind string, fn func(*amqp.Delivery), configs map[string]bool, routeKeys ...string) error {
+	if err := sess.DelareExchange(exchange, kind, configs); err != nil {
 		return err
 	}
 
@@ -238,6 +217,7 @@ func (sess *Session) HandleExchange(fn func(*amqp.Delivery), configs map[string]
 		return err
 	}
 
+	// TODO: add new setting bind/unbind with default false
 	if err := sess.BindKeys(queueInfo.Name, exchange, configs, routeKeys...); err != nil {
 		return err
 	}
@@ -266,21 +246,21 @@ func (sess *Session) UnbindKeys(bindQueue, exchange string, keys ...string) erro
 	return retErr
 }
 
-func (sess *Session) BindKeys(bindQueue, exchange string, cs map[string]bool, keys ...string) error {
+func (sess *Session) BindKeys(bindQueue, exchange string, settings map[string]bool, keys ...string) error {
 	if exchange == "" || bindQueue == "" || len(keys) == 0 {
 		return fmt.Errorf("unbind parameters cannot be empty")
 	}
 
-	configs := map[string]bool{
-		"nowait": false,
+	bindSettings := map[string]bool{
+		settingNoWait: false,
 	}
 
-	filterBooleanConfigs(&configs, "bind/", cs, false)
+	filterBooleanConfigs(&bindSettings, bindSettingPrefix, settings, false)
 
 	var retErr error
 	for _, key := range keys {
 		if err := sess.recvChannel.QueueBind(
-			bindQueue, key, exchange, configs["nowait"], nil,
+			bindQueue, key, exchange, bindSettings[settingNoWait], nil,
 		); err != nil {
 			if retErr == nil {
 				retErr = err
@@ -291,47 +271,37 @@ func (sess *Session) BindKeys(bindQueue, exchange string, cs map[string]bool, ke
 	return retErr
 }
 
-func (sess *Session) PushRequest(req proto.Message, reqQueue string, sn string, contentType string, rspQueue string) error {
-	body, err := proto.Marshal(req)
-	if err != nil {
-		return err
+func makePublishing(body []byte, options ...PublishOption) *amqp.Publishing {
+	publishing := amqp.Publishing{
+		Timestamp: time.Now().UTC(),
+		Body:      body,
 	}
 
-	return sess.PublishBytes(
-		body,
-		"",
-		reqQueue,
-		map[string]string{
-			"contenttype":   contentType,
-			"replyto":       rspQueue,
-			"correlationid": sn,
-			"expiration":    strconv.Itoa(int(time.Minute * 3 / time.Millisecond)),
-		},
-	)
+	for _, option := range options {
+		option(&publishing)
+	}
+
+	return &publishing
 }
 
-func (sess *Session) PublishBytes(body []byte, exchange, queueOrKey string, args map[string]string) error {
+func (sess *Session) Publish(body []byte, exchange, queueOrKey string, options ...PublishOption) error {
+	publishing := makePublishing(body, options...)
+
 	log.WithFields(log.Fields{
 		"send_to":        queueOrKey,
 		"exchange":       exchange,
-		"content_type":   args["contenttype"],
-		"reply_to":       args["replyto"],
-		"timestamp":      time.Now().UTC(),
-		"correlation_id": args["correlationid"],
-		"expiration":     args["expiration"],
-	}).Info("[AMQP]Publish content")
+		"content_type":   publishing.ContentType,
+		"reply_to":       publishing.ReplyTo,
+		"timestamp":      publishing.Timestamp,
+		"correlation_id": publishing.CorrelationId,
+		"expiration":     publishing.Expiration,
+	}).Debug("Publish amqp content")
+
 	if err := sess.sendChannel.Publish(
 		exchange,
 		queueOrKey,
 		false, false,
-		amqp.Publishing{
-			ContentType:   args["contenttype"],
-			Body:          body,
-			ReplyTo:       args["replyto"],
-			Timestamp:     time.Now().UTC(),
-			CorrelationId: args["correlationid"],
-			Expiration:    args["expiration"],
-		},
+		*publishing,
 	); err != nil {
 		return err
 	}
@@ -339,6 +309,6 @@ func (sess *Session) PublishBytes(body []byte, exchange, queueOrKey string, args
 	return nil
 }
 
-func (sess *Session) PublishString(msg string, exchange, queueOrKey string, args map[string]string) error {
-	return sess.PublishBytes([]byte(msg), exchange, queueOrKey, args)
+func (sess *Session) PublishString(msg string, exchange, queueOrKey string, options ...PublishOption) error {
+	return sess.Publish([]byte(msg), exchange, queueOrKey, options...)
 }
