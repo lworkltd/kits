@@ -1,4 +1,4 @@
-package ginutil
+package gin
 
 import (
 	"context"
@@ -6,6 +6,6 @@ import (
 )
 
 func CtxFromGinContext(ctx *gin.Context) context.Context {
-	//TODO:pending the context from gin conetext
+	// TODO:pending the context from gin conetext
 	return context.Background()
 }

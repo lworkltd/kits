@@ -1,4 +1,4 @@
-package invokeutil
+package invoke
 
 import (
 	"encoding/json"
@@ -15,9 +15,9 @@ type Response struct {
 	Message string          `json:"message,omitemtpy"`
 }
 
-// 解析包中的错误码(该封装已经达成共识)
+// ExtractHeader  解析包中的错误码(该封装已经达成共识)
 // 即：{result:true,mcode:"<code>",data:{}}
-func Unpkg(name string, invokeErr error, statusCode int, res *Response, out interface{}) code.Error {
+func ExtractHeader(name string, invokeErr error, statusCode int, res *Response, out interface{}) code.Error {
 	if statusCode == 0 {
 		return code.NewMcode(
 			fmt.Sprintf("%s_BAD_INVOKE", strings.ToUpper(name)),

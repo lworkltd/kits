@@ -4,7 +4,7 @@ import "testing"
 
 func TestIp(t *testing.T) {
 	type args struct {
-		adapter []string
+		adapter string
 	}
 	tests := []struct {
 		name    string
@@ -15,7 +15,7 @@ func TestIp(t *testing.T) {
 		{
 			name: "normal",
 			args: args{
-				adapter: []string{},
+				adapter: "",
 			},
 			want1:   true,
 			wantErr: false,
@@ -23,7 +23,7 @@ func TestIp(t *testing.T) {
 		{
 			name: "not_found",
 			args: args{
-				adapter: []string{"not_found_interface"},
+				adapter: "not_found_interface",
 			},
 			want1:   false,
 			wantErr: true,
@@ -31,7 +31,7 @@ func TestIp(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := Ipv4(tt.args.adapter...)
+			got, got1, err := Ipv4(tt.args.adapter)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Ip() error = %v, wantErr %v", err, tt.wantErr)
 				return

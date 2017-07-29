@@ -1,4 +1,4 @@
-package discoverutil
+package discovery
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/helper/consul"
-	"github.com/lworkltd/kits/service/discover"
+	"github.com/lworkltd/kits/service/discovery"
 	"github.com/lworkltd/kits/service/profile"
 )
 
@@ -47,7 +47,7 @@ func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
 		return fmt.Errorf("service port must be a number:%v", port)
 	}
 
-	endpoints, ids, err := discover.Discover(cfg.ReportName)
+	endpoints, ids, err := discovery.Discover(cfg.ReportName)
 	if err == nil {
 		newEp := net.JoinHostPort(cfg.ReportIp, strconv.Itoa(port))
 		for index, ep := range endpoints {
@@ -60,8 +60,7 @@ func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
 					}).Warn("Service has same id,but endpoint changed")
 				}
 			}
-
-			//TODO:Warn which the same ip port belong to differet service
+			// TODO:Warn which the same ip port belong to differet service
 		}
 	}
 
@@ -74,7 +73,7 @@ func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
 		"report_tags": cfg.ReportTags,
 	}).Info("Register service info")
 
-	return discover.Register(&consul.RegisterOption{
+	return discovery.Register(&consul.RegisterOption{
 		Ip:       cfg.ReportIp,
 		Port:     port,
 		CheckUrl: checkUrl,
