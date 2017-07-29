@@ -4,19 +4,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lworkltd/kits/example/location/api/errcode"
 	"github.com/lworkltd/kits/example/location/position"
-	"github.com/lworkltd/kits/pkgs/discoverutil"
-	"github.com/lworkltd/kits/pkgs/ginutil"
 	"github.com/lworkltd/kits/service/profile"
 	"github.com/lworkltd/kits/service/restful/code"
 	"github.com/lworkltd/kits/service/restful/wrap"
+	discoveryutils "github.com/lworkltd/kits/utils/discovery"
+	ginutils "github.com/lworkltd/kits/utils/gin"
 )
 
 var wrapper *wrap.Wrapper
 
-//TODO: 在gin所监听的接口同时处理pprof
+// TODO: 在gin所监听的接口同时处理pprof
 func initService(_ *gin.Engine, option *profile.Service) error {
 	wrapper = wrap.New(&wrap.Option{
-		Prefix: option.McodeProfix,
+		Prefix: option.McodePrefix,
 	})
 
 	if option.Reportable {
@@ -27,9 +27,7 @@ func initService(_ *gin.Engine, option *profile.Service) error {
 		// TODO:handle for pprof
 	}
 
-	return discoverutil.RegisterServerWithProfile("/ping", option)
-
-	return nil
+	return discoveryutils.RegisterServerWithProfile("/ping", option)
 }
 
 func Setup(option *profile.Service) error {
@@ -72,5 +70,5 @@ func GetCitizenLocation(ctx *gin.Context) (interface{}, code.Error) {
 		return nil, code.Newf(errcode.LackParameter, "bad citizen identify %s", id)
 	}
 
-	return position.GetCitizenPosition(ginutil.CtxFromGinContext(ctx), id)
+	return position.GetCitizenPosition(ginutils.CtxFromGinContext(ctx), id)
 }
