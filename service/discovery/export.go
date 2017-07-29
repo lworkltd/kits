@@ -1,29 +1,29 @@
-package discover
+package discovery
 
 import "github.com/lworkltd/kits/helper/consul"
 
-// Discoverer 定义了服务发现的接口
-type Discoverer interface {
+// Discovery 定义了服务发现的接口
+type Discovery interface {
 	Discover(service string) ([]string, []string, error)
 	Register(option *consul.RegisterOption) error
 	Unregister(option *consul.RegisterOption) error
 }
 
-var defaultDiscoverer Discoverer
+var defaultDiscovery Discovery
 
 // Discover 发现一个服务
 func Discover(service string) ([]string, []string, error) {
-	return defaultDiscoverer.Discover(service)
+	return defaultDiscovery.Discover(service)
 }
 
 // Register 发现服务
 func Register(option *consul.RegisterOption) error {
-	return defaultDiscoverer.Register(option)
+	return defaultDiscovery.Register(option)
 }
 
 // Unregister 删除服务注册
 func Unregister(option *consul.RegisterOption) error {
-	return defaultDiscoverer.Unregister(option)
+	return defaultDiscovery.Unregister(option)
 }
 
 // DiscoveryOption 初始化服务发现的
@@ -41,7 +41,7 @@ func Init(option *Option) error {
 	dis.seacher = option.SearchFunc
 	dis.register = option.RegisterFunc
 	dis.unregister = option.UnregisterFunc
-	defaultDiscoverer = dis
+	defaultDiscovery = dis
 
 	return nil
 }
