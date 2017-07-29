@@ -8,7 +8,7 @@ import (
 
 func parsePath(path string, r map[string]string) (string, error) {
 	ret := path
-	//FIXME:bad perpormance
+	// FIXME:bad perpormance
 	for key, value := range r {
 		old := "{" + key + "}"
 		ret = strings.Replace(ret, old, value, 1)
@@ -17,8 +17,8 @@ func parsePath(path string, r map[string]string) (string, error) {
 	return ret, nil
 }
 
-func makeUrl(sche, host, path string, querys map[string][]string) (string, error) {
-	b := make([]byte, 0, len(sche)+len(host)+len(path)+3+len(querys)*10)
+func makeUrl(sche, host, path string, queries map[string][]string) (string, error) {
+	b := make([]byte, 0, len(sche)+len(host)+len(path)+3+len(queries)*10)
 	buffer := bytes.NewBuffer(b)
 
 	buffer.WriteString(sche)
@@ -27,7 +27,7 @@ func makeUrl(sche, host, path string, querys map[string][]string) (string, error
 	buffer.WriteString(path)
 
 	qv := url.Values{}
-	for key, array := range querys {
+	for key, array := range queries {
 		for _, value := range array {
 			qv.Add(key, value)
 		}

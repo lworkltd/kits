@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/afex/hystrix-go/hystrix"
-	"github.com/lworkltd/kits/pkgs/co"
+	"github.com/lworkltd/kits/utils/co"
 )
 
 // service 是用来获取服务器地址，并创建调用的
@@ -14,7 +14,7 @@ type service struct {
 	wellCount      co.Int64
 	totalCallCount co.Int64
 	name           string
-	discover       DiscoveryFunc
+	discovery       DiscoveryFunc
 	useTracing     bool
 	useCircuit     bool
 	circuitConfig  hystrix.CommandConfig
@@ -25,11 +25,11 @@ func (service *service) remote() (string, string, error) {
 	index := service.totalCallCount.Get()
 	defer service.totalCallCount.Add(1)
 
-	if service.discover == nil {
+	if service.discovery == nil {
 		return "", "", fmt.Errorf("service %s not found", service.name)
 	}
 
-	remotes, ids, err := service.discover(service.name)
+	remotes, ids, err := service.discovery(service.name)
 	if err != nil {
 		return "", "", fmt.Errorf("discovery service %s failed", service.name)
 	}
@@ -94,7 +94,7 @@ func newRest(service Service, method string, path string, remote string, id stri
 		path:         path,
 		host:         remote,
 		serverid:     id,
-		sche:         "http",
+		scheme:       "http",
 		errInProcess: err,
 		method:       method,
 		logFields: map[string]interface{}{

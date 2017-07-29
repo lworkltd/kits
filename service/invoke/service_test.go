@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-func Testservice_remote(t *testing.T) {
+func TestServiceRemote(t *testing.T) {
 	svc := &service{
-		discover: func(string) ([]string, []string, error) {
+		discovery: func(string) ([]string, []string, error) {
 			return []string{"127.0.0.1", "127.0.0.2"}, []string{"my-service-1", "my-service-2"}, nil
 		},
 	}
@@ -39,7 +39,7 @@ func Testservice_remote(t *testing.T) {
 		{
 			name: "emtpy",
 			service: &service{
-				discover: func(string) ([]string, []string, error) {
+				discovery: func(string) ([]string, []string, error) {
 					return []string{}, []string{}, nil
 				},
 			},
@@ -48,7 +48,7 @@ func Testservice_remote(t *testing.T) {
 		{
 			name: "single",
 			service: &service{
-				discover: func(string) ([]string, []string, error) {
+				discovery: func(string) ([]string, []string, error) {
 					return []string{"127.0.0.1:8080"}, []string{"service"}, nil
 				},
 			},
@@ -58,7 +58,7 @@ func Testservice_remote(t *testing.T) {
 		{
 			name: "error",
 			service: &service{
-				discover: func(string) ([]string, []string, error) {
+				discovery: func(string) ([]string, []string, error) {
 					return []string{}, []string{}, fmt.Errorf("service error")
 				},
 			},
@@ -87,9 +87,9 @@ func Testservice_remote(t *testing.T) {
 	}
 }
 
-func Test_newRest(t *testing.T) {
+func TestNewRest(t *testing.T) {
 	service := &service{
-		discover: func(string) ([]string, []string, error) {
+		discovery: func(string) ([]string, []string, error) {
 			return []string{"127.0.0.1", "127.0.0.2"}, []string{"my-service-1", "my-service-2"}, nil
 		},
 		name:       "auth_service",
@@ -128,7 +128,7 @@ func Test_newRest(t *testing.T) {
 	}
 }
 
-func Testservice_Method(t *testing.T) {
+func TestServiceMethod(t *testing.T) {
 	type args struct {
 		method string
 		path   string
@@ -142,7 +142,7 @@ func Testservice_Method(t *testing.T) {
 		{
 			name: "error",
 			service: &service{
-				discover: func(string) ([]string, []string, error) {
+				discovery: func(string) ([]string, []string, error) {
 					return []string{"127.0.0.1:12304"}, []string{"service-id"}, nil
 				},
 			},
@@ -158,7 +158,7 @@ func Testservice_Method(t *testing.T) {
 	}
 }
 
-func Testservice_Get(t *testing.T) {
+func TestServiceGet(t *testing.T) {
 	type args struct {
 		path string
 	}
@@ -171,7 +171,7 @@ func Testservice_Get(t *testing.T) {
 		{
 			name: "error",
 			service: &service{
-				discover: func(string) ([]string, []string, error) {
+				discovery: func(string) ([]string, []string, error) {
 					return []string{"127.0.0.1:12304"}, []string{"service-id"}, nil
 				},
 			},
