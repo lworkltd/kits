@@ -4,7 +4,7 @@ import (
 	"net"
 )
 
-// 获取本机IP，如果指定了网卡，则返回网卡的ipv4，否则选择第一个网卡的ip
+// 获取本机ip，如果指定了网卡，则返回网卡的ipv4，否则选择第一个网卡的ip
 func Ipv4(adapter string) (string, bool, error) {
 	if adapter == "" {
 		addrs, err := net.InterfaceAddrs()

@@ -1,13 +1,11 @@
 package eval
 
 import (
-	"fmt"
-	"github.com/lworkltd/kits/pkgs/jsonize"
 	"reflect"
 	"testing"
 )
 
-func Test_parseDesc(t *testing.T) {
+func TestParseDesc(t *testing.T) {
 	type args struct {
 		desc string
 	}
@@ -154,7 +152,7 @@ func TestEmptyArgsExecutor(t *testing.T) {
 	}
 }
 
-func Test_evalImpl_Eval(t *testing.T) {
+func TestEvalImplEval(t *testing.T) {
 	RegisterExecutor("ip_of_interface", SingleArgsExecutor(func(interfaceName string) (string, bool, error) {
 		if interfaceName == "eth0" {
 			return "127.0.0.1", false, nil
@@ -341,7 +339,6 @@ func TestComplete(t *testing.T) {
 			if err := Complete(tt.args.v); (err != nil) != tt.wantErr {
 				t.Errorf("Complete() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			fmt.Printf("%s\n", jsonize.V(tt.args.v, true))
 		})
 	}
 }
