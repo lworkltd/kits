@@ -7,7 +7,7 @@ import (
 	"github.com/lworkltd/kits/service/restful/code"
 )
 
-func Test_Server(t *testing.T) {
+func TestServer(t *testing.T) {
 	FailedCode := 10010
 
 	type Data struct {
