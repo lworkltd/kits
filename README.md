@@ -14,7 +14,7 @@ git get github.com/lworkltd/kits
 [alpha]
 
 1. 尚未实现针对每个服务的熔断配置
-2. 需要实现能够实现调用链路追踪的[LoggerFormater](./pkgs/logutil/json_formatter.go)，此外，还需要更多的运行时信息加入日志
+2. 需要实现能够实现调用链路追踪的[LoggerFormater](./utils/log/json_formatter.go)，此外，还需要更多的运行时信息加入日志
 3. 很多代码的测试覆盖率依然比较低
 4. 工具目前比较少
 5. 文档不完善
