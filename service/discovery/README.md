@@ -12,13 +12,13 @@ discovery 包
 使用方法
 ----
 ```
-csl, err := consul.New("your-consul-server)
+consulClient, err := consul.New("your-consul-server)
 if err != nil {
     panic(err)
 }
 
 Init(&Option{
-    ConsulClient: csl,
+    ConsulClient: consulClient,
 })
 
 option := &consul.RegisterOption{
@@ -28,8 +28,8 @@ option := &consul.RegisterOption{
     Port: 11111,
 }
 
-Register(o)
-remotes, err := Discover(o.Name)
+Register(option)
+remotes, err := Discover(option.Name)
 if err != nil || len(remotes) != 1 {
     log.Errorf("expect 1 server got %v ,err=%v", len(remotes), err)
     return
@@ -39,7 +39,7 @@ if remotes[0] != fmt.Sprintf("%s:%d", o.Ip, o.Port) {
     return
 }
 
-Unregister(o)
+Unregister(option)
 
 remotes, err = Discover(o.Name)
 if err != nil || len(remotes) != 1 {

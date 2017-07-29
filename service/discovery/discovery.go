@@ -1,4 +1,4 @@
-package discover
+package discovery
 
 import (
 	"fmt"
@@ -15,35 +15,35 @@ type DiscoverImpl struct {
 }
 
 // Discover 发现服务
-func (discover *DiscoverImpl) Discover(service string) ([]string, []string, error) {
-	if discover.static != nil {
-		remotes, _, _ := discover.static(service)
+func (discovery *DiscoverImpl) Discover(service string) ([]string, []string, error) {
+	if discovery.static != nil {
+		remotes, _, _ := discovery.static(service)
 		if len(remotes) != 0 {
 			return remotes, remotes, nil
 		}
 	}
 
-	if discover.seacher != nil {
-		return discover.seacher(service)
+	if discovery.seacher != nil {
+		return discovery.seacher(service)
 	}
 
-	return nil, nil, fmt.Errorf("not avaliable discover")
+	return nil, nil, fmt.Errorf("not avaliable discovery")
 }
 
 // Register 注册服务
-func (discover *DiscoverImpl) Register(option *consul.RegisterOption) error {
-	if discover.register == nil {
+func (discovery *DiscoverImpl) Register(option *consul.RegisterOption) error {
+	if discovery.register == nil {
 		return fmt.Errorf("service register not initialize yet")
 	}
 
-	return discover.register(option)
+	return discovery.register(option)
 }
 
 // Unregister 删除服务
-func (discover *DiscoverImpl) Unregister(option *consul.RegisterOption) error {
-	if discover.unregister == nil {
+func (discovery *DiscoverImpl) Unregister(option *consul.RegisterOption) error {
+	if discovery.unregister == nil {
 		return fmt.Errorf("service unregister not initialize yet")
 	}
 
-	return discover.unregister(option)
+	return discovery.unregister(option)
 }
