@@ -31,7 +31,7 @@ func (ts *TestDefaultItem) AfterParse() {
 	ts.N = 100
 }
 
-func Test_profileParserImpl_Parse(t *testing.T) {
+func TestProfileParserImplParse(t *testing.T) {
 	var tdc TestDefaultConfig
 	os.Setenv("abc.n", "321")
 	os.Setenv("abc.r_123_xcvf", "1234")
@@ -69,7 +69,7 @@ func Test_profileParserImpl_Parse(t *testing.T) {
 	}
 }
 
-func Test_parseDefault(t *testing.T) {
+func TestParseDefault(t *testing.T) {
 	var tdc TestDefaultConfig
 	type args struct {
 		v           interface{}
@@ -97,7 +97,7 @@ func Test_parseDefault(t *testing.T) {
 	}
 }
 
-func Test_parseEnv(t *testing.T) {
+func TestParseEnv(t *testing.T) {
 	var tdc TestDefaultConfig
 	os.Setenv("abc.r_123_xcvf", "1323")
 	os.Setenv("top_level", "[1,2,3,4,5,6]")
@@ -138,7 +138,7 @@ func Test_parseEnv(t *testing.T) {
 	}
 }
 
-func Test_parseInit(t *testing.T) {
+func TestParseInit(t *testing.T) {
 	type args struct {
 		v           interface{}
 		parseStatus *parseStatus
@@ -159,7 +159,7 @@ func Test_parseInit(t *testing.T) {
 	}
 }
 
-func Test_parseInit0(t *testing.T) {
+func TestParseInit0(t *testing.T) {
 	type args struct {
 		v           reflect.Value
 		parseStatus *parseStatus

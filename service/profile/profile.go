@@ -59,7 +59,7 @@ func (consul *Consul) AfterParse() {
 type Service struct {
 	Host        string `toml:"host"`         // 服务监听
 	PathPrefix  string `toml:"path_prefix"`  // 接口前缀
-	McodeProfix string `toml:"mcode_profix"` // API错误码前缀
+	McodePrefix string `toml:"mcode_prefix"` // API错误码前缀
 
 	TraceEnabled     bool `toml:"trace_enabled"`      // 启用OpenTrace,需要Zipkin配置
 	AccessLogEnabled bool `toml:"access_log_enabled"` // 访问日志启用
