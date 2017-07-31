@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func Test_client_exec(t *testing.T) {
+func TestClientExec(t *testing.T) {
 	type Response struct {
 		ResultCode int `json:"result_code"`
 	}
@@ -73,7 +73,7 @@ func Test_client_exec(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	service := &service{
-		discover: func(string) ([]string, []string, error) {
+		discovery: func(string) ([]string, []string, error) {
 			return []string{"127.0.0.1:26403"}, []string{"service-id"}, nil
 		},
 		name: "test-service",
@@ -87,7 +87,7 @@ func Test_client_exec(t *testing.T) {
 		}).
 		Query("hourse_number", "T-12").
 		QueryArray("building", "12", "15").
-		Querys(map[string][]string{
+		Queries(map[string][]string{
 			"floor": []string{"1", "2", "3"},
 			"room":  []string{"1"},
 		}).

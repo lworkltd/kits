@@ -5,8 +5,10 @@ import (
 	"github.com/lworkltd/kits/example/location/api/server"
 	"github.com/lworkltd/kits/example/location/conf"
 	"github.com/lworkltd/kits/example/location/model"
-	"github.com/lworkltd/kits/pkgs/redisutil"
+	redisutils "github.com/lworkltd/kits/utils/redis"
 )
+
+
 
 func main() {
 	if err := conf.Parse(); err != nil {
@@ -15,7 +17,7 @@ func main() {
 
 	conf.Dump()
 
-	client := redis.NewClusterClient(redisutil.Option(conf.GetRedis()))
+	client := redis.NewClusterClient(redisutils.Option(conf.GetRedis()))
 	model.Setup(client)
 
 	if err := server.Setup(conf.GetService()); err != nil {

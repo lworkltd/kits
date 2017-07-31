@@ -23,11 +23,11 @@ type client struct {
 
 	method   string
 	host     string
-	sche     string
+	scheme   string
 	serverid string
 
 	headers map[string]string
-	querys  map[string][]string
+	queries  map[string][]string
 	routes  map[string]string
 	payload func() ([]byte, error)
 
@@ -53,10 +53,10 @@ func (client *client) clear() {
 	client.errInProcess = nil
 	client.headers = nil
 	client.routes = nil
-	client.querys = nil
+	client.queries = nil
 	client.method = "GET"
 	client.host = ""
-	client.sche = "http"
+	client.scheme = "http"
 	client.payload = nil
 	client.logFields = make(map[string]interface{}, 10)
 	client.ctx = nil
@@ -67,7 +67,7 @@ func (client *client) Tls() Client {
 		return client
 	}
 
-	client.sche = "https"
+	client.scheme = "https"
 
 	return client
 }
@@ -115,16 +115,16 @@ func (client *client) Query(queryName, queryValue string) Client {
 		return client
 	}
 
-	if client.querys == nil {
-		client.querys = map[string][]string{
+	if client.queries == nil {
+		client.queries = map[string][]string{
 			queryName: []string{queryValue},
 		}
 		return client
 	}
 
-	querys := client.querys[queryName]
-	querys = append(querys, queryValue)
-	client.querys[queryName] = querys
+	queries := client.queries[queryName]
+	queries = append(queries, queryValue)
+	client.queries[queryName] = queries
 
 	return client
 }
@@ -134,34 +134,34 @@ func (client *client) QueryArray(queryName string, queryValues ...string) Client
 		return client
 	}
 
-	if client.querys == nil {
-		client.querys = map[string][]string{
+	if client.queries == nil {
+		client.queries = map[string][]string{
 			queryName: queryValues,
 		}
 		return client
 	}
 
-	querys := client.querys[queryName]
-	querys = append(querys, queryValues...)
-	client.querys[queryName] = querys
+	queries := client.queries[queryName]
+	queries = append(queries, queryValues...)
+	client.queries[queryName] = queries
 
 	return client
 }
 
-func (client *client) Querys(queryValues map[string][]string) Client {
+func (client *client) Queries(queryValues map[string][]string) Client {
 	if client.errInProcess != nil {
 		return client
 	}
 
-	if client.querys == nil {
-		client.querys = make(map[string][]string, len(queryValues))
+	if client.queries == nil {
+		client.queries = make(map[string][]string, len(queryValues))
 		return client
 	}
 
-	for key, qs := range queryValues {
-		querys := client.querys[key]
-		querys = append(querys, qs...)
-		client.querys[key] = querys
+	for key, queryValueSlice := range queryValues {
+		queries := client.queries[key]
+		queries = append(queries, queryValueSlice...)
+		client.queries[key] = queries
 	}
 
 	return client
@@ -257,7 +257,7 @@ func (client *client) Exec(out interface{}) (int, error) {
 			"service_id": client.serverid,
 			"method":     client.method,
 			"path":       client.path,
-			"querys":     client.querys,
+			"queries":    client.queries,
 			"headers":    client.headers,
 			"routes":     client.routes,
 			"endpoint":   client.host,
@@ -277,7 +277,7 @@ func (client *client) Exec(out interface{}) (int, error) {
 func (client *client) build() (*http.Request, error) {
 	path, err := parsePath(client.path, client.routes)
 	if err != nil {
-		client.logFields["error"] = "resources parameter invalid"
+		client.logFields["error"] = "routes parameter invalid"
 		client.logFields["routes"] = client.routes
 		return nil, err
 	}
@@ -287,13 +287,13 @@ func (client *client) build() (*http.Request, error) {
 		return nil, fmt.Errorf("remote is emtpy")
 	}
 
-	url, err := makeUrl(client.sche, client.host, path, client.querys)
+	url, err := makeUrl(client.scheme, client.host, path, client.queries)
 
 	if err != nil {
-		client.logFields["scheme"] = client.sche
+		client.logFields["scheme"] = client.scheme
 		client.logFields["remote"] = client.host
 		client.logFields["path"] = url
-		client.logFields["querys"] = client.querys
+		client.logFields["queries"] = client.queries
 		return nil, err
 	}
 
@@ -318,8 +318,8 @@ func (client *client) build() (*http.Request, error) {
 
 	request.Header.Add("Content-Type", "application/json")
 
-	for k, v := range client.headers {
-		request.Header.Add(k, v)
+	for headerKey, headerValue := range client.headers {
+		request.Header.Add(headerKey, headerValue)
 	}
 
 	return request, nil

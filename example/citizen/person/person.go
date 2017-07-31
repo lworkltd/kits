@@ -6,7 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/example/citizen/model"
 	loc "github.com/lworkltd/kits/example/location/model"
-	"github.com/lworkltd/kits/pkgs/invokeutil"
+	invokeutils"github.com/lworkltd/kits/utils/invoke"
 	"github.com/lworkltd/kits/service/invoke"
 	"github.com/lworkltd/kits/service/restful/code"
 )
@@ -31,13 +31,13 @@ func GetPerson(cxt context.Context, age int8) ([]*PersonReatimeInfo, code.Error)
 		// TODO: for the service invokation should move to the common packge
 		// TODO: performace advice,read the location once
 		location := loc.Location{}
-		res := &invokeutil.Response{}
+		res := &invokeutils.Response{}
 		info.Location = location
 		status, invokeerr := invoke.Name("kits-location").
 			Get("/v1/location").
 			Query("id", person.Id).
 			Exec(res)
-		cerr := invokeutil.Unpkg("kits-location", invokeerr, status, res, &location)
+		cerr := invokeutils.ExtractHeader("kits-location", invokeerr, status, res, &location)
 		if cerr != nil {
 			logrus.WithFields(logrus.Fields{
 				"id":    person.Id,

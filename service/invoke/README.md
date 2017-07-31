@@ -41,7 +41,7 @@ func main() {
 		}).
 		Query("hourse_number", "T-12").
 		QueryArray("building", "12", "15").
-		Querys(map[string][]string{
+		Queries(map[string][]string{
 			"floor": []string{"1", "2", "3"},
 			"room":  []string{"1"},
 		}).

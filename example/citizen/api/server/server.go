@@ -9,10 +9,10 @@ import (
 
 var wrapper *wrap.Wrapper
 
-//TODO: 在gin所监听的接口同时处理pprof
+// TODO: 在gin所监听的接口同时处理pprof
 func initService(_ *gin.Engine, option *profile.Service) error {
 	wrapper = wrap.New(&wrap.Option{
-		Prefix: option.McodeProfix,
+		Prefix: option.McodePrefix,
 	})
 
 	if option.Reportable {
@@ -46,6 +46,6 @@ func Setup(option *profile.Service) error {
 }
 
 func ctxFromGinContext(ctx *gin.Context) context.Context {
-	//TODO:pending the context from gin conetext
+	// TODO:pending the context from gin conetext
 	return context.Background()
 }

@@ -4,12 +4,12 @@ import (
 	"testing"
 )
 
-func Test_makeUrl(t *testing.T) {
+func TestMakeUrl(t *testing.T) {
 	type args struct {
 		sche   string
 		host   string
 		path   string
-		querys map[string][]string
+		queries map[string][]string
 	}
 	tests := []struct {
 		name    string
@@ -23,7 +23,7 @@ func Test_makeUrl(t *testing.T) {
 				sche: "http",
 				host: "127.0.0.1:8013",
 				path: "/v1/apples/total_weight",
-				querys: map[string][]string{
+				queries: map[string][]string{
 					"box":   {"1", "2"},
 					"color": []string{"yellow"},
 				},
@@ -34,7 +34,7 @@ func Test_makeUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := makeUrl(tt.args.sche, tt.args.host, tt.args.path, tt.args.querys)
+			got, err := makeUrl(tt.args.sche, tt.args.host, tt.args.path, tt.args.queries)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("makeUrl() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -46,7 +46,7 @@ func Test_makeUrl(t *testing.T) {
 	}
 }
 
-func Test_parsePath(t *testing.T) {
+func TestParsePath(t *testing.T) {
 	type args struct {
 		path string
 		r    map[string]string
