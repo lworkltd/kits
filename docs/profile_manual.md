@@ -137,7 +137,7 @@ logger_enabled = true
 ----
 + **eval**  
 对于有些动态配置，比如consul的kv，网卡的ip等可以使用eval来解释配置的实际值
-,但是要使用这种规则首先需要在代码中对实现接口,参考[Eval指引](../pkgs/eval/README.md)
+,但是要使用这种规则首先需要在代码中对实现接口,参考[Eval指引](../utils/eval/README.md)
 + **invoker.balance_mode**  
 目前支持`round-robin`
 + **hystrix.service_circuits**  

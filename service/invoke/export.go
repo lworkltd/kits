@@ -33,7 +33,7 @@ type (
 		Put(string) Client            // PUT
 		Delete(string) Client         // DELETE
 		Method(string, string) Client // 自定义方法
-		Name() string                 //服务名称
+		Name() string                 // 服务名称
 	}
 
 	// Client 客户端
@@ -42,7 +42,7 @@ type (
 		Header(string, string) Client        // 添加头部
 		Query(string, string) Client         // 添加查询参数
 		QueryArray(string, ...string) Client // 添加查询参数
-		Querys(map[string][]string) Client   // 添加查询参数
+		Queries(map[string][]string) Client  // 添加查询参数
 		Route(string, string) Client         // 添加路径参数
 		Routes(map[string]string) Client     // 添加路径参数
 		Json(interface{}) Client             // 添加Json消息体
@@ -59,8 +59,7 @@ func Init(option *Option) error {
 	return eng.Init(option)
 }
 
-// Name 返回服务器
-// More examples please see <<README.md>>
+// Name 返回服务器实例
 func Name(name string) Service {
 	return eng.Service(name)
 }

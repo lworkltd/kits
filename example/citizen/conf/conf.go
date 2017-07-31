@@ -9,11 +9,11 @@ import (
 	"github.com/afex/hystrix-go/plugins"
 	hystrixplugins "github.com/afex/hystrix-go/plugins"
 	"github.com/lworkltd/kits/helper/consul"
-	"github.com/lworkltd/kits/pkgs/eval"
-	"github.com/lworkltd/kits/pkgs/ipnet"
-	"github.com/lworkltd/kits/pkgs/jsonize"
-	"github.com/lworkltd/kits/pkgs/logutil"
-	"github.com/lworkltd/kits/service/discover"
+	"github.com/lworkltd/kits/utils/eval"
+	"github.com/lworkltd/kits/utils/ipnet"
+	"github.com/lworkltd/kits/utils/jsonize"
+	"github.com/lworkltd/kits/utils/log"
+	"github.com/lworkltd/kits/service/discovery"
 	"github.com/lworkltd/kits/service/invoke"
 	"github.com/lworkltd/kits/service/profile"
 	"github.com/opentracing/opentracing-go"
@@ -46,20 +46,20 @@ func Parse(f ...string) error {
 }
 
 func makeStaticDiscover(lines []string) (func(string) ([]string, []string, error), error) {
-	var staticServices []*discover.StaticService
+	var staticServices []*discovery.StaticService
 	for _, line := range lines {
 		words := strings.Split(line, " ")
 		if len(words) == 0 {
 
 		}
-		service := &discover.StaticService{
+		service := &discovery.StaticService{
 			Name:  words[0],
 			Hosts: words[1:],
 		}
 
 		staticServices = append(staticServices, service)
 	}
-	s := discover.NewStaticDiscoverer(staticServices)
+	s := discovery.NewStaticDiscovery(staticServices)
 
 	return s.Discover, nil
 }
@@ -70,7 +70,7 @@ func (pro *Profile) Init(tomlFile string) error {
 		return err
 	}
 
-	if err := logutil.InitLoggerWithProfile(&pro.Logger); err != nil {
+	if err := log.InitLoggerWithProfile(&pro.Logger); err != nil {
 		return err
 	}
 
@@ -90,7 +90,7 @@ func (pro *Profile) Init(tomlFile string) error {
 	}
 
 	// Discover 服务发现
-	var discoverOption discover.Option
+	var discoverOption discovery.Option
 	if pro.Discover.EnableConsul {
 		discoverOption.SearchFunc = consulClient.Discover
 	}
@@ -101,7 +101,7 @@ func (pro *Profile) Init(tomlFile string) error {
 		}
 		discoverOption.StaticFunc = staticsDiscover
 	}
-	if err := discover.Init(&discoverOption); err != nil {
+	if err := discovery.Init(&discoverOption); err != nil {
 		return err
 	}
 
@@ -144,7 +144,7 @@ func (pro *Profile) Init(tomlFile string) error {
 
 	// Invoker 服务调用初始化
 	invokeOption := &invoke.Option{
-		Discover:        discover.Discover,
+		Discover:        discovery.Discover,
 		LoadBalanceMode: pro.Invoker.LoadBanlanceMode,
 		UseTracing:      pro.Invoker.TracingEnabled,
 		UseCircuit:      pro.Invoker.CircuitEnabled,
@@ -168,6 +168,6 @@ func GetMongo() *profile.Mongo {
 }
 
 func Dump() {
-	mutiline := logutil.IsMultiLineFormat(configuration.Logger.Format)
+	mutiline := log.IsMultiLineFormat(configuration.Logger.Format)
 	logrus.WithField("profile", jsonize.V(configuration, mutiline)).Info("Dump profile")
 }
