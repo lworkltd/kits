@@ -2,6 +2,7 @@ package context
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -18,15 +19,15 @@ import (
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
 )
 
-func TestContext_Debug(t *testing.T) {
-	collector, err := zipkin.NewHTTPCollector("http://localhost:9411/api/v1/spans")
+func TestContextDebug(t *testing.T) {
+	collector, err := zipkin.NewHTTPCollector("http://47.90.65.243:9411/api/v1/spans")
 	if err != nil {
 		fmt.Printf("unable to create Zipkin HTTP collector: %+v\n", err)
 		os.Exit(-1)
 	}
 
 	// Create our recorder.
-	recorder := zipkin.NewRecorder(collector, false, "0.0.0.0:0", "service-cli")
+	recorder := zipkin.NewRecorder(collector, false, "127.0.0.1:8083", "qwerty")
 
 	// Create our tracer.
 	tracer, err := zipkin.NewTracer(
@@ -59,7 +60,7 @@ func TestContext_Debug(t *testing.T) {
 		client := http.Client{}
 		_, err = client.Do(request)
 		if err != nil {
-			ctx.WithError(err).Info("pullDataFromServiceB failed")
+			subContext.WithError(err).Info("pullDataFromServiceB failed")
 			return nil, code.Newf(1234, "bad request %v", err)
 		}
 
@@ -76,7 +77,7 @@ func TestContext_Debug(t *testing.T) {
 		defer dbContext.Finish()
 
 		// Read data from database ...
-		ctx.Info("readDataFromDatabase done")
+		dbContext.Info("readDataFromDatabase done")
 		return map[string]interface{}{
 			"anyfield": 1,
 		}, nil
@@ -85,7 +86,7 @@ func TestContext_Debug(t *testing.T) {
 	readData := func(ctx Context, parameters ...interface{}) (interface{}, code.Error) {
 		data, cerr := readDataFromDatabase(ctx, parameters...)
 		if cerr != nil {
-			logrus.WithFields(logrus.Fields{
+			ctx.WithFields(logrus.Fields{
 				"parameters": parameters,
 				"error":      cerr,
 			}).Error("Read data base failed")
@@ -94,16 +95,21 @@ func TestContext_Debug(t *testing.T) {
 		ctx.WithError(fmt.Errorf("xxx")).WithField("abc", "123").Info("readDataFromDatabase OK")
 		ctx.WithFields(logrus.Fields{"abc": "123"}).Info("readDataFromDatabase OK")
 
+		logrus.Error("##################")
 		return pullDataFromServiceB(ctx, data, parameters...)
 	}
 
 	handler := func(serviceCtx Context, r *gin.Context) (interface{}, code.Error) {
 		if r.Query("panic") != "" {
+			serviceCtx.Error("Panic in handler")
 			panic("panic test")
 		}
+
 		if r.Query("error") != "" {
+			serviceCtx.Error("Error in handler")
 			return nil, code.New(1002, "error test")
 		}
+
 		return readData(serviceCtx, r.Query("name"), r.Query("type"))
 	}
 
@@ -112,14 +118,18 @@ func TestContext_Debug(t *testing.T) {
 			Prefix := "SERVICE_A" // 错误码前缀
 			logger := logrus.New()
 			// 设置日志等级
-			logger.SetLevel(logrus.InfoLevel)
-			// 设置日志格式
-			logger.Formatter = &logrus.TextFormatter{}
-			// 附加日志文件行号
-			logger.Hooks.Add(logutils.NewFileLineHook(true))
+			logger.Level = logrus.InfoLevel
+			// 设置日志格式,让附加的TAG放在最前面
+			logger.Formatter = &logutils.TextFormatter{
+				TimestampFormat: "01-02 15:04:05.999",
+			}
+
 			// 附加服务ID
 			logger.Hooks.Add(logutils.NewServiceTagHook("service-a", "service-a-10", "dev"))
-
+			// 附加日志文件行号
+			logger.Hooks.Add(logutils.NewFileLineHook(log.Lshortfile))
+			// 附加Tracing TAG
+			logger.Hooks.Add(logutils.NewTracingLogHook())
 			serviceCtx := FromHttpRequest(httpCtx.Request, logger)
 			defer serviceCtx.Finish()
 
@@ -134,6 +144,7 @@ func TestContext_Debug(t *testing.T) {
 				cerr code.Error
 			)
 			defer func() {
+				// 拦截业务层的异常
 				if r := recover(); r != nil {
 					cerr = code.New(100000000, "Service internal error")
 					serviceCtx.WithFields(logrus.Fields{
@@ -141,6 +152,7 @@ func TestContext_Debug(t *testing.T) {
 						"stack": string(debug.Stack()),
 					}).Errorln("Panic")
 				}
+				// 错误的返回
 				if cerr != nil {
 					httpCtx.JSON(200, map[string]interface{}{
 						"result":  false,
@@ -153,12 +165,12 @@ func TestContext_Debug(t *testing.T) {
 						"data":   data,
 					})
 				}
+				// 正确的返回
 
-				l := logrus.WithFields(logrus.Fields{
-					"method":  httpCtx.Request.Method,
-					"path":    httpCtx.Request.URL.Path,
-					"delay":   time.Since(since),
-					"tracing": serviceCtx.TracingId(),
+				l := serviceCtx.WithFields(logrus.Fields{
+					"method": httpCtx.Request.Method,
+					"path":   httpCtx.Request.URL.Path,
+					"delay":  time.Since(since),
 				})
 				if cerr != nil {
 					l.WithFields(logrus.Fields{
@@ -188,10 +200,13 @@ func TestContext_Debug(t *testing.T) {
 		Query("name", "xiaoming").
 		Query("type", "1").
 		Exec(&ret)
+
 	invoke.Addr("127.0.0.1:8080").
 		Get("/v1/any").
 		Query("panic", "yes").Exec(nil)
+
 	invoke.Addr("127.0.0.1:8080").
 		Get("/v1/any").
 		Query("error", "yes").Exec(nil)
+	time.Sleep(time.Second * 5)
 }
