@@ -7,6 +7,16 @@ import (
 	"github.com/lworkltd/kits/service/profile"
 )
 
+const (
+	FilelineTag     = "@fileline"
+	ServiceTag      = "@service"
+	ServiceIdTag    = "@service-id"
+	TracingTag      = "@tracing"
+	EnvTag          = "@env"
+	DirectLoggerTag = "@directLoggerTag"
+	ContextTag      = "@contextTempTag"
+)
+
 func InitLoggerWithProfile(cfg *profile.Logger) error {
 	switch cfg.Format {
 	case "json":

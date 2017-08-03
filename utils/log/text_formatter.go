@@ -70,6 +70,9 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var b *bytes.Buffer
 	keys := make([]string, 0, len(entry.Data))
 	for k := range entry.Data {
+		if has := strings.HasPrefix(k, "@"); has {
+			continue
+		}
 		keys = append(keys, k)
 	}
 
@@ -99,9 +102,25 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 			f.appendKeyValue(b, "time", entry.Time.Format(timestampFormat))
 		}
 		f.appendKeyValue(b, "level", entry.Level.String())
+		if env, exist := entry.Data[EnvTag]; !exist {
+			f.appendKeyValue(b, EnvTag, env)
+			delete(entry.Data, EnvTag)
+		}
+
+		if tracing, exist := entry.Data[TracingTag]; exist {
+			f.appendKeyValue(b, TracingTag, tracing)
+			delete(entry.Data, TracingTag)
+		}
+
+		if fileline, exist := entry.Data[FilelineTag]; exist {
+			f.appendKeyValue(b, FilelineTag, fileline)
+			delete(entry.Data, FilelineTag)
+		}
+
 		if entry.Message != "" {
 			f.appendKeyValue(b, "msg", entry.Message)
 		}
+
 		for _, key := range keys {
 			f.appendKeyValue(b, key, entry.Data[key])
 		}
