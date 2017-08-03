@@ -118,93 +118,110 @@ var directLogFields = logrus.Fields{
 	log.DirectLoggerTag: true,
 }
 
+func contextLogFields(ctx context.Context) logrus.Fields {
+	return logrus.Fields{
+		log.ContextTag: ctx,
+	}
+}
+func (ctx *tracingCtx) WithField(key string, value interface{}) *logrus.Entry {
+	return ctx.FieldLogger.WithFields(contextLogFields(ctx)).WithField(key, value)
+}
+
+func (ctx *tracingCtx) WithFields(fields logrus.Fields) *logrus.Entry {
+	return ctx.FieldLogger.WithFields(contextLogFields(ctx)).WithFields(fields)
+}
+
+func (ctx *tracingCtx) WithError(err error) *logrus.Entry {
+	return ctx.FieldLogger.WithFields(contextLogFields(ctx)).WithError(err)
+}
+
 func (ctx *tracingCtx) Debugf(format string, args ...interface{}) {
-	ctx.WithFields(directLogFields).Debugf(format, args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Debugf(format, args...)
 }
 
 func (ctx *tracingCtx) Infof(format string, args ...interface{}) {
-	ctx.WithFields(directLogFields).Infof(format, args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Infof(format, args...)
 }
 
 func (ctx *tracingCtx) Printf(format string, args ...interface{}) {
-	ctx.WithFields(directLogFields).Printf(format, args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Printf(format, args...)
 }
 
 func (ctx *tracingCtx) Warnf(format string, args ...interface{}) {
-	ctx.WithFields(directLogFields).Warnf(format, args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Warnf(format, args...)
 }
 
 func (ctx *tracingCtx) Warningf(format string, args ...interface{}) {
-	ctx.WithFields(directLogFields).Warningf(format, args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Warningf(format, args...)
 }
 
 func (ctx *tracingCtx) Errorf(format string, args ...interface{}) {
-	ctx.WithFields(directLogFields).Errorf(format, args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Errorf(format, args...)
 }
 
 func (ctx *tracingCtx) Fatalf(format string, args ...interface{}) {
-	ctx.WithFields(directLogFields).Fatalf(format, args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Fatalf(format, args...)
 }
 
 func (ctx *tracingCtx) Panicf(format string, args ...interface{}) {
-	ctx.WithFields(directLogFields).Panicf(format, args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Panicf(format, args...)
 }
 
 func (ctx *tracingCtx) Debug(args ...interface{}) {
-	ctx.WithFields(directLogFields).Debug(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Debug(args...)
 }
 
 func (ctx *tracingCtx) Info(args ...interface{}) {
-	ctx.WithFields(directLogFields).Info(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Info(args...)
 }
 
 func (ctx *tracingCtx) Print(args ...interface{}) {
-	ctx.WithFields(directLogFields).Print(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Print(args...)
 }
 
 func (ctx *tracingCtx) Warn(args ...interface{}) {
-	ctx.WithFields(directLogFields).Warn(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Warn(args...)
 }
 
 func (ctx *tracingCtx) Warning(args ...interface{}) {
-	ctx.WithFields(directLogFields).Warning(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Warning(args...)
 }
 
 func (ctx *tracingCtx) Error(args ...interface{}) {
-	ctx.WithFields(directLogFields).Error(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Error(args...)
 }
 
 func (ctx *tracingCtx) Panic(args ...interface{}) {
-	ctx.WithFields(directLogFields).Panic(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Panic(args...)
 }
 
 func (ctx *tracingCtx) Debugln(args ...interface{}) {
-	ctx.WithFields(directLogFields).Debugln(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Debugln(args...)
 }
 func (ctx *tracingCtx) Infoln(args ...interface{}) {
-	ctx.WithFields(directLogFields).Infoln(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Infoln(args...)
 }
 
 func (ctx *tracingCtx) Println(args ...interface{}) {
-	ctx.WithFields(directLogFields).Println(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Println(args...)
 }
 
 func (ctx *tracingCtx) Warnln(args ...interface{}) {
-	ctx.WithFields(directLogFields).Warnln(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Warnln(args...)
 }
 
 func (ctx *tracingCtx) Warningln(args ...interface{}) {
-	ctx.WithFields(directLogFields).Warningln(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Warningln(args...)
 }
 
 func (ctx *tracingCtx) Errorln(args ...interface{}) {
-	ctx.WithFields(directLogFields).Errorln(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Errorln(args...)
 }
 
 func (ctx *tracingCtx) Fatalln(args ...interface{}) {
-	ctx.WithFields(directLogFields).Fatalln(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Fatalln(args...)
 }
 
 func (ctx *tracingCtx) Panicln(args ...interface{}) {
-	ctx.WithFields(directLogFields).Panicln(args...)
+	ctx.FieldLogger.WithFields(directLogFields).WithFields(contextLogFields(ctx)).Panicln(args...)
 }
