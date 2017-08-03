@@ -27,7 +27,7 @@ type client struct {
 	serverid string
 
 	headers map[string]string
-	queries  map[string][]string
+	queries map[string][]string
 	routes  map[string]string
 	payload func() ([]byte, error)
 
@@ -253,7 +253,7 @@ func (client *client) Exec(out interface{}) (int, error) {
 
 	if doLogger {
 		fileds := logrus.Fields{
-			"service":    client.service,
+			"service":    client.service.Name(),
 			"service_id": client.serverid,
 			"method":     client.method,
 			"path":       client.path,
