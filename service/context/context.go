@@ -1,6 +1,7 @@
 package context
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/lworkltd/kits/utils/log"
@@ -27,10 +28,11 @@ type Context interface {
 	SubContext(string) Context
 }
 
+// FromHttpRequest 从http.Request解析Opentracing的上下文
+// 如果没有解析成功,则创建一个新的上下文
 func FromHttpRequest(request *http.Request, logger logrus.FieldLogger) Context {
 	var sp opentracing.Span
-	name := "http://xx/xx"
-	// TODO: fix the name of tracing span
+	name := fmt.Sprintf("%s:%s", request.URL.Scheme, request.URL.Path)
 	wireContext, err := opentracing.GlobalTracer().Extract(
 		opentracing.HTTPHeaders,
 		opentracing.HTTPHeadersCarrier(request.Header))
