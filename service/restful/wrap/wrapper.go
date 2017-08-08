@@ -29,6 +29,10 @@ type Wrapper struct {
 	logFunc func(*LogParameter)
 	// 模式
 	mode string
+	// 服务名称
+	serviceName string
+	// 服务ID
+	serviceId string
 }
 
 type Option struct {
@@ -64,7 +68,7 @@ type HttpServer interface {
 // Wrap 为gin的回调接口增加了固定的返回值，当程序收到处理结果的时候会将返回值封装一层再发送到网络
 func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 	return func(httpCtx *gin.Context) {
-		Prefix := "SERVICE_A" // 错误码前缀
+		Prefix := wrapper.mcodePrefix // 错误码前缀
 		logger := logrus.New()
 		// 设置日志等级
 		logger.Level = logrus.InfoLevel
@@ -74,7 +78,7 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 		}
 
 		// 附加服务ID
-		logger.Hooks.Add(logutils.NewServiceTagHook("service-a", "service-a-10", "dev"))
+		logger.Hooks.Add(logutils.NewServiceTagHook(wrapper.serviceName, wrapper.serviceId, wrapper.mode))
 		// 附加日志文件行号
 		logger.Hooks.Add(logutils.NewFileLineHook(log.Lshortfile))
 		// 附加Tracing TAG
