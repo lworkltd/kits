@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	traceIdHeader = "X-B3-Traceid"
-	spanIdHeader  = "X-B3-Traceid"
+	TraceIdHeader = "X-B3-Traceid"
+	SpanIdHeader  = "X-B3-Traceid"
 )
 
 type Context interface {
@@ -97,7 +97,7 @@ func (ctx *tracingCtx) TracingId() string {
 	if ctx.tracingId == "" {
 		headers := http.Header{}
 		ctx.Inject(headers)
-		ctx.tracingId = headers[traceIdHeader][0]
+		ctx.tracingId = headers[TraceIdHeader][0]
 	}
 
 	return ctx.tracingId
@@ -108,7 +108,7 @@ func (ctx *tracingCtx) SpanId() string {
 	if ctx.spanId == "" {
 		headers := http.Header{}
 		ctx.Inject(headers)
-		ctx.spanId = headers[spanIdHeader][0]
+		ctx.spanId = headers[SpanIdHeader][0]
 	}
 
 	return ctx.spanId

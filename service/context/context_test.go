@@ -95,7 +95,7 @@ func TestContextDebug(t *testing.T) {
 		ctx.WithError(fmt.Errorf("xxx")).WithField("abc", "123").Info("readDataFromDatabase OK")
 		ctx.WithFields(logrus.Fields{"abc": "123"}).Info("readDataFromDatabase OK")
 
-		logrus.Error("##################")
+		logrus.WithField("ctx", ctx)
 		return pullDataFromServiceB(ctx, data, parameters...)
 	}
 
@@ -136,7 +136,7 @@ func TestContextDebug(t *testing.T) {
 			// 附加Tracing Id
 			tracingHeader := http.Header{}
 			serviceCtx.Inject(tracingHeader)
-			logger.Hooks.Add(logutils.NewTracingTagHook(tracingHeader[traceIdHeader][0]))
+			logger.Hooks.Add(logutils.NewTracingTagHook(tracingHeader[TraceIdHeader][0]))
 
 			since := time.Now()
 			var (
