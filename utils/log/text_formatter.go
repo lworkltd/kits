@@ -102,6 +102,7 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 			f.appendKeyValue(b, "time", entry.Time.Format(timestampFormat))
 		}
 		f.appendKeyValue(b, "level", entry.Level.String())
+		
 		if env, exist := entry.Data[EnvTag]; !exist {
 			f.appendKeyValue(b, EnvTag, env)
 			delete(entry.Data, EnvTag)
