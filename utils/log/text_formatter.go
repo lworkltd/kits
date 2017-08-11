@@ -29,12 +29,6 @@ func init() {
 }
 
 type TextFormatter struct {
-	// Set to true to bypass checking for a TTY before outputting colors.
-	ForceColors bool
-
-	// Force disabling colors.
-	DisableColors bool
-
 	// Disable timestamp logging. useful when output is redirected to logging
 	// system that already adds timestamps.
 	DisableTimestamp bool
@@ -54,16 +48,10 @@ type TextFormatter struct {
 	// QuoteEmptyFields will wrap empty fields in quotes if true
 	QuoteEmptyFields bool
 
-	// Whether the logger's out is to a terminal
-	isTerminal bool
-
 	sync.Once
 }
 
 func (f *TextFormatter) init(entry *logrus.Entry) {
-	if entry.Logger != nil {
-		f.isTerminal = logrus.IsTerminal(entry.Logger.Out)
-	}
 }
 
 func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
@@ -89,75 +77,40 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	f.Do(func() { f.init(entry) })
 
-	isColored := (f.ForceColors || f.isTerminal) && !f.DisableColors
-
 	timestampFormat := f.TimestampFormat
 	if timestampFormat == "" {
 		timestampFormat = logrus.DefaultTimestampFormat
 	}
-	if isColored {
-		f.printColored(b, entry, keys, timestampFormat)
-	} else {
-		if !f.DisableTimestamp {
-			f.appendKeyValue(b, "time", entry.Time.Format(timestampFormat))
-		}
-		f.appendKeyValue(b, "level", entry.Level.String())
-		
-		if env, exist := entry.Data[EnvTag]; !exist {
-			f.appendKeyValue(b, EnvTag, env)
-			delete(entry.Data, EnvTag)
-		}
+	if !f.DisableTimestamp {
+		f.appendKeyValue(b, "time", entry.Time.Format(timestampFormat))
+	}
+	f.appendKeyValue(b, "level", entry.Level.String())
 
-		if tracing, exist := entry.Data[TracingTag]; exist {
-			f.appendKeyValue(b, TracingTag, tracing)
-			delete(entry.Data, TracingTag)
-		}
+	if env, exist := entry.Data[EnvTag]; !exist {
+		f.appendKeyValue(b, EnvTag, env)
+		delete(entry.Data, EnvTag)
+	}
 
-		if fileline, exist := entry.Data[FilelineTag]; exist {
-			f.appendKeyValue(b, FilelineTag, fileline)
-			delete(entry.Data, FilelineTag)
-		}
+	if tracing, exist := entry.Data[TracingTag]; exist {
+		f.appendKeyValue(b, TracingTag, tracing)
+		delete(entry.Data, TracingTag)
+	}
 
-		if entry.Message != "" {
-			f.appendKeyValue(b, "msg", entry.Message)
-		}
+	if fileline, exist := entry.Data[FilelineTag]; exist {
+		f.appendKeyValue(b, FilelineTag, fileline)
+		delete(entry.Data, FilelineTag)
+	}
 
-		for _, key := range keys {
-			f.appendKeyValue(b, key, entry.Data[key])
-		}
+	if entry.Message != "" {
+		f.appendKeyValue(b, "msg", entry.Message)
+	}
+
+	for _, key := range keys {
+		f.appendKeyValue(b, key, entry.Data[key])
 	}
 
 	b.WriteByte('\n')
 	return b.Bytes(), nil
-}
-
-func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys []string, timestampFormat string) {
-	var levelColor int
-	switch entry.Level {
-	case logrus.DebugLevel:
-		levelColor = gray
-	case logrus.WarnLevel:
-		levelColor = yellow
-	case logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel:
-		levelColor = red
-	default:
-		levelColor = blue
-	}
-
-	levelText := strings.ToUpper(entry.Level.String())[0:4]
-
-	if f.DisableTimestamp {
-		fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m %-44s ", levelColor, levelText, entry.Message)
-	} else if !f.FullTimestamp {
-		fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m[%04d] %-44s ", levelColor, levelText, int(entry.Time.Sub(baseTimestamp)/time.Second), entry.Message)
-	} else {
-		fmt.Fprintf(b, "\x1b[%dm%s\x1b[0m[%s] %-44s ", levelColor, levelText, entry.Time.Format(timestampFormat), entry.Message)
-	}
-	for _, k := range keys {
-		v := entry.Data[k]
-		fmt.Fprintf(b, " \x1b[%dm%s\x1b[0m=", levelColor, k)
-		f.appendValue(b, v)
-	}
 }
 
 func (f *TextFormatter) needsQuoting(text string) bool {
