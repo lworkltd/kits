@@ -27,7 +27,7 @@ type client struct {
 	serverid string
 
 	headers map[string]string
-	queries  map[string][]string
+	queries map[string][]string
 	routes  map[string]string
 	payload func() ([]byte, error)
 
@@ -253,7 +253,7 @@ func (client *client) Exec(out interface{}) (int, error) {
 
 	if doLogger {
 		fileds := logrus.Fields{
-			"service":    client.service,
+			"service":    client.service.Name(),
 			"service_id": client.serverid,
 			"method":     client.method,
 			"path":       client.path,
@@ -330,12 +330,12 @@ func (client *client) exec(out interface{}) (int, error) {
 		return 0, client.errInProcess
 	}
 
-	cli := &http.Client{}
 	request, err := client.build()
 	if err != nil {
 		return 0, err
 	}
 
+	cli := &http.Client{}
 	resp, err := cli.Do(request)
 	if err != nil {
 		client.logFields["error"] = err
@@ -368,4 +368,67 @@ func (client *client) exec(out interface{}) (int, error) {
 	}
 
 	return resp.StatusCode, nil
+}
+
+func (client *client) getResp() (*http.Response, error) {
+	if client.errInProcess != nil {
+		return nil, client.errInProcess
+	}
+
+	request, err := client.build()
+	if err != nil {
+		return nil, err
+	}
+
+	cli := &http.Client{}
+	resp, err := cli.Do(request)
+	if err != nil {
+		client.logFields["error"] = err
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (client *client) Response() (*http.Response, error) {
+	if client.useTracing {
+		span, ctx := opentracing.StartSpanFromContext(client.ctx, client.tracingName())
+		client.ctx = ctx
+		defer span.Finish()
+	}
+
+	var err error
+	var resp *http.Response
+	if !client.useCircuit {
+		resp, err = client.getResp()
+	} else {
+		err = hystrix.Do(client.circuitName(), func() error {
+			s, err := client.getResp()
+			resp = s
+			return err
+		}, client.fallback)
+	}
+
+	if doLogger {
+		fileds := logrus.Fields{
+			"service":    client.service.Name(),
+			"service_id": client.serverid,
+			"method":     client.method,
+			"path":       client.path,
+			"queries":    client.queries,
+			"headers":    client.headers,
+			"routes":     client.routes,
+			"endpoint":   client.host,
+			"cost":       time.Since(client.createTime),
+		}
+
+		if err != nil {
+			logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
+		} else {
+			logrus.WithFields(fileds).Error("Invoke service done")
+		}
+	}
+
+	return resp, err
+
 }
