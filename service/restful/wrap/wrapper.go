@@ -2,15 +2,19 @@ package wrap
 
 import (
 	"fmt"
+	"log"
 
 	"sync"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/gin-gonic/gin"
-	"github.com/lworkltd/kits/service/restful/code"
 	"net/http"
 	"runtime/debug"
 	"time"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/gin-gonic/gin"
+	"github.com/lworkltd/kits/service/context"
+	"github.com/lworkltd/kits/service/restful/code"
+	logutils "github.com/lworkltd/kits/utils/log"
 )
 
 // Wrapper 用于对请求返回结果进行封装的类
@@ -25,6 +29,10 @@ type Wrapper struct {
 	logFunc func(*LogParameter)
 	// 模式
 	mode string
+	// 服务名称
+	serviceName string
+	// 服务ID
+	serviceId string
 }
 
 type Option struct {
@@ -51,7 +59,7 @@ func New(option *Option) *Wrapper {
 }
 
 // WrappedFunc 是用于封装GIN HTTP接口返回为通用接口的函数定义
-type WrappedFunc func(ctx *gin.Context) (interface{}, code.Error)
+type WrappedFunc func(srvContext context.Context, ctx *gin.Context) (interface{}, code.Error)
 
 type HttpServer interface {
 	Handle(string, string, ...gin.HandlerFunc) gin.IRoutes
@@ -59,55 +67,75 @@ type HttpServer interface {
 
 // Wrap 为gin的回调接口增加了固定的返回值，当程序收到处理结果的时候会将返回值封装一层再发送到网络
 func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
+	return func(httpCtx *gin.Context) {
+		Prefix := wrapper.mcodePrefix // 错误码前缀
+		logger := logrus.New()
+		// 设置日志等级
+		logger.Level = logrus.InfoLevel
+		// 设置日志格式,让附加的TAG放在最前面
+		logger.Formatter = &logutils.TextFormatter{
+			TimestampFormat: "01-02 15:04:05.999",
+		}
 
+		// 附加服务ID
+		logger.Hooks.Add(logutils.NewServiceTagHook(wrapper.serviceName, wrapper.serviceId, wrapper.mode))
+		// 附加日志文件行号
+		logger.Hooks.Add(logutils.NewFileLineHook(log.Lshortfile))
+		// 附加Tracing TAG
+		logger.Hooks.Add(logutils.NewTracingLogHook())
+		serviceCtx := context.FromHttpRequest(httpCtx.Request, logger)
+		defer serviceCtx.Finish()
+
+		// 附加Tracing Id
+		tracingHeader := http.Header{}
+		serviceCtx.Inject(tracingHeader)
+		logger.Hooks.Add(logutils.NewTracingTagHook(serviceCtx.TracingId()))
+
+		since := time.Now()
 		var (
-			res   Response
-			since time.Time
-			data  interface{}
-			cerr  code.Error
+			data interface{}
+			cerr code.Error
 		)
-		since = time.Now()
-
 		defer func() {
+			// 拦截业务层的异常
 			if r := recover(); r != nil {
-				if ce, ok := r.(code.Error); ok {
-					cerr = ce
-				} else {
-					cerr = code.NewPrefixf(wrapper.mcodePrefix, 10000000, "service internal error catched")
-				}
-				logrus.WithFields(logrus.Fields{
+				cerr = code.New(100000000, "Service internal error")
+				serviceCtx.WithFields(logrus.Fields{
 					"error": r,
 					"stack": string(debug.Stack()),
-				}).Error("Service panic")
+				}).Errorln("Panic")
 			}
-
+			// 错误的返回
 			if cerr != nil {
-				res.Result = false
-				if cerr.Mcode() != "" {
-					res.Mcode = cerr.Mcode()
-				} else {
-					res.Mcode = fmt.Sprintf("%s_%d", wrapper.mcodePrefix, cerr.Code())
-				}
-				res.Result = false
-				res.Message = cerr.Error()
-			} else {
-				res.Result = true
-				res.Data = data
-			}
-
-			ctx.JSON(200, res)
-
-			if wrapper.logFunc != nil {
-				wrapper.logFunc(&LogParameter{
-					Since:    since,
-					Request:  ctx.Request,
-					Response: &res,
+				httpCtx.JSON(200, map[string]interface{}{
+					"result":  false,
+					"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
+					"message": cerr.Error(),
 				})
+			} else {
+				httpCtx.JSON(200, map[string]interface{}{
+					"result": true,
+					"data":   data,
+				})
+			}
+			// 正确的返回
+
+			l := serviceCtx.WithFields(logrus.Fields{
+				"method": httpCtx.Request.Method,
+				"path":   httpCtx.Request.URL.Path,
+				"delay":  time.Since(since),
+			})
+			if cerr != nil {
+				l.WithFields(logrus.Fields{
+					"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
+					"message": cerr.Error(),
+				}).Error("Http request failed")
+			} else {
+				l.Info("HTTP request done")
 			}
 		}()
 
-		data, cerr = f(ctx)
+		data, cerr = f(serviceCtx, httpCtx)
 	}
 }
 
