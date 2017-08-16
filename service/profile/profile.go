@@ -93,9 +93,9 @@ func (service *Service) AfterParse() {
 }
 
 type Discovery struct {
-	EnableConsul   bool     `json:"enable_consul"`   // 启用Consul，仅使用Consul时有效
-	EnableStatic   bool     `json:"enable_static"`   // 启用静态服务发现
-	StaticServices []string `json:"static_services"` // 静态服务配置,格式：["{serviceName} addr1 [addr2...]"]
+	EnableConsul   bool     `toml:"enable_consul"`   // 启用Consul，仅使用Consul时有效
+	EnableStatic   bool     `toml:"enable_static"`   // 启用静态服务发现
+	StaticServices []string `toml:"static_services"` // 静态服务配置,格式：["{serviceName} addr1 [addr2...]"]
 }
 
 func (discovery *Discovery) BeforeParse() {
@@ -112,10 +112,10 @@ func (discovery *Discovery) AfterParse() {
 
 // Invoker服务调用相关的配置
 type Invoker struct {
-	LoadBanlanceMode string `json:"load_balance_mode"` // 负载均衡模式
-	CircuitEnabled   bool   `json:"circuit_enabled"`   // 启用Hystrix,需配置Hystrix才会生效
-	TracingEnabled   bool   `json:"traceing_enabled"`  // 启用Tracing，需配置Zipkin后有效
-	LoggerEnabled    bool   `json:"logger_enabled"`    // 启用日志打印，日志等级受控于
+	LoadBanlanceMode string `toml:"load_balance_mode"` // 负载均衡模式
+	CircuitEnabled   bool   `toml:"circuit_enabled"`   // 启用Hystrix,需配置Hystrix才会生效
+	TracingEnabled   bool   `toml:"traceing_enabled"`  // 启用Tracing，需配置Zipkin后有效
+	LoggerEnabled    bool   `toml:"logger_enabled"`    // 启用日志打印，日志等级受控于
 }
 
 func (invoker *Invoker) BeforeParse() {
@@ -129,11 +129,11 @@ func (invoker *Invoker) AfterParse() {}
 // Logger 日志配置
 // 在几乎所有的服务或工具当中，这个配置项目都不应该缺席
 type Logger struct {
-	Format     string     `json:"format"` // 日志的格式
-	Level      string     `json:"level"`
-	File       string     `json:"file"`
-	TimeFormat string     `json:"time_format"`
-	Hooks      [][]string `json:"hooks"`
+	Format     string     `toml:"format"` // 日志的格式
+	Level      string     `toml:"level"`
+	File       string     `toml:"file"`
+	TimeFormat string     `toml:"time_format"`
+	Hooks      [][]string `toml:"hooks"`
 }
 
 func (logger *Logger) BeforeParse() {
