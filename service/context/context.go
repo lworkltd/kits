@@ -32,7 +32,7 @@ type Context interface {
 // 如果没有解析成功,则创建一个新的上下文
 func FromHttpRequest(request *http.Request, logger logrus.FieldLogger) Context {
 	var sp opentracing.Span
-	name := fmt.Sprintf("%s:%s", request.URL.Scheme, request.URL.Path)
+	name := fmt.Sprintf("http:%s", request.URL.Path)
 	wireContext, err := opentracing.GlobalTracer().Extract(
 		opentracing.HTTPHeaders,
 		opentracing.HTTPHeadersCarrier(request.Header))
@@ -40,6 +40,28 @@ func FromHttpRequest(request *http.Request, logger logrus.FieldLogger) Context {
 		sp = opentracing.StartSpan(name)
 	} else {
 		sp = opentracing.StartSpan(name, ext.RPCServerOption(wireContext))
+	}
+
+	return &tracingCtx{
+		Context:     opentracing.ContextWithSpan(context.Background(), sp),
+		FieldLogger: logger,
+	}
+}
+
+// New 创建一个全新的context
+func New(name string, logger logrus.FieldLogger) Context {
+	sp := opentracing.StartSpan(name)
+	return &tracingCtx{
+		Context:     opentracing.ContextWithSpan(context.Background(), sp),
+		FieldLogger: logger,
+	}
+}
+
+// FromContext 从一个Context读取Tracing信息,如果不存在则创建一个新的
+func FromContext(ctx context.Context, name string, logger logrus.FieldLogger) Context {
+	sp := opentracing.SpanFromContext(ctx)
+	if sp == nil {
+		sp = opentracing.StartSpan(name)
 	}
 
 	return &tracingCtx{
@@ -99,7 +121,15 @@ func (ctx *tracingCtx) TracingId() string {
 	if ctx.tracingId == "" {
 		headers := http.Header{}
 		ctx.Inject(headers)
-		ctx.tracingId = headers[TraceIdHeader][0]
+		headerValues, exist := headers[TraceIdHeader]
+		if !exist {
+			return ""
+		}
+		if len(headerValues) < 1 {
+			return ""
+		}
+
+		ctx.tracingId = headerValues[0]
 	}
 
 	return ctx.tracingId
