@@ -14,7 +14,7 @@ type service struct {
 	wellCount      co.Int64
 	totalCallCount co.Int64
 	name           string
-	discovery       DiscoveryFunc
+	discovery      DiscoveryFunc
 	useTracing     bool
 	useCircuit     bool
 	circuitConfig  hystrix.CommandConfig
@@ -107,7 +107,7 @@ func newRest(service Service, method string, path string, remote string, id stri
 
 	if err != nil {
 		client.logFields["error"] = err
-		client.errInProcess = fmt.Errorf("Service not valiable")
+		client.errInProcess = fmt.Errorf("Service [%s] discovery failed,remote call canceled", service.Name())
 	}
 
 	return client

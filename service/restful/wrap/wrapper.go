@@ -3,6 +3,7 @@ package wrap
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"sync"
 
@@ -25,8 +26,6 @@ type Wrapper struct {
 	mcodePrefix string
 	// 返回对象和回收，高并发场景下的内存重复利用 变[use->gc->allocate manager->use] 为 [use->pool->use]
 	pool sync.Pool
-	// 打印日志
-	logFunc func(*LogParameter)
 	// 模式
 	mode string
 	// 服务名称
@@ -36,9 +35,8 @@ type Wrapper struct {
 }
 
 type Option struct {
-	Prefix       string
-	LogParameter func(*LogParameter)
-	Mode         string
+	Prefix string
+	Mode   string
 }
 
 // NewWrapper 创建一个新的wrapper
@@ -50,9 +48,6 @@ func New(option *Option) *Wrapper {
 				return new(Response)
 			},
 		},
-	}
-	if option.LogParameter == nil {
-		w.logFunc = defaultLogFunc
 	}
 
 	return w
@@ -70,13 +65,14 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 	return func(httpCtx *gin.Context) {
 		Prefix := wrapper.mcodePrefix // 错误码前缀
 		logger := logrus.New()
+		logger.Out = os.Stderr
 		// 设置日志等级
 		logger.Level = logrus.InfoLevel
 		// 设置日志格式,让附加的TAG放在最前面
-		logger.Formatter = &logutils.TextFormatter{
+		formatter := &logutils.TextFormatter{
 			TimestampFormat: "01-02 15:04:05.999",
 		}
-
+		logger.Formatter = formatter
 		// 附加服务ID
 		logger.Hooks.Add(logutils.NewServiceTagHook(wrapper.serviceName, wrapper.serviceId, wrapper.mode))
 		// 附加日志文件行号
@@ -99,32 +95,46 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 		defer func() {
 			// 拦截业务层的异常
 			if r := recover(); r != nil {
-				cerr = code.New(100000000, "Service internal error")
-				serviceCtx.WithFields(logrus.Fields{
-					"error": r,
-					"stack": string(debug.Stack()),
-				}).Errorln("Panic")
+				fmt.Println(r)
+				if codeErr, ok := r.(code.Error); ok {
+					cerr = codeErr
+				} else {
+					cerr = code.New(100000000, "Service internal error")
+					serviceCtx.WithFields(logrus.Fields{
+						"error": r,
+						"stack": string(debug.Stack()),
+					}).Errorln("Panic")
+				}
 			}
+
 			// 错误的返回
 			if cerr != nil {
-				httpCtx.JSON(200, map[string]interface{}{
-					"result":  false,
-					"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
-					"message": cerr.Error(),
-				})
+				if cerr.Mcode() != "" {
+					httpCtx.JSON(http.StatusOK, map[string]interface{}{
+						"result":  false,
+						"mcode":   cerr.Mcode(),
+						"message": cerr.Error(),
+					})
+				} else {
+					httpCtx.JSON(http.StatusOK, map[string]interface{}{
+						"result":  false,
+						"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
+						"message": cerr.Error(),
+					})
+				}
 			} else {
-				httpCtx.JSON(200, map[string]interface{}{
+				httpCtx.JSON(http.StatusOK, map[string]interface{}{
 					"result": true,
 					"data":   data,
 				})
 			}
 			// 正确的返回
-
 			l := serviceCtx.WithFields(logrus.Fields{
 				"method": httpCtx.Request.Method,
 				"path":   httpCtx.Request.URL.Path,
 				"delay":  time.Since(since),
 			})
+
 			if cerr != nil {
 				l.WithFields(logrus.Fields{
 					"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
@@ -169,29 +179,4 @@ func (wrapper *Wrapper) Head(srv HttpServer, path string, f WrappedFunc) {
 
 func (wrapper *Wrapper) Delete(srv HttpServer, path string, f WrappedFunc) {
 	wrapper.Handle("DELETE", srv, path, f)
-}
-
-type LogParameter struct {
-	Since    time.Time
-	Request  *http.Request
-	Response *Response
-}
-
-func defaultLogFunc(param *LogParameter) {
-	if param.Response.Result == false {
-		logrus.WithFields(logrus.Fields{
-			"cost":   fmt.Sprintf("%v", time.Since(param.Since)),
-			"method": param.Request.Method,
-			"path":   fmt.Sprintf("%s", param.Request.URL.Path),
-			"mcode":  param.Response.Mcode,
-			"reason": param.Response.Message, // TODO: cut for too long
-		}).Error("HTTP request failed")
-		return
-	}
-
-	logrus.WithFields(logrus.Fields{
-		"cost":   fmt.Sprintf("%v", time.Since(param.Since)),
-		"method": param.Request.Method,
-		"path":   fmt.Sprintf("%s", param.Request.URL.Path),
-	}).Error("HTTP request done")
 }

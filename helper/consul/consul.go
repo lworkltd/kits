@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"errors"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/hashicorp/consul/api"
 )
@@ -211,13 +212,17 @@ func (client *Client) mergeServices(newServices map[string]*serviceCache) {
 	defer client.mutex.Unlock()
 	for name, info := range newServices {
 		service := client.serviceCache[name]
+		if service == nil {
+			service = &serviceCache{}
+		}
 		service.hosts = info.hosts
 		service.t = info.t
 		service.err = info.err
+		client.serviceCache[name] = service
 	}
 }
 
-// 合并服务信息
+// 删除服务信息
 func (client *Client) removeServices(names []string) {
 	client.mutex.Lock()
 	defer client.mutex.Unlock()

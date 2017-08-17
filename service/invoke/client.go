@@ -262,8 +262,8 @@ func (client *client) Exec(out interface{}) (int, error) {
 			"routes":     client.routes,
 			"endpoint":   client.host,
 			"cost":       time.Since(client.createTime),
+			"payload":    client.logFields["payload"],
 		}
-
 		if err != nil {
 			logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
 		} else {
@@ -303,6 +303,7 @@ func (client *client) build() (*http.Request, error) {
 		if err != nil {
 			return nil, err
 		}
+		client.logFields["payload"] = string(b)
 		reader = bytes.NewReader(b)
 	}
 
@@ -420,6 +421,7 @@ func (client *client) Response() (*http.Response, error) {
 			"routes":     client.routes,
 			"endpoint":   client.host,
 			"cost":       time.Since(client.createTime),
+			"payload":    client.logFields["payload"],
 		}
 
 		if err != nil {
