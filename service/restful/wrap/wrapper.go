@@ -106,13 +106,22 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 					}).Errorln("Panic")
 				}
 			}
+
 			// 错误的返回
 			if cerr != nil {
-				httpCtx.JSON(200, map[string]interface{}{
-					"result":  false,
-					"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
-					"message": cerr.Error(),
-				})
+				if cerr.Mcode() != "" {
+					httpCtx.JSON(200, map[string]interface{}{
+						"result":  false,
+						"mcode":   cerr.Mcode(),
+						"message": cerr.Error(),
+					})
+				} else {
+					httpCtx.JSON(200, map[string]interface{}{
+						"result":  false,
+						"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
+						"message": cerr.Error(),
+					})
+				}
 			} else {
 				httpCtx.JSON(200, map[string]interface{}{
 					"result": true,
@@ -135,6 +144,7 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 				l.Info("HTTP request done")
 			}
 		}()
+
 		data, cerr = f(serviceCtx, httpCtx)
 	}
 }
