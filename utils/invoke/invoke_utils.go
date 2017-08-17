@@ -64,7 +64,7 @@ func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out i
 		statusCode = rsp.StatusCode
 	}
 
-	if statusCode == 200 {
+	if statusCode == http.StatusOK {
 		body, err := ioutil.ReadAll(rsp.Body)
 		if err != nil {
 			return code.NewMcode(
@@ -79,6 +79,7 @@ func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out i
 				err.Error(),
 			)
 		}
+		fmt.Println("Body=", string(body))
 		err = json.Unmarshal(body, &commonResp)
 		if err != nil {
 			return code.NewMcode(
