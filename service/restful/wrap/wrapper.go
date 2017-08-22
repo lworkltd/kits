@@ -123,10 +123,13 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 					})
 				}
 			} else {
-				httpCtx.JSON(http.StatusOK, map[string]interface{}{
+				resp := map[string]interface{}{
 					"result": true,
-					"data":   data,
-				})
+				}
+				if data != nil {
+					resp["data"] = data
+				}
+				httpCtx.JSON(http.StatusOK, resp)
 			}
 			// 正确的返回
 			l := serviceCtx.WithFields(logrus.Fields{
