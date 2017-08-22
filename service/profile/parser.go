@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Sirupsen/logrus"
+
 	"github.com/BurntSushi/toml"
 	"github.com/lworkltd/kits/utils/tags"
 )
@@ -212,7 +214,7 @@ func parseInit0(v reflect.Value, parseStatus *parseStatus) {
 }
 
 func isQuoteField(vt string) bool {
-	return vt == "String" || vt == "time.Time" || vt == "time.Duration"
+	return vt == "String" || vt == "string" || vt == "time.Time" || vt == "time.Duration"
 }
 
 // folderToText 使用环境变量的配置生成一个toml文件
@@ -246,8 +248,25 @@ func parseEnv(v interface{}, parseStatus *parseStatus) (err error) {
 	}()
 	parseEnv0(reflect.ValueOf(v), parseStatus, &parseStatus.root)
 	folderToText(&parseStatus.Buffer, &parseStatus.root)
-	_, err = toml.Decode(parseStatus.Buffer.String(), v)
+	text := parseStatus.Buffer.String()
+	logrus.WithFields(logrus.Fields{
+		"text": text,
+	}).Info("Generate toml from env")
+	_, err = toml.Decode(text, v)
 	return err
+}
+
+func unTitle(v string) string {
+	if v == "" {
+		return ""
+	}
+
+	bs := []byte(v)
+
+	lowerBs := bytes.ToLower(bs[0:1])
+	bs[0] = lowerBs[0]
+
+	return string(bs)
 }
 
 // parseEnv0 解析环境变量实现
@@ -271,6 +290,13 @@ func parseEnv0(v reflect.Value, parseStatus *parseStatus, fd *folder) (err error
 		if tag == "-" {
 			continue
 		}
+
+		if tag == "" {
+			continue
+		}
+
+		tag = unTitle(tag)
+
 		if field.Kind() == reflect.Struct {
 			subFolder := &folder{
 				route: parseStatus.routes(tag),
@@ -284,7 +310,13 @@ func parseEnv0(v reflect.Value, parseStatus *parseStatus, fd *folder) (err error
 			continue
 		}
 		key := tag
+		envKey := parseStatus.routes(tag)
 		value, exist := syscall.Getenv(parseStatus.routes(tag))
+		logrus.WithFields(logrus.Fields{
+			"environmentKey": envKey,
+			"value":          value,
+			"type":           field.Type().String(),
+		}).Infoln("Read environment key")
 		if !exist {
 			continue
 		}
