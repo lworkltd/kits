@@ -89,7 +89,7 @@ func (client *Client) Discover(name string) ([]string, []string, error) {
 	service, exist := client.serviceCache[name]
 	client.mutex.RUnlock()
 
-	if !exist {
+	if !exist || service == nil || service.err != nil {
 		s, err := client.service(name)
 		if err != nil {
 			return nil, nil, err
@@ -101,6 +101,7 @@ func (client *Client) Discover(name string) ([]string, []string, error) {
 		client.mutex.Unlock()
 		service = s
 	}
+
 	if service.err != nil {
 		return nil, nil, fmt.Errorf("Get service %s from consul failed:%v", name, service.err)
 	}
@@ -139,7 +140,7 @@ func (client *Client) loop() {
 		deleteServices := make([]string, 0, len(client.serviceCache))
 		for name, service := range client.serviceCache {
 			// 超过30分钟没有访问的服务，将移除自动更新
-			if service.r.Add(time.Minute * 30).Before(time.Now()) {
+			if service.r.Add(time.Minute * 3).Before(time.Now()) {
 				deleteServices = append(deleteServices, name)
 			}
 
@@ -175,6 +176,7 @@ func (client *Client) service(service string) (*serviceCache, error) {
 			"error":   err,
 			"service": service,
 		}).Warn("Get service from consul failed")
+
 		return &serviceCache{
 			err: err,
 		}, err
@@ -211,14 +213,13 @@ func (client *Client) mergeServices(newServices map[string]*serviceCache) {
 	client.mutex.Lock()
 	defer client.mutex.Unlock()
 	for name, info := range newServices {
-		service := client.serviceCache[name]
-		if service == nil {
-			service = &serviceCache{}
-		}
-		service.hosts = info.hosts
-		service.t = info.t
-		service.err = info.err
-		client.serviceCache[name] = service
+		client.serviceCache[name] = info
+		logrus.WithFields(logrus.Fields{
+			"name":  name,
+			"hosts": info.hosts,
+			"ids":   info.ids,
+			"err":   info.err,
+		}).Debug("Update service discovery")
 	}
 }
 
@@ -228,6 +229,10 @@ func (client *Client) removeServices(names []string) {
 	defer client.mutex.Unlock()
 
 	for _, name := range names {
+		logrus.WithFields(logrus.Fields{
+			"name": name,
+		}).Debug("Remove unuse service")
+
 		delete(client.serviceCache, name)
 	}
 }

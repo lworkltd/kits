@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/lworkltd/kits/utils/log"
+	logutils "github.com/lworkltd/kits/utils/log"
 	"github.com/opentracing/opentracing-go/ext"
 
 	"github.com/Sirupsen/logrus"
@@ -42,6 +42,10 @@ func FromHttpRequest(request *http.Request, logger logrus.FieldLogger) Context {
 		sp = opentracing.StartSpan(name, ext.RPCServerOption(wireContext))
 	}
 
+	if logger == nil {
+		logger = &NoopLogger{}
+	}
+
 	return &tracingCtx{
 		Context:     opentracing.ContextWithSpan(context.Background(), sp),
 		FieldLogger: logger,
@@ -51,9 +55,23 @@ func FromHttpRequest(request *http.Request, logger logrus.FieldLogger) Context {
 // New 创建一个全新的context
 func New(name string, logger logrus.FieldLogger) Context {
 	sp := opentracing.StartSpan(name)
+
+	if logger == nil {
+		logger = &NoopLogger{}
+	}
+
 	return &tracingCtx{
 		Context:     opentracing.ContextWithSpan(context.Background(), sp),
 		FieldLogger: logger,
+	}
+}
+
+// NewNoopContext 返回一个什么都不干的Context
+func NewNoopContext() Context {
+	return &NoopContext{
+		Context:     context.Background(),
+		FieldLogger: &NoopLogger{},
+		Tracer:      &NoopTracer{},
 	}
 }
 
@@ -62,6 +80,10 @@ func FromContext(ctx context.Context, name string, logger logrus.FieldLogger) Co
 	sp := opentracing.SpanFromContext(ctx)
 	if sp == nil {
 		sp = opentracing.StartSpan(name)
+	}
+
+	if logger == nil {
+		logger = &NoopLogger{}
 	}
 
 	return &tracingCtx{
@@ -76,6 +98,7 @@ var (
 	_ Tracer             = new(tracingCtx)
 )
 
+// Tracer 包含了所有调用追踪的接口
 type Tracer interface {
 	Finish()
 	TracingId() string
@@ -147,12 +170,12 @@ func (ctx *tracingCtx) SpanId() string {
 }
 
 var directLogFields = logrus.Fields{
-	log.DirectLoggerTag: true,
+	logutils.DirectLoggerTag: true,
 }
 
 func contextLogFields(ctx context.Context) logrus.Fields {
 	return logrus.Fields{
-		log.ContextTag: ctx,
+		logutils.ContextTag: ctx,
 	}
 }
 func (ctx *tracingCtx) WithField(key string, value interface{}) *logrus.Entry {
