@@ -427,7 +427,7 @@ func (client *client) Response() (*http.Response, error) {
 		if err != nil {
 			logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
 		} else {
-			logrus.WithFields(fileds).Error("Invoke service done")
+			logrus.WithFields(fileds).Info("Invoke service done")
 		}
 	}
 

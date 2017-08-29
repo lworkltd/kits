@@ -123,10 +123,13 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 					})
 				}
 			} else {
-				httpCtx.JSON(http.StatusOK, map[string]interface{}{
+				resp := map[string]interface{}{
 					"result": true,
-					"data":   data,
-				})
+				}
+				if data != nil {
+					resp["data"] = data
+				}
+				httpCtx.JSON(http.StatusOK, resp)
 			}
 			// 正确的返回
 			l := serviceCtx.WithFields(logrus.Fields{
@@ -139,7 +142,7 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 				l.WithFields(logrus.Fields{
 					"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
 					"message": cerr.Error(),
-				}).Error("Http request failed")
+				}).Error("HTTP request failed")
 			} else {
 				l.Info("HTTP request done")
 			}
