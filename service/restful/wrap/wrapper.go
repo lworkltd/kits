@@ -142,7 +142,7 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 				l.WithFields(logrus.Fields{
 					"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
 					"message": cerr.Error(),
-				}).Error("Http request failed")
+				}).Error("HTTP request failed")
 			} else {
 				l.Info("HTTP request done")
 			}
