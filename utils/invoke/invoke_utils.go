@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/restful/code"
 )
 
@@ -56,6 +57,7 @@ func ExtractHeader(name string, invokeErr error, statusCode int, res *Response, 
 	return nil
 }
 
+
 // ExtractHttpResponse 解析标准http.Response为输出
 func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out interface{}) code.Error {
 	var commonResp Response
@@ -79,7 +81,7 @@ func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out i
 				err.Error(),
 			)
 		}
-		fmt.Println("Body=", string(body))
+		logrus.Debug("Invoke return Body", string(body))
 		err = json.Unmarshal(body, &commonResp)
 		if err != nil {
 			return code.NewMcode(
