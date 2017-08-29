@@ -34,11 +34,14 @@ func (service *service) remote() (string, string, error) {
 		return "", "", fmt.Errorf("discovery service %s failed", service.name)
 	}
 
+	if len(remotes) != len(ids) {
+		return "", "", fmt.Errorf("discovery return wrong remotes=%v ids=%v", remotes, ids)
+	}
+
 	l := len(remotes)
 	if l == 0 {
 		return "", "", fmt.Errorf("service %s not found", service.name)
 	}
-
 	var use int64
 	if l > 1 {
 		// 通过轮询策略来访问

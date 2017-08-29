@@ -11,6 +11,12 @@ func TestServiceRemote(t *testing.T) {
 			return []string{"127.0.0.1", "127.0.0.2"}, []string{"my-service-1", "my-service-2"}, nil
 		},
 	}
+
+	svc1 := &service{
+		discovery: func(string) ([]string, []string, error) {
+			return []string{"127.0.0.1"}, []string{"my-service-1"}, nil
+		},
+	}
 	tests := []struct {
 		name    string
 		service *service
@@ -18,6 +24,12 @@ func TestServiceRemote(t *testing.T) {
 		want1   string
 		wantErr bool
 	}{
+		{
+			name:    "firsttime",
+			service: svc1,
+			want:    "127.0.0.1",
+			want1:   "my-service-1",
+		},
 		{
 			name:    "firsttime",
 			service: svc,

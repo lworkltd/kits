@@ -58,6 +58,7 @@ var eng Engine = newEngine()
 
 // Init 初始化
 func Init(option *Option) error {
+	doLogger = option.DoLogger
 	return eng.Init(option)
 }
 
