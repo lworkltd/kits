@@ -72,6 +72,9 @@ type Service struct {
 
 	PprofEnabled    bool   `toml:"pprof_enabled"`     // 启用PPROF
 	PprofPathPrefix string `toml:"pprof_path_prefix"` // PPROF的路径前缀,
+	//srvContext log
+	LogLevel        string `toml:"log_level"`
+	LogFilePath     string `toml:"log_file_path"`
 }
 
 func (service *Service) BeforeParse() {
@@ -133,6 +136,7 @@ type Logger struct {
 	Level      string     `toml:"level"`
 	File       string     `toml:"file"`
 	TimeFormat string     `toml:"time_format"`
+	LogFilePath    string `toml:"log_file_path"`
 	Hooks      [][]string `toml:"hooks"`
 }
 
