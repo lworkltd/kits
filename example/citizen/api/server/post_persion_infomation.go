@@ -6,9 +6,10 @@ import (
 	"github.com/lworkltd/kits/example/citizen/model"
 	"github.com/lworkltd/kits/example/citizen/person"
 	"github.com/lworkltd/kits/service/restful/code"
+	"github.com/lworkltd/kits/service/context"
 )
 
-func postPersonInfo(ctx *gin.Context) (interface{}, code.Error) {
+func postPersonInfo(srvContext context.Context, ctx *gin.Context) (interface{}, code.Error) {
 	info := &model.PersonInfo{}
 	if err := ctx.BindJSON(info); err != nil {
 		return nil, code.NewError(errcode.JsonError, err)
