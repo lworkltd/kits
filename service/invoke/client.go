@@ -222,6 +222,19 @@ func (client *client) Proto(payload proto.Message) Client {
 	return client
 }
 
+func (client *client) Body(payload []byte) Client {
+	if client.errInProcess != nil {
+		return client
+	}
+
+	client.payload = func() ([]byte, error) {
+		return payload, nil
+	}
+	return client
+}
+
+
+
 func (client *client) Context(ctx context.Context) Client {
 	if client.errInProcess != nil {
 		return client
