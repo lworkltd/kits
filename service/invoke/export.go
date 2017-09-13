@@ -48,6 +48,7 @@ type (
 		Routes(map[string]string) Client     // 添加路径参数
 		Json(interface{}) Client             // 添加Json消息体
 		Body(byte []byte) Client             // 添加byte消息体
+		Tls() Client                         // 使用HTTPS
 		Context(context.Context) Client      // 上下文
 		Fallback(func(error) error) Client   // 失败触发器
 		Exec(interface{}) (int, error)       // 执行请求
