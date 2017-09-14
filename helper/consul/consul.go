@@ -130,6 +130,18 @@ func (client *Client) KeyValue(key string) (string, bool, error) {
 	return string(pair.Value), true, err
 }
 
+func (client *Client) UpdateKeyValue(key, value string) error {
+	if client == nil || client.cli == nil {
+		return ErrConsulNotInit
+	}
+	_, err := client.cli.KV().Put(&api.KVPair{
+		Key:   key,
+		Value: []byte(value),
+	}, nil)
+
+	return err
+}
+
 // 循环地去读取已经访问过的服务
 func (client *Client) loop() {
 	for {
