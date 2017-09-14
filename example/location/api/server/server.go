@@ -9,6 +9,7 @@ import (
 	"github.com/lworkltd/kits/service/restful/wrap"
 	discoveryutils "github.com/lworkltd/kits/utils/discovery"
 	ginutils "github.com/lworkltd/kits/utils/gin"
+	"github.com/lworkltd/kits/service/context"
 )
 
 var wrapper *wrap.Wrapper
@@ -60,7 +61,7 @@ func checkIndentifyValid(id string) bool {
 	return true
 }
 
-func GetCitizenLocation(ctx *gin.Context) (interface{}, code.Error) {
+func GetCitizenLocation(srvContext context.Context, ctx *gin.Context) (interface{}, code.Error) {
 	id := ctx.Query("id")
 	if id == "" {
 		return nil, code.Newf(errcode.LackParameter, "citizen identify required")

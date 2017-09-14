@@ -16,6 +16,7 @@ import (
 	"github.com/lworkltd/kits/service/context"
 	"github.com/lworkltd/kits/service/restful/code"
 	logutils "github.com/lworkltd/kits/utils/log"
+	"io"
 )
 
 // Wrapper 用于对请求返回结果进行封装的类
@@ -32,17 +33,44 @@ type Wrapper struct {
 	serviceName string
 	// 服务ID
 	serviceId string
+	serviceLogLevel  logrus.Level
+	serviceLogWriter io.Writer
 }
 
 type Option struct {
-	Prefix string
-	Mode   string
+	Prefix       string
+	Mode         string
+	LogLevel     string
+	LogFilePath  string
 }
 
 // NewWrapper 创建一个新的wrapper
 func New(option *Option) *Wrapper {
+	// 设置日志输出IO流，若未配置使用os.Stderr
+	logWriter := os.Stderr
+	if "" != option.LogFilePath {
+		file, err := os.OpenFile(option.LogFilePath, os.O_CREATE | os.O_WRONLY, 0660)
+		if nil != err {
+			fmt.Errorf("Open log file failed, err:%v, log file path:%v", err, option.LogFilePath)
+		} else {
+			logWriter = file
+		}
+	}
+	// 设置日志等级，若未配置，使用logrus.InfoLevel
+	logLevel := logrus.InfoLevel
+	if option.LogLevel != "" {
+		logLevelParse, err := logrus.ParseLevel(option.LogLevel)
+		if err != nil {
+			fmt.Errorf("cannot parse logger level %s", option.LogLevel)
+		} else {
+			logLevel = logLevelParse
+		}
+	}
+
 	w := &Wrapper{
 		mcodePrefix: option.Prefix,
+		serviceLogLevel: logLevel,
+		serviceLogWriter: logWriter,
 		pool: sync.Pool{
 			New: func() interface{} {
 				return new(Response)
@@ -65,9 +93,11 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 	return func(httpCtx *gin.Context) {
 		Prefix := wrapper.mcodePrefix // 错误码前缀
 		logger := logrus.New()
-		logger.Out = os.Stderr
+		// 设置日志输出IO流
+		logger.Out = wrapper.serviceLogWriter
 		// 设置日志等级
-		logger.Level = logrus.InfoLevel
+		logger.Level = wrapper.serviceLogLevel
+
 		// 设置日志格式,让附加的TAG放在最前面
 		formatter := &logutils.TextFormatter{
 			TimestampFormat: "01-02 15:04:05.999",
