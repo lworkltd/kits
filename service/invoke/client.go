@@ -222,6 +222,19 @@ func (client *client) Proto(payload proto.Message) Client {
 	return client
 }
 
+func (client *client) Body(payload []byte) Client {
+	if client.errInProcess != nil {
+		return client
+	}
+
+	client.payload = func() ([]byte, error) {
+		return payload, nil
+	}
+	return client
+}
+
+
+
 func (client *client) Context(ctx context.Context) Client {
 	if client.errInProcess != nil {
 		return client
@@ -317,7 +330,9 @@ func (client *client) build() (*http.Request, error) {
 		request.WithContext(client.ctx)
 	}
 
-	request.Header.Add("Content-Type", "application/json")
+	if _, ok := client.headers["Content-Type"]; !ok {
+		request.Header.Add("Content-Type", "application/json")
+	}
 
 	for headerKey, headerValue := range client.headers {
 		request.Header.Add(headerKey, headerValue)

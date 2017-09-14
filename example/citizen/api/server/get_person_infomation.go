@@ -6,9 +6,10 @@ import (
 	"github.com/lworkltd/kits/example/citizen/person"
 	"github.com/lworkltd/kits/service/restful/code"
 	"strconv"
+	"github.com/lworkltd/kits/service/context"
 )
 
-func getPersonInfo(ctx *gin.Context) (interface{}, code.Error) {
+func getPersonInfo(srvContext context.Context, ctx *gin.Context) (interface{}, code.Error) {
 	ageString := ctx.Query("age")
 	if ageString == "" {
 		return nil, code.New(errcode.LackParameters, "age is required")
