@@ -133,7 +133,7 @@ func TestNewRest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := newRest(tt.args.service, tt.args.method, tt.args.path, tt.args.remote, tt.args.id, tt.args.err); got == nil {
+			if got := newRest(tt.args.service, tt.args.method, tt.args.path); got == nil {
 				t.Errorf("newRest() = nil")
 			}
 		})

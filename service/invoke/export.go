@@ -34,7 +34,9 @@ type (
 		Put(string) Client            // PUT
 		Delete(string) Client         // DELETE
 		Method(string, string) Client // 自定义方法
-		Name() string                 // 服务名称
+
+		Name() string                    // 服务名称
+		Remote() (string, string, error) // 获取一个服务地址和ID
 	}
 
 	// Client 客户端
