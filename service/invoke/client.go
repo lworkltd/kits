@@ -233,8 +233,6 @@ func (client *client) Body(payload []byte) Client {
 	return client
 }
 
-
-
 func (client *client) Context(ctx context.Context) Client {
 	if client.errInProcess != nil {
 		return client
@@ -288,6 +286,13 @@ func (client *client) Exec(out interface{}) (int, error) {
 }
 
 func (client *client) build() (*http.Request, error) {
+	host, serviceNode, err := client.service.Remote()
+	if err != nil {
+		return nil, fmt.Errorf("discovery failed,%v", err)
+	}
+
+	client.host, client.serverid = host, serviceNode
+
 	path, err := parsePath(client.path, client.routes)
 	if err != nil {
 		client.logFields["error"] = "routes parameter invalid"
