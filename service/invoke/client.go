@@ -15,6 +15,13 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
+
+const (
+	HTTP_HEADER_CONTENT_TYPE = "Content-Type"
+
+	HTTP_HEADER_CONTENT_TYPE_JSON = "application/json"
+)
+
 type client struct {
 	service      Service
 	path         string
@@ -335,8 +342,8 @@ func (client *client) build() (*http.Request, error) {
 		request.WithContext(client.ctx)
 	}
 
-	if _, ok := client.headers["Content-Type"]; !ok {
-		request.Header.Add("Content-Type", "application/json")
+	if _, ok := client.headers[HTTP_HEADER_CONTENT_TYPE]; !ok {
+		request.Header.Add(HTTP_HEADER_CONTENT_TYPE, HTTP_HEADER_CONTENT_TYPE_JSON)
 	}
 
 	for headerKey, headerValue := range client.headers {
