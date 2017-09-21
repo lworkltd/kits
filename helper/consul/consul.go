@@ -15,6 +15,11 @@ import (
 	"github.com/hashicorp/consul/api"
 )
 
+const (
+	defaultRegisterCheckInterval = "60s"
+	defaultRegisterCheckTimeout  = "15s"
+)
+
 var ErrConsulNotInit = errors.New("consul not init yet,please initilize with consul.InitConsul() or consul.SetClient()")
 
 // ConsulClient 服务发现
@@ -24,6 +29,7 @@ type Client struct {
 	serviceCache map[string]*serviceCache
 }
 
+// serviceCache 缓存服务的发现信息
 type serviceCache struct {
 	t     time.Time
 	hosts []string
@@ -33,13 +39,20 @@ type serviceCache struct {
 	from  string
 }
 
+// RegisterOption 注册服务的选项参数
 type RegisterOption struct {
-	Ip       string
-	Port     int
-	CheckUrl string
-	Name     string
-	Id       string
-	Tags     []string
+	// 必须配置
+	Name     string // *服务名
+	Id       string // *服务ID,全局唯一
+	Ip       string // *服务端口
+	Port     int    // *端口
+	CheckUrl string // *HTTP 地址
+
+	// 选项配置
+	CheckInterval                string   // 检测间隔，默认 60s
+	CheckTimeout                 string   // 检测超时，默认 16s
+	CheckDeregisterCriticalAfter string   // 仅支持consul 0.7+
+	Tags                         []string // 服务标签
 }
 
 // NewConsulClient 创建一个consul客户端
@@ -66,6 +79,40 @@ func New(host string) (*Client, error) {
 
 // Register 向consul上报一个服务
 func (client *Client) Register(option *RegisterOption) error {
+	if option.Ip == "" {
+		return fmt.Errorf("ip must be set in option")
+	}
+
+	if option.Port == 0 {
+		return fmt.Errorf("port must be set in option")
+	}
+
+	if option.Name == "" {
+		return fmt.Errorf("service name must be set in option")
+	}
+
+	if option.Id == "" {
+		return fmt.Errorf("service id must be set in option")
+	}
+
+	_, err := time.ParseDuration(option.CheckInterval)
+	if err != nil {
+		return fmt.Errorf("check interval %s is not a golang duration", option.CheckInterval)
+	}
+
+	_, err = time.ParseDuration(option.CheckTimeout)
+	if err != nil {
+		return fmt.Errorf("check timout %s is not a golang duration", option.CheckTimeout)
+	}
+
+	if option.CheckInterval == "" {
+		option.CheckInterval = defaultRegisterCheckInterval
+	}
+
+	if option.CheckTimeout == "" {
+		option.CheckTimeout = defaultRegisterCheckTimeout
+	}
+
 	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
 		ID:      option.Id,   // SERVICE_ID
 		Name:    option.Name, // 模块定义 fw_service
@@ -73,7 +120,10 @@ func (client *Client) Register(option *RegisterOption) error {
 		Tags:    option.Tags, // 服务标签
 		Address: option.Ip,   // 服务地址
 		Check: &api.AgentServiceCheck{
-			HTTP: option.CheckUrl,
+			HTTP:     option.CheckUrl,
+			Interval: option.CheckInterval,
+			Timeout:  option.CheckTimeout,
+			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
 		}, // 健康检测
 	})
 }
