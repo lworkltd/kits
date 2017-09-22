@@ -23,34 +23,13 @@ func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
 		return nil
 	}
 
-	if cfg.ReportName == "" {
-		return fmt.Errorf("register server need a service name")
-	}
-
-	if cfg.ReportId == "" {
-		return fmt.Errorf("register server need a service id")
-	}
-
-	if cfg.ReportIp == "" {
-		return fmt.Errorf("register server need a ip address")
-	}
-
-	if cfg.ReportIp == "localhost" || strings.HasPrefix(cfg.ReportIp, "127.0.0") {
-		return fmt.Errorf("register server ip can not be a loopback address")
-	}
-
 	if checkUrl == "" {
 		return fmt.Errorf("register server need a health check url")
 	}
 
-	_, portStr, err := net.SplitHostPort(cfg.Host)
+	port, err := checkAndResolveProfile(cfg)
 	if err != nil {
-		return fmt.Errorf("cannot resolve host port,%s", cfg.Host)
-	}
-
-	port, err := strconv.Atoi(portStr)
-	if err != nil {
-		return fmt.Errorf("service port must be a number:%v", port)
+		return err
 	}
 
 	endpoints, ids, err := discovery.Discover(cfg.ReportName)
@@ -98,4 +77,35 @@ func makeCheckUrl(ip string, port int, path string) string {
 	}
 
 	return path
+}
+
+// checkProfile parse the listen port and check if the profile is configured correctly
+func checkAndResolveProfile(cfg *profile.Service) (int, error) {
+	if cfg.ReportName == "" {
+		return 0, fmt.Errorf("register server need a service name")
+	}
+
+	if cfg.ReportId == "" {
+		return 0, fmt.Errorf("register server need a service id")
+	}
+
+	if cfg.ReportIp == "" {
+		return 0, fmt.Errorf("register server need a ip address")
+	}
+
+	if cfg.ReportIp == "localhost" || strings.HasPrefix(cfg.ReportIp, "127.0.0") {
+		return 0, fmt.Errorf("register server ip can not be a loopback address")
+	}
+
+	_, portStr, err := net.SplitHostPort(cfg.Host)
+	if err != nil {
+		return 0, fmt.Errorf("cannot resolve host port,%s", cfg.Host)
+	}
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return 0, fmt.Errorf("service port must be a number:%v", port)
+	}
+
+	return port, nil
 }
