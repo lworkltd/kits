@@ -95,6 +95,14 @@ func (client *Client) Register(option *RegisterOption) error {
 		return fmt.Errorf("service id must be set in option")
 	}
 
+	if option.CheckInterval == "" {
+		option.CheckInterval = defaultRegisterCheckInterval
+	}
+
+	if option.CheckTimeout == "" {
+		option.CheckTimeout = defaultRegisterCheckTimeout
+	}
+
 	_, err := time.ParseDuration(option.CheckInterval)
 	if err != nil {
 		return fmt.Errorf("check interval %s is not a golang duration", option.CheckInterval)
@@ -103,14 +111,6 @@ func (client *Client) Register(option *RegisterOption) error {
 	_, err = time.ParseDuration(option.CheckTimeout)
 	if err != nil {
 		return fmt.Errorf("check timout %s is not a golang duration", option.CheckTimeout)
-	}
-
-	if option.CheckInterval == "" {
-		option.CheckInterval = defaultRegisterCheckInterval
-	}
-
-	if option.CheckTimeout == "" {
-		option.CheckTimeout = defaultRegisterCheckTimeout
 	}
 
 	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
