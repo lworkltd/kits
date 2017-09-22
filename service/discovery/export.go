@@ -29,7 +29,7 @@ func Unregister(option *consul.RegisterOption) error {
 // Option 初始化服务发现的
 type Option struct {
 	// StaticFunc 返回静态服务，静态服务比发现服务更加优先，经常用于配置文件写死得服务配置
-	// 输入参数为服务名称，第一个返回参数为ip:port列表，第二个为服务ID名称
+	// 输入参数为服务名称，第一个返回参数为ip:port列表，第二个为服务ID名称列表
 	// 如果不填写，那么意味着没有静态服务，模块将尝试从SearchFunc获取服务访问地址
 	StaticFunc func(string) ([]string, []string, error)
 
