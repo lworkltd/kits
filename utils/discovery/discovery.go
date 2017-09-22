@@ -12,6 +12,12 @@ import (
 	"github.com/lworkltd/kits/service/profile"
 )
 
+// RegisterServerWithProfile Register the service with profile
+//
+// `checkUrl` could be either an URL or a path
+//
+// Health check interval use the default value which should be 60s,Health check timeout also
+// use the default value which should be 15s
 func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
 	if !cfg.Reportable {
 		return nil
@@ -76,9 +82,20 @@ func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
 	return discovery.Register(&consul.RegisterOption{
 		Ip:       cfg.ReportIp,
 		Port:     port,
-		CheckUrl: checkUrl,
+		CheckUrl: makeCheckUrl(cfg.ReportIp, port, checkUrl),
 		Name:     cfg.ReportName,
 		Id:       cfg.ReportId,
 		Tags:     cfg.ReportTags,
 	})
+}
+
+// makeCheckUrl return the health check URL
+// If the path is already a complete URL, it do nothing
+// If the path is just a route path, return the URL making up whth given ip&port
+func makeCheckUrl(ip string, port int, path string) string {
+	if strings.HasPrefix(path, "/") {
+		return fmt.Sprintf("http://%s:%d%s", ip, port, path)
+	}
+
+	return path
 }
