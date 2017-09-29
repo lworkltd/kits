@@ -49,7 +49,7 @@ func New(option *Option) *Wrapper {
 	// 设置日志输出IO流，若未配置使用os.Stderr
 	logWriter := os.Stderr
 	if "" != option.LogFilePath {
-		file, err := os.OpenFile(option.LogFilePath, os.O_CREATE | os.O_WRONLY, 0660)
+		file, err := os.OpenFile(option.LogFilePath, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0660)
 		if nil != err {
 			fmt.Errorf("Open log file failed, err:%v, log file path:%v", err, option.LogFilePath)
 		} else {
