@@ -74,7 +74,7 @@ func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out i
 				err.Error(),
 			)
 		}
-
+		defer rsp.Body.Close()
 		if len(body) == 0 {
 			return code.NewMcode(
 				fmt.Sprintf("INVOKE_EMPTY_BODY"),
