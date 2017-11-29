@@ -62,6 +62,10 @@ func ExtractHeader(name string, invokeErr error, statusCode int, res *Response, 
 func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out interface{}) code.Error {
 	var commonResp Response
 	statusCode := 0
+	if invokeErr == nil && rsp != nil{
+		defer rsp.Body.Close()
+	}
+
 	if rsp != nil {
 		statusCode = rsp.StatusCode
 	}
@@ -74,7 +78,6 @@ func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out i
 				err.Error(),
 			)
 		}
-		defer rsp.Body.Close()
 		if len(body) == 0 {
 			return code.NewMcode(
 				fmt.Sprintf("INVOKE_EMPTY_BODY"),
