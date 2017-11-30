@@ -34,7 +34,9 @@ type (
 		Put(string) Client            // PUT
 		Delete(string) Client         // DELETE
 		Method(string, string) Client // 自定义方法
-		Name() string                 // 服务名称
+
+		Name() string                    // 服务名称
+		Remote() (string, string, error) // 获取一个服务地址和ID
 	}
 
 	// Client 客户端
@@ -47,6 +49,8 @@ type (
 		Route(string, string) Client         // 添加路径参数
 		Routes(map[string]string) Client     // 添加路径参数
 		Json(interface{}) Client             // 添加Json消息体
+		Body([]byte) Client             	 // 添加byte消息体
+		Tls() Client                         // 使用HTTPS
 		Context(context.Context) Client      // 上下文
 		Fallback(func(error) error) Client   // 失败触发器
 		Exec(interface{}) (int, error)       // 执行请求

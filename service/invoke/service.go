@@ -81,8 +81,11 @@ func (service *service) Delete(path string) Client {
 
 // Method 使用指定方法请求
 func (service *service) Method(method, path string) Client {
-	remote, id, err := service.remote()
-	return newRest(service, method, path, remote, id, err)
+	return newRest(service, method, path)
+}
+
+func (service *service) Remote() (string, string, error) {
+	return service.remote()
 }
 
 // Name 返回服务名称
@@ -90,27 +93,18 @@ func (service *service) Name() string {
 	return service.name
 }
 
-func newRest(service Service, method string, path string, remote string, id string, err error) Client {
+func newRest(service Service, method string, path string) Client {
 	client := &client{
-		createTime:   time.Now(),
-		service:      service,
-		path:         path,
-		host:         remote,
-		serverid:     id,
-		scheme:       "http",
-		errInProcess: err,
-		method:       method,
+		createTime: time.Now(),
+		service:    service,
+		path:       path,
+		scheme:     "http",
+		method:     method,
 		logFields: map[string]interface{}{
-			"service":   service.Name(),
-			"serviceid": id,
-			"method":    method,
-			"path":      path,
+			"service": service.Name(),
+			"method":  method,
+			"path":    path,
 		},
-	}
-
-	if err != nil {
-		client.logFields["error"] = err
-		client.errInProcess = fmt.Errorf("Service [%s] discovery failed,remote call canceled", service.Name())
 	}
 
 	return client

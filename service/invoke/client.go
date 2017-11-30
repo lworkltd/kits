@@ -15,6 +15,13 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
+
+const (
+	HTTP_HEADER_CONTENT_TYPE = "Content-Type"
+
+	HTTP_HEADER_CONTENT_TYPE_JSON = "application/json"
+)
+
 type client struct {
 	service      Service
 	path         string
@@ -222,6 +229,17 @@ func (client *client) Proto(payload proto.Message) Client {
 	return client
 }
 
+func (client *client) Body(payload []byte) Client {
+	if client.errInProcess != nil {
+		return client
+	}
+
+	client.payload = func() ([]byte, error) {
+		return payload, nil
+	}
+	return client
+}
+
 func (client *client) Context(ctx context.Context) Client {
 	if client.errInProcess != nil {
 		return client
@@ -275,6 +293,13 @@ func (client *client) Exec(out interface{}) (int, error) {
 }
 
 func (client *client) build() (*http.Request, error) {
+	host, serviceNode, err := client.service.Remote()
+	if err != nil {
+		return nil, fmt.Errorf("discovery failed,%v", err)
+	}
+
+	client.host, client.serverid = host, serviceNode
+
 	path, err := parsePath(client.path, client.routes)
 	if err != nil {
 		client.logFields["error"] = "routes parameter invalid"
@@ -317,7 +342,9 @@ func (client *client) build() (*http.Request, error) {
 		request.WithContext(client.ctx)
 	}
 
-	request.Header.Add("Content-Type", "application/json")
+	if _, ok := client.headers[HTTP_HEADER_CONTENT_TYPE]; !ok {
+		request.Header.Add(HTTP_HEADER_CONTENT_TYPE, HTTP_HEADER_CONTENT_TYPE_JSON)
+	}
 
 	for headerKey, headerValue := range client.headers {
 		request.Header.Add(headerKey, headerValue)
