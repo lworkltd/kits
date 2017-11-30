@@ -27,11 +27,13 @@ func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
 		return fmt.Errorf("register server need a health check url")
 	}
 
+	// Check the profile arguments valid.
 	port, err := checkAndResolveProfile(cfg)
 	if err != nil {
 		return err
 	}
 
+	// To warn that service node have move from host to another
 	endpoints, ids, err := discovery.Discover(cfg.ReportName)
 	if err == nil {
 		newEp := net.JoinHostPort(cfg.ReportIp, strconv.Itoa(port))
