@@ -57,10 +57,13 @@ func ExtractHeader(name string, invokeErr error, statusCode int, res *Response, 
 	return nil
 }
 
-
 // ExtractHttpResponse 解析标准http.Response为输出
 func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out interface{}) code.Error {
 	var commonResp Response
+	if invokeErr == nil && rsp != nil {
+		defer rsp.Body.Close()
+	}
+
 	statusCode := 0
 	if rsp != nil {
 		statusCode = rsp.StatusCode
