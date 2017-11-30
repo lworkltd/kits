@@ -45,6 +45,8 @@ func (impl evalImpl) Value(desc string) (str string, err error) {
 }
 
 // 解析语句
+// 符合统配的语句格式为`${method,arg1[,arg2,...]}`
+// 在匹配的过程中，会调用注册好的method，传递后缀的参数，得到一个字符串结果
 func executeDesc(buffer *bytes.Buffer, desc string) {
 	index := strings.Index(desc, "${")
 	if index < 0 {
