@@ -93,6 +93,14 @@ func (service *service) Name() string {
 	return service.name
 }
 
+func (service *service) UseTracing() bool {
+	return service.useTracing
+}
+
+func (service *service) UseCircuit() bool {
+	return service.useCircuit
+}
+
 func newRest(service Service, method string, path string) Client {
 	client := &client{
 		createTime: time.Now(),
@@ -105,6 +113,8 @@ func newRest(service Service, method string, path string) Client {
 			"method":  method,
 			"path":    path,
 		},
+		useTracing: service.UseTracing(),
+		useCircuit: service.UseCircuit(),
 	}
 
 	return client

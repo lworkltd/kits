@@ -116,9 +116,9 @@ func (discovery *Discovery) AfterParse() {
 // Invoker服务调用相关的配置
 type Invoker struct {
 	LoadBanlanceMode string `toml:"load_balance_mode"` // 负载均衡模式
-	CircuitEnabled   bool   `toml:"circuit_enabled"`   // 启用Hystrix,需配置Hystrix才会生效
-	TracingEnabled   bool   `toml:"traceing_enabled"`  // 启用Tracing，需配置Zipkin后有效
-	LoggerEnabled    bool   `toml:"logger_enabled"`    // 启用日志打印，日志等级受控于
+	CircuitEnabled   bool   `toml:"hytrix_enabled"`    // 启用Hystrix,需配置Hystrix才会生效
+	TracingEnabled   bool   `toml:"tracing_enabled"`   // 启用Tracing，需配置Zipkin后有效
+	LoggerEnabled    bool   `toml:"do_logger"`         // 启用日志打印，日志等级受控于
 }
 
 func (invoker *Invoker) BeforeParse() {
@@ -150,9 +150,9 @@ func (logger *Logger) AfterParse() {}
 type Hystrix struct {
 	StatsdUrl             string `toml:"statsd_url"`
 	Prefix                string `toml:"prefix"`
-	Timeout               int    `toml:"timeout"`
-	MaxConcurrentRequests int    `toml:"max_concurrent_request"`
-	ErrorPercentThreshold int    `toml:"error_percent_threshold"`
+	DefaultTimeout               int    `toml:"default_timeout"`
+	DefaultMaxConcurrentRequests int    `toml:"default_max_concurrent_request"`
+	DefaultErrorPercentThreshold int    `toml:"default_error_percent_threshold"`
 }
 
 func (hystrix *Hystrix) BeforeParse() {}
