@@ -5,22 +5,26 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lworkltd/kits/service/profile"
 	"github.com/lworkltd/kits/service/restful/wrap"
+	"github.com/DeanThompson/ginpprof"
+	discoveryutils "github.com/lworkltd/kits/utils/discovery"
 )
 
 var wrapper *wrap.Wrapper
 
 // TODO: 在gin所监听的接口同时处理pprof
-func initService(_ *gin.Engine, option *profile.Service) error {
+func initService(engine *gin.Engine, option *profile.Service) error {
 	wrapper = wrap.New(&wrap.Option{
 		Prefix: option.McodePrefix,
 	})
 
 	if option.Reportable {
-		// TODO:report service
+		if err := discoveryutils.RegisterServerWithProfile("/ping", option); err != nil {
+			return err
+		}
 	}
 
 	if option.PprofEnabled {
-		// TODO:handle for pprof
+		ginpprof.Wrapper(engine)
 	}
 
 	return nil
