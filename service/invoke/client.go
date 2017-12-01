@@ -264,6 +264,22 @@ func (client *client) Hystrix(timeOutMillisecond, maxConn, thresholdPercent int)
 	if client.errInProcess != nil {
 		return client
 	}
+	//设置值不合理时调整
+	if timeOutMillisecond < 10 {
+		timeOutMillisecond = 10
+	} else if timeOutMillisecond > 10000 {
+		timeOutMillisecond = 10000
+	}
+	if maxConn < 30 {
+		maxConn = 30
+	}else if maxConn > 10000 {
+		maxConn = 10000
+	}
+	if thresholdPercent < 5 {
+		thresholdPercent = 5
+	}else if thresholdPercent > 100 {
+		thresholdPercent = 100
+	}
 
 	client.hystrixInfo.Timeout = timeOutMillisecond
 	client.hystrixInfo.MaxConcurrentRequests = maxConn
