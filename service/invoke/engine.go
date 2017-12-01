@@ -22,7 +22,8 @@ type engine struct {
 func (engine *engine) Init(option *Option) error {
 	engine.dv = option.Discover
 	engine.lbMode = option.LoadBalanceMode
-
+	engine.useTracing = option.UseTracing
+	engine.useCircuit = option.UseCircuit
 	return nil
 }
 

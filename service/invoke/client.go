@@ -32,6 +32,7 @@ type client struct {
 	host     string
 	scheme   string
 	serverid string
+	hystrixInfo hystrix.CommandConfig
 
 	headers map[string]string
 	queries map[string][]string
@@ -47,6 +48,14 @@ type client struct {
 
 func (client *client) circuitName() string {
 	return client.serverid
+}
+
+//未设置hytrix参数，或者参数不合理，使用默认熔断策略
+func (client *client) hytrixCommand() string {
+	if client.hystrixInfo.Timeout <= 0 || client.hystrixInfo.MaxConcurrentRequests <= 0 || client.hystrixInfo.Timeout > 10000 || client.hystrixInfo.MaxConcurrentRequests > 10000 {
+		return "DEFAULT"
+	}
+	return client.service.Name() + client.method + client.path
 }
 
 func (client *client) tracingName() string {
@@ -250,6 +259,23 @@ func (client *client) Context(ctx context.Context) Client {
 	return client
 }
 
+
+func (client *client) Hystrix(timeOutMillisecond, maxConn, thresholdPercent int) Client {
+	if client.errInProcess != nil {
+		return client
+	}
+
+	client.hystrixInfo.Timeout = timeOutMillisecond
+	client.hystrixInfo.MaxConcurrentRequests = maxConn
+	client.hystrixInfo.ErrorPercentThreshold = thresholdPercent
+	command := client.hytrixCommand()
+	if "DEFAULT" != command {
+		hystrix.ConfigureCommand(command,client.hystrixInfo)
+	}
+	return client
+}
+
+
 func (client *client) Exec(out interface{}) (int, error) {
 	if client.useTracing {
 		span, ctx := opentracing.StartSpanFromContext(client.ctx, client.tracingName())
@@ -262,7 +288,7 @@ func (client *client) Exec(out interface{}) (int, error) {
 	if !client.useCircuit {
 		status, err = client.exec(out)
 	} else {
-		err = hystrix.Do(client.circuitName(), func() error {
+		err = hystrix.Do(client.hytrixCommand(), func() error {
 			s, err := client.exec(out)
 			status = s
 			return err
@@ -430,7 +456,7 @@ func (client *client) Response() (*http.Response, error) {
 	if !client.useCircuit {
 		resp, err = client.getResp()
 	} else {
-		err = hystrix.Do(client.circuitName(), func() error {
+		err = hystrix.Do(client.hytrixCommand(), func() error {
 			s, err := client.getResp()
 			resp = s
 			return err

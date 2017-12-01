@@ -66,9 +66,9 @@ static_services=[
 
 [hystrix]
 statsd_url="${kv_of_consul,kits/statsd/url-external}"
-timeout=1000
-max_concurrent_request=200
-error_percent_threshold=20
+default_timeout=1000
+default_max_concurrent_request=200
+default_error_percent_threshold=20
 # service_circuits = [
 #     ["serviceA",1000,200,20,
 #         ["seviceA-id-1",1000,200,20],
@@ -83,6 +83,6 @@ error_percent_threshold=20
 
 [invoker]
 load_balance_mode = "round-robin"
-tracing_enabled = true
+tracing_enabled = false
 hytrix_enabled = true
 do_logger = true

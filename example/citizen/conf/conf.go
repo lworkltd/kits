@@ -149,6 +149,9 @@ func (pro *Profile) Init(tomlFile string) error {
 		UseTracing:      pro.Invoker.TracingEnabled,
 		UseCircuit:      pro.Invoker.CircuitEnabled,
 		DoLogger:        pro.Invoker.LoggerEnabled,
+		DefaultTimeout:  pro.Hystrix.DefaultTimeout,
+		DefaultMaxConcurrentRequests: pro.Hystrix.DefaultMaxConcurrentRequests,
+		DefaultErrorPercentThreshold: pro.Hystrix.DefaultErrorPercentThreshold,
 	}
 	if err := invoke.Init(invokeOption); err != nil {
 		return err
