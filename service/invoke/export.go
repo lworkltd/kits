@@ -71,14 +71,31 @@ var eng Engine = newEngine()
 func Init(option *Option) error {
 	doLogger = option.DoLogger
 	if true == option.UseCircuit {
-		if option.DefaultTimeout <= 0 || option.DefaultTimeout > 10000 {
+		//未设置时的默认值
+		if 0 == option.DefaultTimeout {
 			option.DefaultTimeout = 1000
 		}
-		if option.DefaultMaxConcurrentRequests <= 0 || option.DefaultMaxConcurrentRequests > 10000 {
+		if 0 == option.DefaultMaxConcurrentRequests {
 			option.DefaultMaxConcurrentRequests = 200
 		}
-		if option.DefaultErrorPercentThreshold <= 0 || option.DefaultErrorPercentThreshold > 100 {
+		if 0 == option.DefaultErrorPercentThreshold {
 			option.DefaultErrorPercentThreshold = 20
+		}
+		//设置值不合理时调整
+		if option.DefaultTimeout < 10 {
+			option.DefaultTimeout = 10
+		} else if option.DefaultTimeout > 10000 {
+			option.DefaultTimeout = 10000
+		}
+		if option.DefaultMaxConcurrentRequests < 30 {
+			option.DefaultMaxConcurrentRequests = 30
+		}else if option.DefaultMaxConcurrentRequests > 10000 {
+			option.DefaultMaxConcurrentRequests = 10000
+		}
+		if option.DefaultErrorPercentThreshold < 5 {
+			option.DefaultErrorPercentThreshold = 5
+		}else if option.DefaultErrorPercentThreshold > 100 {
+			option.DefaultErrorPercentThreshold = 100
 		}
 		hystrix.ConfigureCommand("DEFAULT", hystrix.CommandConfig{		//添加一个默认的熔断策略
 			Timeout:               option.DefaultTimeout,
