@@ -302,13 +302,17 @@ func (client *client) Exec(out interface{}) (int, error) {
 	var err error
 	var status int
 	if !client.useCircuit {
-		status, err = client.exec(out)
+		status, err = client.exec(out, nil)
 	} else {
+		var cancel context.CancelFunc = nil
 		err = hystrix.Do(client.hytrixCommand(), func() error {
-			s, err := client.exec(out)
+			s, err := client.exec(out, &cancel)
 			status = s
 			return err
 		}, client.fallback)
+		if nil != err && nil != cancel {
+			cancel()
+		}
 	}
 
 	if doLogger {
@@ -381,7 +385,7 @@ func (client *client) build() (*http.Request, error) {
 	}
 
 	if client.ctx != nil {
-		request.WithContext(client.ctx)
+		request = request.WithContext(client.ctx)
 	}
 
 	if _, ok := client.headers[HTTP_HEADER_CONTENT_TYPE]; !ok {
@@ -395,11 +399,14 @@ func (client *client) build() (*http.Request, error) {
 	return request, nil
 }
 
-func (client *client) exec(out interface{}) (int, error) {
+func (client *client) exec(out interface{},cancel *context.CancelFunc) (int, error) {
 	if client.errInProcess != nil {
 		return 0, client.errInProcess
 	}
 
+	if nil != cancel && nil != client.ctx {
+		client.ctx, *cancel = context.WithCancel(client.ctx)
+	}
 	request, err := client.build()
 	if err != nil {
 		return 0, err
@@ -440,11 +447,14 @@ func (client *client) exec(out interface{}) (int, error) {
 	return resp.StatusCode, nil
 }
 
-func (client *client) getResp() (*http.Response, error) {
+func (client *client) getResp(cancel *context.CancelFunc) (*http.Response, error) {
 	if client.errInProcess != nil {
 		return nil, client.errInProcess
 	}
 
+	if nil != cancel && nil != client.ctx {
+		client.ctx, *cancel = context.WithCancel(client.ctx)
+	}
 	request, err := client.build()
 	if err != nil {
 		return nil, err
@@ -470,13 +480,17 @@ func (client *client) Response() (*http.Response, error) {
 	var err error
 	var resp *http.Response
 	if !client.useCircuit {
-		resp, err = client.getResp()
+		resp, err = client.getResp(nil)
 	} else {
+		var cancel context.CancelFunc = nil
 		err = hystrix.Do(client.hytrixCommand(), func() error {
-			s, err := client.getResp()
+			s, err := client.getResp(&cancel)
 			resp = s
 			return err
 		}, client.fallback)
+		if nil != err && nil != cancel {
+			cancel()		//cancel run client.getResp
+		}
 	}
 
 	if doLogger {

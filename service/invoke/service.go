@@ -3,7 +3,7 @@ package invoke
 import (
 	"fmt"
 	"time"
-
+	"context"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/lworkltd/kits/utils/co"
 )
@@ -113,6 +113,7 @@ func newRest(service Service, method string, path string) Client {
 			"method":  method,
 			"path":    path,
 		},
+		ctx:        context.Background(),
 		useTracing: service.UseTracing(),
 		useCircuit: service.UseCircuit(),
 	}
