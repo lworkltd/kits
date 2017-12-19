@@ -8,6 +8,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/restful/code"
+	"github.com/lworkltd/kits/service/monitor"
+	"time"
+	"strconv"
+	"strings"
 )
 
 type Response struct {
@@ -57,11 +61,68 @@ func ExtractHeader(name string, invokeErr error, statusCode int, res *Response, 
 	return nil
 }
 
+func reportDataToMonitor(error code.Error, rsp *http.Response) {
+	if monitor.EnableReportMonitor() == false || nil == rsp {			//rsp为nil时，已在client中错误上报
+		return
+	}
+	timeNowMicrosecond := time.Now().UnixNano() / 1e3
+	infc := rsp.Header.Get("Infc")
+	tName := rsp.Header.Get("TName")
+	endpoint := rsp.Header.Get("Endpoint")			//请求的IP:Port，或者一个domain:Port/domain
+	tIP := endpoint
+	endArray := strings.Split(endpoint, ":")
+	if len(endArray) >= 2 {								//若有端口号，只保留IP或者domain
+		tIP = endArray[0]
+	}
+	beginTimeMicrosecond,_ := strconv.ParseInt(rsp.Header.Get("BeginTime"), 10, 64)
+	if nil == error {					//处理成功上报
+		var succCountReport monitor.ReqSuccessCountDimension
+		succCountReport.SName = monitor.GetCurrentServerName()
+		succCountReport.SIP = monitor.GetCurrentServerIP()
+		succCountReport.TName = tName
+		succCountReport.TIP = tIP
+		succCountReport.Infc = infc
+		monitor.ReportReqSuccess(&succCountReport)
+
+		if beginTimeMicrosecond > 0 {
+			var succAvgTimeReport monitor.ReqSuccessAvgTimeDimension
+			succAvgTimeReport.SName = monitor.GetCurrentServerName()
+			succAvgTimeReport.SIP = monitor.GetCurrentServerIP()
+			succAvgTimeReport.TName = tName
+			succAvgTimeReport.TIP = tIP
+			succAvgTimeReport.Infc = infc
+			monitor.ReportSuccessAvgTime(&succAvgTimeReport, timeNowMicrosecond - beginTimeMicrosecond)		//耗时单位为微秒
+		}
+	} else {							//处理失败上报
+		var failedCountReport monitor.ReqFailedCountDimension
+		failedCountReport.SName = monitor.GetCurrentServerName()
+		failedCountReport.TName = tName
+		failedCountReport.TIP = tIP
+		failedCountReport.Code = error.Mcode()
+		failedCountReport.Infc = infc
+		monitor.ReportReqFailed(&failedCountReport)
+
+		if beginTimeMicrosecond > 0 {
+			var failedAvgTimeReport monitor.ReqFailedAvgTimeDimension
+			failedAvgTimeReport.SName = monitor.GetCurrentServerName()
+			failedAvgTimeReport.SIP = monitor.GetCurrentServerIP()
+			failedAvgTimeReport.TName = tName
+			failedAvgTimeReport.TIP = tIP
+			failedAvgTimeReport.Infc = infc
+			monitor.ReportFailedAvgTime(&failedAvgTimeReport, timeNowMicrosecond - beginTimeMicrosecond) //耗时单位为微秒
+		}
+	}
+}
+
 // ExtractHttpResponse 解析标准http.Response为输出
 func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out interface{}) code.Error {
 	var commonResp Response
+	var errCode code.Error = nil
 	if invokeErr == nil && rsp != nil {
 		defer rsp.Body.Close()
+	}
+	if nil != rsp {
+		defer reportDataToMonitor(errCode, rsp)
 	}
 
 	statusCode := 0
@@ -72,27 +133,22 @@ func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out i
 	if statusCode == http.StatusOK {
 		body, err := ioutil.ReadAll(rsp.Body)
 		if err != nil {
-			return code.NewMcode(
-				fmt.Sprintf("INVOKE_READ_BODY_FAILED"),
-				err.Error(),
-			)
+			errCode = code.NewMcode(fmt.Sprintf("INVOKE_READ_BODY_FAILED"),err.Error())
+			return errCode
 		}
 
 		if len(body) == 0 {
-			return code.NewMcode(
-				fmt.Sprintf("INVOKE_EMPTY_BODY"),
-				err.Error(),
-			)
+			errCode = code.NewMcode(fmt.Sprintf("INVOKE_EMPTY_BODY"),err.Error())
+			return errCode
 		}
 		logrus.Debug("Invoke return Body", string(body))
 		err = json.Unmarshal(body, &commonResp)
 		if err != nil {
-			return code.NewMcode(
-				fmt.Sprintf("INVOKE_PARSE_COMMON_RSP_FAILED"),
-				err.Error(),
-			)
+			errCode = code.NewMcode(fmt.Sprintf("INVOKE_PARSE_COMMON_RSP_FAILED"),err.Error())
+			return errCode
 		}
 	}
 
-	return ExtractHeader(name, invokeErr, statusCode, &commonResp, out)
+	errCode = ExtractHeader(name, invokeErr, statusCode, &commonResp, out)
+	return errCode
 }

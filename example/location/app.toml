@@ -85,3 +85,6 @@ load_balance_mode = "round-robin"
 tracing_enabled = false
 hytrix_enabled = true
 do_logger = true
+
+[monitor]
+enable_report=true
