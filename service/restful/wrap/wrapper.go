@@ -17,6 +17,8 @@ import (
 	"github.com/lworkltd/kits/service/restful/code"
 	logutils "github.com/lworkltd/kits/utils/log"
 	"io"
+	"github.com/lworkltd/kits/service/monitor"
+	"strings"
 )
 
 // Wrapper 用于对请求返回结果进行封装的类
@@ -88,8 +90,58 @@ type HttpServer interface {
 	Handle(string, string, ...gin.HandlerFunc) gin.IRoutes
 }
 
-// Wrap 为gin的回调接口增加了固定的返回值，当程序收到处理结果的时候会将返回值封装一层再发送到网络
-func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
+
+//上报处理请求结果到Monitor，registPath为注册路径
+func reportProcessResultToMonitor(err code.Error, httpCtx *gin.Context, beginTime time.Time, registPath string) {
+	if nil == httpCtx || false == monitor.EnableReportMonitor() {
+		return
+	}
+	timeNow := time.Now()
+	infc := "PASSIVE_" + httpCtx.Request.Method + "_" + registPath 	//PASSIVE表示被调, httpCtx.Request.URL.Path为实际请求的路径
+	addrs := strings.Split(httpCtx.Request.RemoteAddr, ":")	//httpCtx.Request.RemoteAddr, 例如：118.112.177.203:58425
+	sIP := ""
+	if len(addrs) == 2 && monitor.IsInnerIPv4(addrs[0]) {
+		sIP = addrs[0]				//若远端IP为内网IP则取值，公网IP请求过多会导致Monitor数据标签量太大
+	}
+	if nil == err {				//处理成功
+		//请求失败，上报失败计数和失败平均耗时
+		timeNow := time.Now()
+		var succCountReport monitor.ReqSuccessCountDimension
+		succCountReport.SName = ""
+		succCountReport.SIP = sIP
+		succCountReport.TName = monitor.GetCurrentServerName()
+		succCountReport.TIP = monitor.GetCurrentServerIP()
+		succCountReport.Infc = infc
+		monitor.ReportReqSuccess(&succCountReport)
+
+		var succAvgTimeReport monitor.ReqSuccessAvgTimeDimension
+		succAvgTimeReport.SName = ""
+		succAvgTimeReport.SIP = sIP
+		succAvgTimeReport.TName = monitor.GetCurrentServerName()
+		succAvgTimeReport.TIP = monitor.GetCurrentServerIP()
+		succAvgTimeReport.Infc = infc
+		monitor.ReportSuccessAvgTime(&succAvgTimeReport, (timeNow.UnixNano() - beginTime.UnixNano()) / 1e3)		//耗时单位为微秒
+	} else {					//处理失败
+		var failedCountReport monitor.ReqFailedCountDimension
+		failedCountReport.SName = ""
+		failedCountReport.TName = monitor.GetCurrentServerName()
+		failedCountReport.TIP = monitor.GetCurrentServerIP()
+		failedCountReport.Code = err.Mcode()
+		failedCountReport.Infc = infc
+		monitor.ReportReqFailed(&failedCountReport)
+
+		var failedAvgTimeReport monitor.ReqFailedAvgTimeDimension
+		failedAvgTimeReport.SName = ""
+		failedAvgTimeReport.SIP = sIP
+		failedAvgTimeReport.TName = monitor.GetCurrentServerName()
+		failedAvgTimeReport.TIP = monitor.GetCurrentServerIP()
+		failedAvgTimeReport.Infc = infc
+		monitor.ReportFailedAvgTime(&failedAvgTimeReport, (timeNow.UnixNano() - beginTime.UnixNano()) / 1e3)		//耗时单位为微秒
+	}
+}
+
+// Wrap 为gin的回调接口增加了固定的返回值，当程序收到处理结果的时候会将返回值封装一层再发送到网络, registPath为注册路径
+func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 	return func(httpCtx *gin.Context) {
 		Prefix := wrapper.mcodePrefix // 错误码前缀
 		logger := logrus.New()
@@ -179,11 +231,13 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc) gin.HandlerFunc {
 		}()
 
 		data, cerr = f(serviceCtx, httpCtx)
+		reportProcessResultToMonitor(cerr, httpCtx, since, registPath)
 	}
 }
 
 func (wrapper *Wrapper) Handle(method string, srv HttpServer, path string, f WrappedFunc) {
-	srv.Handle(method, path, wrapper.Wrap(f))
+	registPath := srv.(*gin.RouterGroup).BasePath() + path
+	srv.Handle(method, path, wrapper.Wrap(f, registPath))
 }
 
 func (wrapper *Wrapper) Get(srv HttpServer, path string, f WrappedFunc) {
