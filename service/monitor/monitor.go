@@ -3,7 +3,6 @@ package monitor
 import (
 	"errors"
 	"strings"
-	"sync"
 	"time"
 	"github.com/Sirupsen/logrus"
 	"encoding/json"
@@ -117,40 +116,118 @@ type countInfo struct {
 	sum           int64			//总和，例如耗时总和（微秒）
 }
 
+type reqSuccessTimeConsumeInfo struct{
+	succAvgTimeDimension *ReqSuccessAvgTimeDimension
+	timeConsume          int64          //耗时，单位微秒(1/1000000 秒）
+}
+type reqFailedTimeConsumeInfo struct{
+	failedAvgTimeDimension *ReqFailedAvgTimeDimension
+	timeConsume          int64          //耗时，单位微秒(1/1000000 秒）
+}
+
+
 type monitorInfo struct {
 	conf             MoniorConf
+	reqSuccCountChan         chan *ReqSuccessCountDimension		//请求成功计数上报队列
+	reqFailedCountChan       chan *ReqFailedCountDimension		//请求失败计数上报队列
+	reqSuccTimeConsumeChan   chan *reqSuccessTimeConsumeInfo	//请求成功耗时上报队列
+	reqFailedTimeConsumeChan chan *reqFailedTimeConsumeInfo		//请求失败耗时上报队列
 	succCountMap     map[string]countInfo		//请求成功次数计数，key为ReqSuccessCountDimension序列化字符串
 	failedCountMap   map[string]countInfo		//请求失败次数计数，key为ReqFailedCountDimension序列化后字符串
 	succAvgTimeMap   map[string]countInfo		//请求成功平均耗时计数，key为ReqSuccessAvgTimeDimension序列化字符串
 	failedAvgTimeMap map[string]countInfo		//请求失败平均耗时计数，key为ReqFailedAvgTimeDimension序列化字符串
-	mutex            sync.RWMutex				//操作map计数的锁
 }
 
 var (
 	monitorObj       monitorInfo
+	lastSendToAliyunTime time.Time
 )
 
+//检查是否需要发送上报数据到阿里云，若需要则发送后返回并且修改lastSendToAliyunTime为当前时间
+func (this *monitorInfo)checkAndReportDataToAliyun() bool {
+	timeNow := time.Now()
+	if timeNow.Unix() - lastSendToAliyunTime.Unix() < reportInterval{
+		return false
+	}
 
+	succCountMap := this.succCountMap
+	failedCountMap := this.failedCountMap
+	succAvgTimeMap := this.succAvgTimeMap
+	failedAvgTimeMap := this.failedAvgTimeMap
+	this.succCountMap = make(map[string]countInfo)
+	this.failedCountMap = make(map[string]countInfo)
+	this.succAvgTimeMap = make(map[string]countInfo)
+	this.failedAvgTimeMap = make(map[string]countInfo)
+	go reportSuccCountToAliyun(succCountMap, timeNow)
+	go reportFailedCountToAliyun(failedCountMap, timeNow)
+	go reportSuccAvgTimeToAliyun(succAvgTimeMap, timeNow)
+	go reportFailedAvgTimeToAliyun(failedAvgTimeMap, timeNow)
+	lastSendToAliyunTime = time.Now()
+	return true
+}
 
-func (this *monitorInfo)reportDataToAliyun() {
+//处理上报数据的函数
+func (this *monitorInfo)processReportData() {
+	reportCountTmp := 0
+	lastSendToAliyunTime = time.Now()
+
 	for {
-		time.Sleep(time.Second * reportInterval)
-		{
-			this.mutex.Lock()			//加锁，从缓存取出已记录的待上报数据去上报，取出后清理缓存重新计数
-			succCountMap := this.succCountMap
-			failedCountMap := this.failedCountMap
-			succAvgTimeMap := this.succAvgTimeMap
-			failedAvgTimeMap := this.failedAvgTimeMap
-			this.succCountMap = make(map[string]countInfo)
-			this.failedCountMap = make(map[string]countInfo)
-			this.succAvgTimeMap = make(map[string]countInfo)
-			this.failedAvgTimeMap = make(map[string]countInfo)
-			this.mutex.Unlock()
-			timeNow := time.Now()
-			go reportSuccCountToAliyun(succCountMap, timeNow)
-			go reportFailedCountToAliyun(failedCountMap, timeNow)
-			go reportSuccAvgTimeToAliyun(succAvgTimeMap, timeNow)
-			go reportFailedAvgTimeToAliyun(failedAvgTimeMap, timeNow)
+		select {
+		case item := <-this.reqSuccCountChan:
+			key := item.generatekey()
+			countObj, exist := monitorObj.succCountMap[key]
+			if false == exist {
+				countObj = countInfo{counter:0,sum:0}
+			}
+			countObj.counter++
+			monitorObj.succCountMap[key] = countObj
+			reportCountTmp++
+			if reportCountTmp > 1000 && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
+				reportCountTmp = 0
+			}
+		case item := <-this.reqFailedCountChan:
+			key := item.generatekey()
+			countObj, exist := monitorObj.failedCountMap[key]
+			if false == exist {
+				countObj = countInfo{counter:0,sum:0}
+			}
+			countObj.counter++
+			monitorObj.failedCountMap[key] = countObj
+			reportCountTmp++
+			if reportCountTmp > 1000 && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
+				reportCountTmp = 0
+			}
+		case item := <-this.reqSuccTimeConsumeChan:
+			key := item.succAvgTimeDimension.generatekey()
+			countObj, exist := monitorObj.succAvgTimeMap[key]
+			if false == exist {
+				countObj = countInfo{counter:0,sum:0}
+			}
+			countObj.counter++
+			countObj.sum += item.timeConsume
+			monitorObj.succAvgTimeMap[key] = countObj
+			reportCountTmp++
+			if reportCountTmp > 1000 && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
+				reportCountTmp = 0
+			}
+		case item := <-this.reqFailedTimeConsumeChan:
+			key := item.failedAvgTimeDimension.generatekey()
+			countObj, exist := monitorObj.succAvgTimeMap[key]
+			if false == exist {
+				countObj = countInfo{counter:0,sum:0}
+			}
+			countObj.counter++
+			countObj.sum += item.timeConsume
+			monitorObj.succAvgTimeMap[key] = countObj
+			reportCountTmp++
+			if reportCountTmp > 1000 && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
+				reportCountTmp = 0
+			}
+		default:
+			if this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
+				reportCountTmp = 0
+			}
+			time.Sleep(time.Millisecond * 3)		//无上报数据时，休眠3毫秒，避免不断消耗CPU
 		}
 	}
 }
@@ -279,6 +356,10 @@ func reportSuccAvgTimeToAliyun(succAvgTimeMap map[string]countInfo, reportTime t
 		if "" != dimessionObj.TName {
 			dimessionObj.TName += "_" + monitorObj.conf.EnvironmenType
 		}
+		if countObj.counter <= 0 {
+			logrus.WithFields(logrus.Fields{"counter":countObj.counter}).Warn("report success avg time counter abnormal")
+			continue
+		}
 
 		var metric AliyunMetric
 		metric.MetricName = dimessionObj.getMetricName()
@@ -308,6 +389,10 @@ func reportFailedAvgTimeToAliyun(failedAvgTimeMap map[string]countInfo, reportTi
 		}
 		if "" != dimessionObj.TName {
 			dimessionObj.TName += "_" + monitorObj.conf.EnvironmenType
+		}
+		if countObj.counter <= 0 {
+			logrus.WithFields(logrus.Fields{"counter":countObj.counter}).Warn("report failed avg time counter abnormal")
+			continue
 		}
 
 		var metric AliyunMetric

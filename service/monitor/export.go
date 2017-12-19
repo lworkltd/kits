@@ -59,11 +59,15 @@ func Init(conf *MoniorConf) error {
 		return nil
 	}
 
+	monitorObj.reqSuccCountChan = make(chan *ReqSuccessCountDimension, 100)
+	monitorObj.reqFailedCountChan = make(chan *ReqFailedCountDimension, 100)
+	monitorObj.reqSuccTimeConsumeChan = make(chan *reqSuccessTimeConsumeInfo, 100)
+	monitorObj.reqFailedTimeConsumeChan = make(chan *reqFailedTimeConsumeInfo, 100)
 	monitorObj.succCountMap = make(map[string]countInfo)
 	monitorObj.failedCountMap = make(map[string]countInfo)
 	monitorObj.succAvgTimeMap = make(map[string]countInfo)
 	monitorObj.failedAvgTimeMap = make(map[string]countInfo)
-	go monitorObj.reportDataToAliyun()		//启动一个协程上报数据
+	go monitorObj.processReportData()		//启动一个协程处理上报数据
 	return nil
 }
 
@@ -95,47 +99,40 @@ func ReportReqSuccess(oneData *ReqSuccessCountDimension) {
 	if nil == oneData || false == monitorObj.conf.EnableReport {
 		return
 	}
-	monitorObj.mutex.Lock()
-	defer monitorObj.mutex.Unlock()
-	key := oneData.generatekey()
-	countObj, exist := monitorObj.succCountMap[key]
-	if false == exist {
-		countObj = countInfo{counter:0,sum:0}
+	select {
+	case monitorObj.reqSuccCountChan<-oneData:
+		//do nothing
+	default:
+		//do nothing, 防止reqSuccCountChan已满而阻塞
 	}
-	countObj.counter++
-	monitorObj.succCountMap[key] = countObj
 }
 
 func ReportReqFailed(oneData *ReqFailedCountDimension) {
 	if nil == oneData || false == monitorObj.conf.EnableReport {
 		return
 	}
-	monitorObj.mutex.Lock()
-	defer monitorObj.mutex.Unlock()
-	key := oneData.generatekey()
-	countObj, exist := monitorObj.failedCountMap[key]
-	if false == exist {
-		countObj = countInfo{counter:0,sum:0}
+	select {
+	case monitorObj.reqFailedCountChan<-oneData:
+		//do nothing
+	default:
+		//do nothing, 防止reqFailedCountChan已满而阻塞
 	}
-	countObj.counter++
-	monitorObj.failedCountMap[key] = countObj
 }
 
 //timeConsume：耗时（微秒）
 func ReportSuccessAvgTime(oneData *ReqSuccessAvgTimeDimension, timeConsume int64) {
-	if nil == oneData || false == monitorObj.conf.EnableReport {
+	if nil == oneData || false == monitorObj.conf.EnableReport || timeConsume <= 0 {
 		return
 	}
-	monitorObj.mutex.Lock()
-	defer monitorObj.mutex.Unlock()
-	key := oneData.generatekey()
-	countObj, exist := monitorObj.succAvgTimeMap[key]
-	if false == exist {
-		countObj = countInfo{counter:0,sum:0}
+	var temp reqSuccessTimeConsumeInfo
+	temp.succAvgTimeDimension = oneData
+	temp.timeConsume = timeConsume
+	select {
+	case monitorObj.reqSuccTimeConsumeChan<-&temp:
+		//do nothing
+	default:
+		//do nothing, 防止reqSuccTimeConsumeChan已满而阻塞
 	}
-	countObj.counter++
-	countObj.sum += timeConsume
-	monitorObj.succAvgTimeMap[key] = countObj
 }
 
 
@@ -144,16 +141,15 @@ func ReportFailedAvgTime(oneData *ReqFailedAvgTimeDimension, timeConsume int64) 
 	if nil == oneData || false == monitorObj.conf.EnableReport {
 		return
 	}
-	monitorObj.mutex.Lock()
-	defer monitorObj.mutex.Unlock()
-	key := oneData.generatekey()
-	countObj, exist := monitorObj.failedAvgTimeMap[key]
-	if false == exist {
-		countObj = countInfo{counter:0,sum:0}
+	var temp reqFailedTimeConsumeInfo
+	temp.failedAvgTimeDimension = oneData
+	temp.timeConsume = timeConsume
+	select {
+	case monitorObj.reqFailedTimeConsumeChan<-&temp:
+		//do nothing
+	default:
+		//do nothing, 防止reqFailedTimeConsumeChan已满而阻塞
 	}
-	countObj.counter++
-	countObj.sum += timeConsume
-	monitorObj.failedAvgTimeMap[key] = countObj
 }
 
 
