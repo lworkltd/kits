@@ -113,6 +113,19 @@ func (discovery *Discovery) AfterParse() {
 	}
 }
 
+
+type Monitor struct {
+	EnableReport   bool     `toml:"enable_report"`		//启用上报到阿里云监控
+}
+
+func (monitor *Monitor) BeforeParse() {
+	monitor.EnableReport = true
+}
+
+func (monitor *Monitor) AfterParse() {
+
+}
+
 // Invoker服务调用相关的配置
 type Invoker struct {
 	LoadBanlanceMode string `toml:"load_balance_mode"` // 负载均衡模式
