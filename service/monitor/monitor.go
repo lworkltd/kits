@@ -12,11 +12,13 @@ import (
 )
 
 const (
-	reportInterval = 1	//上报到阿里云的时间间隔，2秒
+	reportInterval = 1	//上报到阿里云的时间间隔，1秒
+	checkReportDataCountLimit = 1000	//当上报checkReportDataCountLimit记录后，检查一次是否该发送数据
+	notReportDataSleepMillisecond = 10	//没有上报数据时的休眠时间，单位毫秒，避免循环消耗太多CPU
 	delimit = "#@#"
-	uid ="1765747156115092"
-	namespace ="ACS/CUSTOM/1765747156115092"
 	endpoint ="open.cms.aliyun.com"
+	reportQueneLength = 300					//上报数据队列的长度
+	sendReportDataTimeoutSecond = 2			//发送上报数据到阿里云的超时时间，单位为秒
 )
 
 //简易序列化
@@ -182,7 +184,7 @@ func (this *monitorInfo)processReportData() {
 			countObj.counter++
 			monitorObj.succCountMap[key] = countObj
 			reportCountTmp++
-			if reportCountTmp > 1000 && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
+			if reportCountTmp > checkReportDataCountLimit && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
 				reportCountTmp = 0
 			}
 		case item := <-this.reqFailedCountChan:
@@ -194,7 +196,7 @@ func (this *monitorInfo)processReportData() {
 			countObj.counter++
 			monitorObj.failedCountMap[key] = countObj
 			reportCountTmp++
-			if reportCountTmp > 1000 && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
+			if reportCountTmp > checkReportDataCountLimit && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
 				reportCountTmp = 0
 			}
 		case item := <-this.reqSuccTimeConsumeChan:
@@ -207,7 +209,7 @@ func (this *monitorInfo)processReportData() {
 			countObj.sum += item.timeConsume
 			monitorObj.succAvgTimeMap[key] = countObj
 			reportCountTmp++
-			if reportCountTmp > 1000 && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
+			if reportCountTmp > checkReportDataCountLimit && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
 				reportCountTmp = 0
 			}
 		case item := <-this.reqFailedTimeConsumeChan:
@@ -220,14 +222,14 @@ func (this *monitorInfo)processReportData() {
 			countObj.sum += item.timeConsume
 			monitorObj.succAvgTimeMap[key] = countObj
 			reportCountTmp++
-			if reportCountTmp > 1000 && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
+			if reportCountTmp > checkReportDataCountLimit && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
 				reportCountTmp = 0
 			}
 		default:
 			if this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
 				reportCountTmp = 0
 			}
-			time.Sleep(time.Millisecond * 3)		//无上报数据时，休眠3毫秒，避免不断消耗CPU
+			time.Sleep(time.Millisecond * notReportDataSleepMillisecond)		//无上报数据时，休眠notReportDataSleepMillisecond毫秒，避免不断消耗CPU
 		}
 	}
 }
@@ -240,16 +242,11 @@ type AliyunMetric struct {
 	Unit          string           `json:"unit"`
 	Dimensions    interface{}     `json:"dimensions"`
 }
-type AliyunMonitorInfo struct{
-	UserId        string           `json:"userId"`
-	Namespace     string           `json:"namespace"`
-	Metrics       []AliyunMetric   `json:"metrics"`
-}
 
 
-func sendRequestToAliMonitor(bodyObj *AliyunMonitorInfo) error {
-	metricsBytes, _ := json.Marshal(bodyObj.Metrics)
-	body := fmt.Sprintf("userId=%v&namespace=%v&metrics=%v", bodyObj.UserId, bodyObj.Namespace, string(metricsBytes))
+func sendRequestToAliMonitor(metrics []AliyunMetric) error {
+	metricsBytes, _ := json.Marshal(metrics)
+	body := fmt.Sprintf("userId=%v&namespace=%v&metrics=%v", monitorObj.conf.AliUid, monitorObj.conf.AliNamespace, string(metricsBytes))
 	url := "http://" + endpoint + "/metrics/put"
 	request, err := http.NewRequest("POST", url, strings.NewReader(body))
 	if err != nil {
@@ -259,7 +256,7 @@ func sendRequestToAliMonitor(bodyObj *AliyunMonitorInfo) error {
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Add("Connection", "close")
 
-	cli := &http.Client{Timeout:time.Second * 2}			//2秒超时
+	cli := &http.Client{Timeout:time.Second * sendReportDataTimeoutSecond}			//sendReportDataTimeoutSecond秒超时
 	resp, errDo := cli.Do(request)
 	if err != nil || nil == resp {
 		logrus.WithFields(logrus.Fields{"err":errDo, "url":url, "body":body}).Error("http client Do failed")
@@ -279,10 +276,7 @@ func sendRequestToAliMonitor(bodyObj *AliyunMonitorInfo) error {
 }
 
 func reportSuccCountToAliyun(succCountMap map[string]countInfo, reportTime time.Time) {
-	var reportInfo AliyunMonitorInfo
-	reportInfo.Namespace = namespace
-	reportInfo.UserId = uid
-	reportInfo.Metrics = make([]AliyunMetric, 0)
+	metrics := make([]AliyunMetric, 0)
 	for key, countObj := range succCountMap {
 		dimessionObj := parseSuccessCountDimension(key)
 		if nil == dimessionObj {
@@ -301,18 +295,15 @@ func reportSuccCountToAliyun(succCountMap map[string]countInfo, reportTime time.
 		metric.Value = countObj.counter
 		metric.Timestamp = reportTime.UnixNano() / 1e6
 		metric.Dimensions = dimessionObj
-		reportInfo.Metrics = append(reportInfo.Metrics, metric)
+		metrics = append(metrics, metric)
 	}
-	if len(reportInfo.Metrics) > 0 {
-		sendRequestToAliMonitor(&reportInfo)
+	if len(metrics) > 0 {
+		sendRequestToAliMonitor(metrics)
 	}
 }
 
 func reportFailedCountToAliyun(failedCountMap map[string]countInfo, reportTime time.Time) {
-	var reportInfo AliyunMonitorInfo
-	reportInfo.Namespace = namespace
-	reportInfo.UserId = uid
-	reportInfo.Metrics = make([]AliyunMetric, 0)
+	metrics := make([]AliyunMetric, 0)
 	for key, countObj := range failedCountMap {
 		dimessionObj := parseFailedCountDimension(key)
 		if nil == dimessionObj {
@@ -331,19 +322,16 @@ func reportFailedCountToAliyun(failedCountMap map[string]countInfo, reportTime t
 		metric.Value = countObj.counter
 		metric.Timestamp = reportTime.UnixNano() / 1e6
 		metric.Dimensions = dimessionObj
-		reportInfo.Metrics = append(reportInfo.Metrics, metric)
+		metrics = append(metrics, metric)
 	}
-	if len(reportInfo.Metrics) > 0 {
-		sendRequestToAliMonitor(&reportInfo)
+	if len(metrics) > 0 {
+		sendRequestToAliMonitor(metrics)
 	}
 }
 
 
 func reportSuccAvgTimeToAliyun(succAvgTimeMap map[string]countInfo, reportTime time.Time) {
-	var reportInfo AliyunMonitorInfo
-	reportInfo.Namespace = namespace
-	reportInfo.UserId = uid
-	reportInfo.Metrics = make([]AliyunMetric, 0)
+	metrics := make([]AliyunMetric, 0)
 	for key, countObj := range succAvgTimeMap {
 		dimessionObj := parseSuccessAvgTimeDimension(key)
 		if nil == dimessionObj {
@@ -366,18 +354,15 @@ func reportSuccAvgTimeToAliyun(succAvgTimeMap map[string]countInfo, reportTime t
 		metric.Value = countObj.sum / countObj.counter			//平均值
 		metric.Timestamp = reportTime.UnixNano() / 1e6
 		metric.Dimensions = dimessionObj
-		reportInfo.Metrics = append(reportInfo.Metrics, metric)
+		metrics = append(metrics, metric)
 	}
-	if len(reportInfo.Metrics) > 0 {
-		sendRequestToAliMonitor(&reportInfo)
+	if len(metrics) > 0 {
+		sendRequestToAliMonitor(metrics)
 	}
 }
 
 func reportFailedAvgTimeToAliyun(failedAvgTimeMap map[string]countInfo, reportTime time.Time) {
-	var reportInfo AliyunMonitorInfo
-	reportInfo.Namespace = namespace
-	reportInfo.UserId = uid
-	reportInfo.Metrics = make([]AliyunMetric, 0)
+	metrics := make([]AliyunMetric, 0)
 	for key, countObj := range failedAvgTimeMap {
 		dimessionObj := parseFailedAvgTimeDimension(key)
 		if nil == dimessionObj {
@@ -400,9 +385,9 @@ func reportFailedAvgTimeToAliyun(failedAvgTimeMap map[string]countInfo, reportTi
 		metric.Value = countObj.sum / countObj.counter			//平均值
 		metric.Timestamp = reportTime.UnixNano() / 1e6
 		metric.Dimensions = dimessionObj
-		reportInfo.Metrics = append(reportInfo.Metrics, metric)
+		metrics = append(metrics, metric)
 	}
-	if len(reportInfo.Metrics) > 0 {
-		sendRequestToAliMonitor(&reportInfo)
+	if len(metrics) > 0 {
+		sendRequestToAliMonitor(metrics)
 	}
 }
