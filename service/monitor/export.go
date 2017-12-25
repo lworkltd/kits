@@ -12,6 +12,8 @@ type MoniorConf struct {
 	CurServiceName string           //本服务的名称
 	CurServerIP    string           //本机IP
 	EnvironmenType string			//环境类型,dev/qa/online
+	AliUid         string           //上报到阿里云监控的Uid
+	AliNamespace   string          //上报到阿里云监控的namespace
 }
 
 
@@ -51,7 +53,7 @@ type ReqFailedAvgTimeDimension struct {
 
 //monitor监控初始化
 func Init(conf *MoniorConf) error {
-	if nil == conf || (true == conf.EnableReport && ("" == conf.EnvironmenType || "" == conf.CurServiceName)) {
+	if nil == conf || (true == conf.EnableReport && ("" == conf.EnvironmenType || "" == conf.CurServiceName || "" == conf.AliUid || "" == conf.AliNamespace)) {
 		return errors.New("Monitor Init Parameter Error")
 	}
 	monitorObj.conf = *conf
@@ -59,10 +61,10 @@ func Init(conf *MoniorConf) error {
 		return nil
 	}
 
-	monitorObj.reqSuccCountChan = make(chan *ReqSuccessCountDimension, 100)
-	monitorObj.reqFailedCountChan = make(chan *ReqFailedCountDimension, 100)
-	monitorObj.reqSuccTimeConsumeChan = make(chan *reqSuccessTimeConsumeInfo, 100)
-	monitorObj.reqFailedTimeConsumeChan = make(chan *reqFailedTimeConsumeInfo, 100)
+	monitorObj.reqSuccCountChan = make(chan *ReqSuccessCountDimension, reportQueneLength)
+	monitorObj.reqFailedCountChan = make(chan *ReqFailedCountDimension, reportQueneLength)
+	monitorObj.reqSuccTimeConsumeChan = make(chan *reqSuccessTimeConsumeInfo, reportQueneLength)
+	monitorObj.reqFailedTimeConsumeChan = make(chan *reqFailedTimeConsumeInfo, reportQueneLength)
 	monitorObj.succCountMap = make(map[string]countInfo)
 	monitorObj.failedCountMap = make(map[string]countInfo)
 	monitorObj.succAvgTimeMap = make(map[string]countInfo)
