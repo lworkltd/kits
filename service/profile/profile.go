@@ -116,6 +116,8 @@ func (discovery *Discovery) AfterParse() {
 
 type Monitor struct {
 	EnableReport   bool     `toml:"enable_report"`		//启用上报到阿里云监控
+	AliUid         string   `toml:"aliUid"`             //上报到阿里云监控的Uid
+	AliNamespace   string   `toml:"aliNamespace"`       //上报到阿里云监控的namespace
 }
 
 func (monitor *Monitor) BeforeParse() {
@@ -123,7 +125,9 @@ func (monitor *Monitor) BeforeParse() {
 }
 
 func (monitor *Monitor) AfterParse() {
-
+	if true == monitor.EnableReport && ("" == monitor.AliUid || "" == monitor.AliNamespace) {
+		logrus.Warn("Monitor conf abnormal")
+	}
 }
 
 // Invoker服务调用相关的配置

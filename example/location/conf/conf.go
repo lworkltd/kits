@@ -168,6 +168,8 @@ func (pro *Profile) Init(tomlFile string) error {
 			EnableReport:pro.Monitor.EnableReport,
 			CurServiceName:pro.Service.ReportName,
 			CurServerIP:curServerIP,
+			AliUid:pro.Monitor.AliUid,
+			AliNamespace:pro.Monitor.AliNamespace,
 			EnvironmenType:strings.ToLower(pro.Base.Mode),
 		})
 		if nil != err {
