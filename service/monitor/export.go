@@ -11,7 +11,7 @@ type MoniorConf struct {
 	EnableReport   bool     		//启用上报到阿里云监控
 	CurServiceName string           //本服务的名称
 	CurServerIP    string           //本机IP
-	EnvironmenType string			//环境类型,dev/qa/online
+	EnvironmenType string			//环境类型,test/qa/prod
 	AliUid         string           //上报到阿里云监控的Uid
 	AliNamespace   string          //上报到阿里云监控的namespace
 }
