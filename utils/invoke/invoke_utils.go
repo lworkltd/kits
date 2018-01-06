@@ -121,9 +121,6 @@ func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out i
 	if invokeErr == nil && rsp != nil {
 		defer rsp.Body.Close()
 	}
-	if nil != rsp {
-		defer reportDataToMonitor(errCode, rsp)
-	}
 
 	statusCode := 0
 	if rsp != nil {
@@ -134,21 +131,25 @@ func ExtractHttpResponse(name string, invokeErr error, rsp *http.Response, out i
 		body, err := ioutil.ReadAll(rsp.Body)
 		if err != nil {
 			errCode = code.NewMcode(fmt.Sprintf("INVOKE_READ_BODY_FAILED"),err.Error())
+			reportDataToMonitor(errCode, rsp)
 			return errCode
 		}
 
 		if len(body) == 0 {
 			errCode = code.NewMcode(fmt.Sprintf("INVOKE_EMPTY_BODY"),err.Error())
+			reportDataToMonitor(errCode, rsp)
 			return errCode
 		}
 		logrus.Debug("Invoke return Body", string(body))
 		err = json.Unmarshal(body, &commonResp)
 		if err != nil {
 			errCode = code.NewMcode(fmt.Sprintf("INVOKE_PARSE_COMMON_RSP_FAILED"),err.Error())
+			reportDataToMonitor(errCode, rsp)
 			return errCode
 		}
 	}
 
 	errCode = ExtractHeader(name, invokeErr, statusCode, &commonResp, out)
+	reportDataToMonitor(errCode, rsp)
 	return errCode
 }
