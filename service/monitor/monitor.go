@@ -214,13 +214,13 @@ func (this *monitorInfo)processReportData() {
 			}
 		case item := <-this.reqFailedTimeConsumeChan:
 			key := item.failedAvgTimeDimension.generatekey()
-			countObj, exist := monitorObj.succAvgTimeMap[key]
+			countObj, exist := monitorObj.failedAvgTimeMap[key]
 			if false == exist {
 				countObj = countInfo{counter:0,sum:0}
 			}
 			countObj.counter++
 			countObj.sum += item.timeConsume
-			monitorObj.succAvgTimeMap[key] = countObj
+			monitorObj.failedAvgTimeMap[key] = countObj
 			reportCountTmp++
 			if reportCountTmp > checkReportDataCountLimit && this.checkAndReportDataToAliyun() {		//避免上报数据太多，长时间没机会执行reportDataToAliyun
 				reportCountTmp = 0
