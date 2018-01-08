@@ -36,6 +36,7 @@ func GetPerson(cxt context.Context, age int8) ([]*PersonReatimeInfo, code.Error)
 		status, invokeerr := invoke.Name("kits-location").
 			Get("/v1/location").
 			Query("id", person.Id).
+			Hystrix(800,100,20).
 			Exec(res)
 		cerr := invokeutils.ExtractHeader("kits-location", invokeerr, status, res, &location)
 		if cerr != nil {

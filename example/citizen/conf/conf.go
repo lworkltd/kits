@@ -18,6 +18,7 @@ import (
 	"github.com/lworkltd/kits/service/profile"
 	"github.com/opentracing/opentracing-go"
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
+	"github.com/lworkltd/kits/service/monitor"
 )
 
 type Profile struct {
@@ -32,6 +33,7 @@ type Profile struct {
 	Hystrix     profile.Hystrix
 	Zipkin      profile.Zipkin
 	Discover    profile.Discovery
+	Monitor     profile.Monitor
 	Application Application
 }
 
@@ -149,9 +151,28 @@ func (pro *Profile) Init(tomlFile string) error {
 		UseTracing:      pro.Invoker.TracingEnabled,
 		UseCircuit:      pro.Invoker.CircuitEnabled,
 		DoLogger:        pro.Invoker.LoggerEnabled,
+		DefaultTimeout:  pro.Hystrix.DefaultTimeout,
+		DefaultMaxConcurrentRequests: pro.Hystrix.DefaultMaxConcurrentRequests,
+		DefaultErrorPercentThreshold: pro.Hystrix.DefaultErrorPercentThreshold,
 	}
 	if err := invoke.Init(invokeOption); err != nil {
 		return err
+	}
+
+	//monitor初始化
+	if pro.Monitor.EnableReport {
+		curServerIP,_,_ := ipnet.Ipv4("")
+		err := monitor.Init(&monitor.MoniorConf{
+			EnableReport:pro.Monitor.EnableReport,
+			CurServiceName:pro.Service.ReportName,
+			CurServerIP:curServerIP,
+			AliUid:pro.Monitor.AliUid,
+			AliNamespace:pro.Monitor.AliNamespace,
+			EnvironmenType:strings.ToLower(pro.Base.Mode),
+		})
+		if nil != err {
+			return err
+		}
 	}
 
 	return nil

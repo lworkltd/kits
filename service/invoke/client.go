@@ -13,6 +13,8 @@ import (
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/golang/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
+	"github.com/lworkltd/kits/service/monitor"
+	"strconv"
 )
 
 
@@ -32,6 +34,7 @@ type client struct {
 	host     string
 	scheme   string
 	serverid string
+	hystrixInfo hystrix.CommandConfig
 
 	headers map[string]string
 	queries map[string][]string
@@ -47,6 +50,14 @@ type client struct {
 
 func (client *client) circuitName() string {
 	return client.serverid
+}
+
+//未设置hytrix参数，或者参数不合理，使用默认熔断策略
+func (client *client) hytrixCommand() string {
+	if client.hystrixInfo.Timeout <= 0 || client.hystrixInfo.MaxConcurrentRequests <= 0 || client.hystrixInfo.Timeout > 10000 || client.hystrixInfo.MaxConcurrentRequests > 10000 {
+		return "DEFAULT"
+	}
+	return client.service.Name() + client.method + client.path
 }
 
 func (client *client) tracingName() string {
@@ -250,6 +261,39 @@ func (client *client) Context(ctx context.Context) Client {
 	return client
 }
 
+
+func (client *client) Hystrix(timeOutMillisecond, maxConn, thresholdPercent int) Client {
+	if client.errInProcess != nil {
+		return client
+	}
+	//设置值不合理时调整
+	if timeOutMillisecond < 10 {
+		timeOutMillisecond = 10
+	} else if timeOutMillisecond > 10000 {
+		timeOutMillisecond = 10000
+	}
+	if maxConn < 30 {
+		maxConn = 30
+	}else if maxConn > 10000 {
+		maxConn = 10000
+	}
+	if thresholdPercent < 5 {
+		thresholdPercent = 5
+	}else if thresholdPercent > 100 {
+		thresholdPercent = 100
+	}
+
+	client.hystrixInfo.Timeout = timeOutMillisecond
+	client.hystrixInfo.MaxConcurrentRequests = maxConn
+	client.hystrixInfo.ErrorPercentThreshold = thresholdPercent
+	command := client.hytrixCommand()
+	if "DEFAULT" != command {
+		hystrix.ConfigureCommand(command,client.hystrixInfo)
+	}
+	return client
+}
+
+
 func (client *client) Exec(out interface{}) (int, error) {
 	if client.useTracing {
 		span, ctx := opentracing.StartSpanFromContext(client.ctx, client.tracingName())
@@ -257,17 +301,23 @@ func (client *client) Exec(out interface{}) (int, error) {
 		defer span.Finish()
 	}
 
+	beginTime := time.Now()
 	var err error
 	var status int
 	if !client.useCircuit {
-		status, err = client.exec(out)
+		status, err = client.exec(out, nil)
 	} else {
-		err = hystrix.Do(client.circuitName(), func() error {
-			s, err := client.exec(out)
+		var cancel context.CancelFunc = nil
+		err = hystrix.Do(client.hytrixCommand(), func() error {
+			s, err := client.exec(out, &cancel)
 			status = s
 			return err
 		}, client.fallback)
+		if nil != err && nil != cancel {
+			cancel()
+		}
 	}
+	client.processExecMonitorReport(status, err, beginTime)
 
 	if doLogger {
 		fileds := logrus.Fields{
@@ -339,7 +389,7 @@ func (client *client) build() (*http.Request, error) {
 	}
 
 	if client.ctx != nil {
-		request.WithContext(client.ctx)
+		request = request.WithContext(client.ctx)
 	}
 
 	if _, ok := client.headers[HTTP_HEADER_CONTENT_TYPE]; !ok {
@@ -353,11 +403,93 @@ func (client *client) build() (*http.Request, error) {
 	return request, nil
 }
 
-func (client *client) exec(out interface{}) (int, error) {
+
+func (client *client)reportErrorToMonitor(code string, beginTime time.Time) {
+	infc := "ACTIVE_" + client.method + "_" + client.path			//ACTIVE表示主调
+	//请求失败，上报失败计数和失败平均耗时
+	timeNow := time.Now()
+	var failedCountReport monitor.ReqFailedCountDimension
+	failedCountReport.SName = monitor.GetCurrentServerName()
+	failedCountReport.TName = client.service.Name()
+	failedCountReport.TIP = client.host
+	failedCountReport.Code = code
+	failedCountReport.Infc = infc
+	monitor.ReportReqFailed(&failedCountReport)
+
+	var failedAvgTimeReport monitor.ReqFailedAvgTimeDimension
+	failedAvgTimeReport.SName = monitor.GetCurrentServerName()
+	failedAvgTimeReport.SIP = monitor.GetCurrentServerIP()
+	failedAvgTimeReport.TName = client.service.Name()
+	failedAvgTimeReport.TIP = client.host
+	failedAvgTimeReport.Infc = infc
+	monitor.ReportFailedAvgTime(&failedAvgTimeReport, (timeNow.UnixNano() - beginTime.UnixNano()) / 1e3)		//耗时单位为微秒
+}
+
+func (client *client)reportSuccessToMonitor(beginTime time.Time) {
+	infc := "ACTIVE_" + client.method + "_" + client.path			//ACTIVE表示主调
+	//请求失败，上报失败计数和失败平均耗时
+	timeNow := time.Now()
+	var succCountReport monitor.ReqSuccessCountDimension
+	succCountReport.SName = monitor.GetCurrentServerName()
+	succCountReport.SIP = monitor.GetCurrentServerIP()
+	succCountReport.TName = client.service.Name()
+	succCountReport.TIP = client.host
+	succCountReport.Infc = infc
+	monitor.ReportReqSuccess(&succCountReport)
+
+	var succAvgTimeReport monitor.ReqSuccessAvgTimeDimension
+	succAvgTimeReport.SName = monitor.GetCurrentServerName()
+	succAvgTimeReport.SIP = monitor.GetCurrentServerIP()
+	succAvgTimeReport.TName = client.service.Name()
+	succAvgTimeReport.TIP = client.host
+	succAvgTimeReport.Infc = infc
+	monitor.ReportSuccessAvgTime(&succAvgTimeReport, (timeNow.UnixNano() - beginTime.UnixNano()) / 1e3)		//耗时单位为微秒
+}
+
+//处理Response函数的http请求结果monitor上报
+func (client *client) processResponseMonitorReport(resp *http.Response, beginTime time.Time) {
+	if monitor.EnableReportMonitor() == false {
+		return
+	}
+
+	if nil == resp {
+		//请求失败，上报失败计数和失败平均耗时
+		client.reportErrorToMonitor("-1", beginTime)		//code暂时取"-1"
+	} else {
+		//把beginTime，infc，TName放入resp的header中，由ExtractHttpResponse取上报失败或成功
+		infc := "ACTIVE_" + client.method + "_" + client.path			//ACTIVE表示主调
+		resp.Header.Set("Infc",infc)
+		resp.Header.Set("TName", client.service.Name())
+		resp.Header.Set("Endpoint", client.host)					//请求的IP:Port，或者一个domain:Port/domain
+		resp.Header.Set("BeginTime", strconv.FormatInt(beginTime.UnixNano() / 1e3, 10))
+	}
+}
+
+
+//处理Exec函数http请求结果的monitor上报
+func (client *client) processExecMonitorReport(code int, err error, beginTime time.Time) {
+	if monitor.EnableReportMonitor() == false {
+		return
+	}
+
+	if nil != err {
+		//请求失败，上报失败计数和失败平均耗时
+		client.reportErrorToMonitor(strconv.FormatInt(int64(code), 10), beginTime)
+	} else {
+		//请求成功，上报成功计数和成功平均耗时
+		client.reportSuccessToMonitor(beginTime)
+	}
+}
+
+
+func (client *client) exec(out interface{},cancel *context.CancelFunc) (int, error) {
 	if client.errInProcess != nil {
 		return 0, client.errInProcess
 	}
 
+	if nil != cancel && nil != client.ctx {
+		client.ctx, *cancel = context.WithCancel(client.ctx)
+	}
 	request, err := client.build()
 	if err != nil {
 		return 0, err
@@ -398,11 +530,14 @@ func (client *client) exec(out interface{}) (int, error) {
 	return resp.StatusCode, nil
 }
 
-func (client *client) getResp() (*http.Response, error) {
+func (client *client) getResp(cancel *context.CancelFunc) (*http.Response, error) {
 	if client.errInProcess != nil {
 		return nil, client.errInProcess
 	}
 
+	if nil != cancel && nil != client.ctx {
+		client.ctx, *cancel = context.WithCancel(client.ctx)
+	}
 	request, err := client.build()
 	if err != nil {
 		return nil, err
@@ -425,17 +560,23 @@ func (client *client) Response() (*http.Response, error) {
 		defer span.Finish()
 	}
 
+	beginTime := time.Now()
 	var err error
 	var resp *http.Response
 	if !client.useCircuit {
-		resp, err = client.getResp()
+		resp, err = client.getResp(nil)
 	} else {
-		err = hystrix.Do(client.circuitName(), func() error {
-			s, err := client.getResp()
+		var cancel context.CancelFunc = nil
+		err = hystrix.Do(client.hytrixCommand(), func() error {
+			s, err := client.getResp(&cancel)
 			resp = s
 			return err
 		}, client.fallback)
+		if nil != err && nil != cancel {
+			cancel()		//cancel run client.getResp
+		}
 	}
+	client.processResponseMonitorReport(resp, beginTime)	//若resp为nil则上报错误，否则添加请求信息到header待进一步上报monitor数据
 
 	if doLogger {
 		fileds := logrus.Fields{
