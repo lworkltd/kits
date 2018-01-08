@@ -3,6 +3,7 @@ package invoke
 import (
 	"context"
 	"net/http"
+	"github.com/afex/hystrix-go/hystrix"
 )
 
 var doLogger = true
@@ -18,6 +19,9 @@ type (
 		UseTracing      bool
 		UseCircuit      bool
 		DoLogger        bool
+		DefaultTimeout               int
+		DefaultMaxConcurrentRequests int
+		DefaultErrorPercentThreshold int
 	}
 
 	// IEngine 引擎
@@ -36,6 +40,8 @@ type (
 		Method(string, string) Client // 自定义方法
 
 		Name() string                    // 服务名称
+		UseTracing() bool
+		UseCircuit() bool
 		Remote() (string, string, error) // 获取一个服务地址和ID
 	}
 
@@ -50,6 +56,7 @@ type (
 		Routes(map[string]string) Client     // 添加路径参数
 		Json(interface{}) Client             // 添加Json消息体
 		Body([]byte) Client             	 // 添加byte消息体
+		Hystrix(timeOutMillisecond, maxConn, thresholdPercent int) Client //添加熔断参数
 		Tls() Client                         // 使用HTTPS
 		Context(context.Context) Client      // 上下文
 		Fallback(func(error) error) Client   // 失败触发器
@@ -63,6 +70,39 @@ var eng Engine = newEngine()
 // Init 初始化
 func Init(option *Option) error {
 	doLogger = option.DoLogger
+	if true == option.UseCircuit {
+		//未设置时的默认值
+		if 0 == option.DefaultTimeout {
+			option.DefaultTimeout = 1000
+		}
+		if 0 == option.DefaultMaxConcurrentRequests {
+			option.DefaultMaxConcurrentRequests = 200
+		}
+		if 0 == option.DefaultErrorPercentThreshold {
+			option.DefaultErrorPercentThreshold = 20
+		}
+		//设置值不合理时调整
+		if option.DefaultTimeout < 10 {
+			option.DefaultTimeout = 10
+		} else if option.DefaultTimeout > 10000 {
+			option.DefaultTimeout = 10000
+		}
+		if option.DefaultMaxConcurrentRequests < 30 {
+			option.DefaultMaxConcurrentRequests = 30
+		}else if option.DefaultMaxConcurrentRequests > 10000 {
+			option.DefaultMaxConcurrentRequests = 10000
+		}
+		if option.DefaultErrorPercentThreshold < 5 {
+			option.DefaultErrorPercentThreshold = 5
+		}else if option.DefaultErrorPercentThreshold > 100 {
+			option.DefaultErrorPercentThreshold = 100
+		}
+		hystrix.ConfigureCommand("DEFAULT", hystrix.CommandConfig{		//添加一个默认的熔断策略
+			Timeout:               option.DefaultTimeout,
+			MaxConcurrentRequests: option.DefaultMaxConcurrentRequests,
+			ErrorPercentThreshold: option.DefaultErrorPercentThreshold,
+		})
+	}
 	return eng.Init(option)
 }
 
