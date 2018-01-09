@@ -16,9 +16,9 @@ import (
 
 type Response struct {
 	Result  bool            `json:"result"`
-	Code    string          `json:"mcode"`
+	Code    string          `json:"mcode,omitempty"`
 	Data    json.RawMessage `json:"data,omitempty"`
-	Message string          `json:"message,omitemtpy"`
+	Message string          `json:"message,omitempty"`
 }
 
 // ExtractHeader 解析包中的错误码(该封装已经达成共识)
