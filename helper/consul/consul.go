@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	defaultRegisterCheckInterval = "60s"
-	defaultRegisterCheckTimeout  = "15s"
+	defaultRegisterCheckInterval = "5s"
+	defaultRegisterCheckTimeout  = "3s"
 )
 
 var ErrConsulNotInit = errors.New("consul not init yet,please initilize with consul.InitConsul() or consul.SetClient()")
@@ -49,8 +49,8 @@ type RegisterOption struct {
 	CheckUrl string // *HTTP 地址
 
 	// 选项配置
-	CheckInterval                string   // 检测间隔，默认 60s
-	CheckTimeout                 string   // 检测超时，默认 16s
+	CheckInterval                string   // 检测间隔，默认 5s
+	CheckTimeout                 string   // 检测超时，默认 3s
 	CheckDeregisterCriticalAfter string   // 仅支持consul 0.7+
 	Tags                         []string // 服务标签
 }
@@ -112,6 +112,10 @@ func (client *Client) Register(option *RegisterOption) error {
 	if err != nil {
 		return fmt.Errorf("check timout %s is not a golang duration", option.CheckTimeout)
 	}
+	var tcpStr string
+	if "" == option.CheckUrl {
+		tcpStr = fmt.Sprintf("%v:%v", option.Ip, option.Port)
+	}
 
 	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
 		ID:      option.Id,   // SERVICE_ID
@@ -121,6 +125,7 @@ func (client *Client) Register(option *RegisterOption) error {
 		Address: option.Ip,   // 服务地址
 		Check: &api.AgentServiceCheck{
 			HTTP:     option.CheckUrl,
+			TCP:      tcpStr,
 			Interval: option.CheckInterval,
 			Timeout:  option.CheckTimeout,
 			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
@@ -195,19 +200,19 @@ func (client *Client) UpdateKeyValue(key, value string) error {
 // 循环地去读取已经访问过的服务
 func (client *Client) loop() {
 	for {
-		<-time.After(time.Minute)
+		<-time.After(time.Second * 5)
 
 		// 计算需要更新的服务
 		queryServices := make([]string, 0, len(client.serviceCache))
 		deleteServices := make([]string, 0, len(client.serviceCache))
 		for name, service := range client.serviceCache {
-			// 超过30分钟没有访问的服务，将移除自动更新
+			// 超过3分钟没有访问的服务，将移除自动更新
 			if service.r.Add(time.Minute * 3).Before(time.Now()) {
 				deleteServices = append(deleteServices, name)
 			}
 
-			// 超过1分钟没有更新的服务将更新地址
-			query := service.t.Add(time.Minute).Before(time.Now())
+			// 超过5秒没有更新的服务将更新地址
+			query := service.t.Add(time.Second * 5).Before(time.Now())
 			if query {
 				queryServices = append(queryServices, name)
 			}
