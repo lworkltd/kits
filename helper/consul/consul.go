@@ -140,9 +140,15 @@ func (client *Client) Unregister(option *RegisterOption) error {
 
 // Discover 从consul发现一个服务
 func (client *Client) Discover(name string) ([]string, []string, error) {
-	client.mutex.RLock()
-	service, exist := client.serviceCache[name]
-	client.mutex.RUnlock()
+	var (
+		service *serviceCache
+		exist   bool
+	)
+	func() {
+		client.mutex.RLock()
+		defer client.mutex.RUnlock()
+		service, exist = client.serviceCache[name]
+	}()
 
 	if !exist || service == nil || service.err != nil {
 		s, err := client.service(name)
@@ -151,9 +157,12 @@ func (client *Client) Discover(name string) ([]string, []string, error) {
 		}
 
 		// 有一定的可能会重复查询
-		client.mutex.Lock()
-		client.serviceCache[name] = s
-		client.mutex.Unlock()
+		func() {
+			client.mutex.Lock()
+			defer client.mutex.Unlock()
+
+			client.serviceCache[name] = s
+		}()
 		service = s
 	}
 
@@ -205,18 +214,23 @@ func (client *Client) loop() {
 		// 计算需要更新的服务
 		queryServices := make([]string, 0, len(client.serviceCache))
 		deleteServices := make([]string, 0, len(client.serviceCache))
-		for name, service := range client.serviceCache {
-			// 超过3分钟没有访问的服务，将移除自动更新
-			if service.r.Add(time.Minute * 3).Before(time.Now()) {
-				deleteServices = append(deleteServices, name)
-			}
+		func() {
+			client.mutex.RLock()
+			defer client.mutex.RUnlock()
 
-			// 超过5秒没有更新的服务将更新地址
-			query := service.t.Add(time.Second * 5).Before(time.Now())
-			if query {
-				queryServices = append(queryServices, name)
+			for name, service := range client.serviceCache {
+				// 超过3分钟没有访问的服务，将移除自动更新
+				if service.r.Add(time.Minute * 3).Before(time.Now()) {
+					deleteServices = append(deleteServices, name)
+				}
+
+				// 超过5秒没有更新的服务将更新地址
+				query := service.t.Add(time.Second * 5).Before(time.Now())
+				if query {
+					queryServices = append(queryServices, name)
+				}
 			}
-		}
+		}()
 
 		client.removeServices(deleteServices)
 
