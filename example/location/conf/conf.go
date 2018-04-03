@@ -163,14 +163,15 @@ func (pro *Profile) Init(tomlFile string) error {
 
 	//monitor初始化
 	if pro.Monitor.EnableReport {
-		curServerIP,_,_ := ipnet.Ipv4("")
-		err := monitor.Init(&monitor.MoniorConf{
-			EnableReport:pro.Monitor.EnableReport,
-			CurServiceName:pro.Service.ReportName,
-			CurServerIP:curServerIP,
-			AliUid:pro.Monitor.AliUid,
-			AliNamespace:pro.Monitor.AliNamespace,
-			EnvironmenType:strings.ToLower(pro.Base.Mode),
+		curServerIP, _, _ := ipnet.Ipv4("")
+		err := monitor.Init(&monitor.MonitorConf{
+			EnableReport:    pro.Monitor.EnableReport,
+			CurServiceName:  pro.Service.ReportName,
+			CurServerIP:     curServerIP,
+			AliUid:          pro.Monitor.AliUid,
+			AliNamespace:    pro.Monitor.AliNamespace,
+			EnvironmentType: strings.ToLower(pro.Base.Mode),
+			ReportAddr:      pro.Monitor.ReportAddr,
 		})
 		if nil != err {
 			return err

@@ -90,3 +90,5 @@ do_logger = true
 enable_report=true
 aliUid="1765747156115092"
 aliNamespace="ACS/CUSTOM/1765747156115092"
+#reportAddr，默认："open.cms.aliyun.com", lwork上报代理："open.cms.lwork.com"
+reportAddr=""
