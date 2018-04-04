@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"time"
+	"strings"
 )
 
 // MonitorConf 监控配置
@@ -14,6 +15,7 @@ type MonitorConf struct {
 	EnvironmentType string // 环境类型,test/qa/prod
 	AliUid          string // 上报到阿里云监控的Uid
 	AliNamespace    string // 上报到阿里云监控的namespace
+	ReportAddr      string // 上报地址，默认："open.cms.aliyun.com"
 }
 
 // ReqSuccessCountDimension 请求成功量的监控项字段
@@ -60,6 +62,12 @@ func Init(conf *MonitorConf) error {
 	monitorObj.conf = *conf
 	if false == monitorObj.conf.EnableReport {
 		return nil
+	}
+	if "" == conf.ReportAddr {
+		monitorObj.conf.ReportAddr = defaultReportAddr
+	}
+	if strings.HasSuffix(monitorObj.conf.ReportAddr, "/") {
+		monitorObj.conf.ReportAddr = monitorObj.conf.ReportAddr[:len(monitorObj.conf.ReportAddr)-1] //去除最后一个"/"字符
 	}
 
 	monitorObj.reqSuccCountChan = make(chan *ReqSuccessCountDimension, reportQueneLength)
