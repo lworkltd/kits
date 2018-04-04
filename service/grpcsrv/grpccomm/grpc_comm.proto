@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package grpccomm;
+
+service CommService {
+    // RpcRequest 实现请求ID+请求内容的调用接口
+    rpc RpcRequest (CommRequest) returns (CommResponse) {}
+}
+
+// CommHeader 通用业务请求头
+// 租户ID仅需要填写一次即可
+message CommHeader {
+    BaseInfo baseInfo                 = 1;
+    XFeignKey xFeignKey               = 2;
+    XAccountKey xAccountKey           = 3;
+}
+
+message BaseInfo {
+    string          tenantId         = 1;       // 租户ID
+	string          productId        = 2;       // 产品ID,选项为[BW,GW,FW,TM,TW]
+	int64           reqTime          = 3;       // 请求时间戳，毫秒
+	string          xApiToken        = 4;		// 用户 token
+	string          xAccountToken    = 5;		// 账户 token
+	string          clientIP         = 6;       // 客户端 IP
+	string          platform         = 7;		// android/ios/web
+	string          version          = 8;       // 
+	string          deviceID         = 9;		// 物理设备ID
+	string          guid             = 10;		// 客户端自己生成的ID
+    string          appMsgID         = 11;		// 例如苹果生成的ID，用户推送消息
+}
+
+message XFeignKey {
+	string          clientIp         = 1;
+	string          device           = 2;
+	string          language         = 3;
+	string          tenantId         = 4;
+	string          productId        = 5;
+	string          companyName      = 6;
+	string          username         = 7;
+	string          email            = 8;
+	string          phone            = 9;
+	string          realName         = 10;
+	string          nickname         = 11;
+	string          roleId           = 12;
+	string          userId           = 13;
+}
+
+message XAccountKey {
+	string          tenantId         = 1;
+	string          serverId         = 2;
+	string          account          = 3;
+	string          vendor           = 4;
+	string          accountType      = 5;
+	string          tenantToken      = 6;		// 租户的Token
+}
+
+message CommRequest {
+    string         reqInterface     = 1;		// 接口名,用于绑定处理函数，其名称为请求结构体的名称,例如`InvokeTestEchoRequest`
+    string         reqSercice       = 2;        // 服务名称，若目标服务经过接口网关的转发，则此字段是必填的,防止不同服务之间定义了相同的接口名称
+    bytes          header           = 3;        // 头部，通常情况传递CommHeader，也可以自行定义（不建议）
+	bytes          body             = 4;		// 消息体
+}
+
+message CommResponse {
+    bool           result          = 1;
+	string         mcode           = 3;     // 错误码
+	string         message         = 4;     // 错误消息
+	bytes          body            = 5;		// reqService和reqInterface的自定义请求协议数据
+}
+
+message InvokeTestEchoRequest {
+    string str = 1;
+}
+
+message InvokeTestEchoResponse {
+    string str = 1;
+}
