@@ -120,6 +120,7 @@ type Monitor struct {
 	EnableReport   bool     `toml:"enable_report"`		//启用上报到阿里云监控
 	AliUid         string   `toml:"aliUid"`             //上报到阿里云监控的Uid
 	AliNamespace   string   `toml:"aliNamespace"`       //上报到阿里云监控的namespace
+	ReportAddr     string   `toml:"reportAddr"`         //上报到阿里云的服务地址，默认："open.cms.aliyun.com"
 }
 
 func (monitor *Monitor) BeforeParse() {
