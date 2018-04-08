@@ -122,6 +122,15 @@ func (service *Service) regInterface(g *InterfaceGroup, reqName string) error {
 
 // Group 获取一个规则分组，如果不存在，则创建一个
 func (service *Service) Group(name string, pipes ...RequestPipeFunc) *InterfaceGroup {
+	group, isNew := service.newGroup(name, pipes...)
+	if isNew {
+		group.parents = []*InterfaceGroup{}
+	}
+
+	return group
+}
+
+func (service *Service) newGroup(name string, pipes ...RequestPipeFunc) (*InterfaceGroup, bool) {
 	if service.groups == nil {
 		service.groups = make(map[string]*InterfaceGroup, 1)
 	}
@@ -142,7 +151,7 @@ func (service *Service) Group(name string, pipes ...RequestPipeFunc) *InterfaceG
 		group.Use(pipes...)
 	}
 
-	return group
+	return group, !exist
 }
 
 // Run 启动服务
