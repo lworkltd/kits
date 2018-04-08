@@ -49,7 +49,7 @@ func (routeProxy *RouteProxy) Do(ctx context.Context, req *grpccomm.CommRequest)
 		return newRspFromError(err), true
 	}
 
-	return service.Grpc("").Context(ctx).CommRequest(req), true
+	return service.Unary().Context(ctx).CommRequest(req), true
 }
 
 func init() {
