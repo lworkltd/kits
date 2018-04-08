@@ -31,7 +31,7 @@ func (group *InterfaceGroup) Use(pipes ...RequestPipeFunc) {
 }
 
 func (group *InterfaceGroup) rpcProxy(ctx context.Context, service grpcinvoke.Service, commReq *grpccomm.CommRequest) *grpccomm.CommResponse {
-	return service.Grpc("").CommRequest(commReq)
+	return service.Unary().CommRequest(commReq)
 }
 
 func (group *InterfaceGroup) doPipe(ctx context.Context, commReq *grpccomm.CommRequest) error {
