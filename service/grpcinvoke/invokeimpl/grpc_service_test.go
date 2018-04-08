@@ -29,7 +29,7 @@ func TestGrpcServiceGrpc(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.grpcService.Grpc(tt.args.callName)
+			got := tt.grpcService.Unary(tt.args.callName)
 			got.Body(&grpccomm.InvokeTestEchoRequest{}).
 				Header(&grpccomm.CommHeader{}).
 				Fallback(func(error) error { return nil }).
