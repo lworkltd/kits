@@ -15,44 +15,49 @@ import (
 )
 
 func TestInterfaceGroupSubGroup(t *testing.T) {
-	var sum int
+	var sum string
 	service := newService()
-	add10 := service.Group("add-10", func(context.Context, *grpccomm.CommRequest) error {
-		sum += 10
+	addabc := service.Group("add-abc", func(context.Context, *grpccomm.CommRequest) error {
+		sum += "abc"
 		return nil
 	})
-	group := service.groups["add-10"]
+	group := service.groups["add-abc"]
 	if group == nil {
-		t.Errorf("group add-10 has register on service,but not found")
+		t.Errorf("group add-abc has register on service,but not found")
 		return
 	}
-	if group.Name() != "add-10" {
-		t.Errorf("group add-10 has register on service,but group.Name() not return as expect,got %v", group.Name())
+	if group.Name() != "add-abc" {
+		t.Errorf("group add-abc has register on service,but group.Name() not return as expect,got %v", group.Name())
 		return
 	}
 
-	add100 := add10.Group("add-100", func(context.Context, *grpccomm.CommRequest) error {
-		sum += 100
+	add123 := addabc.Group("add-123", func(context.Context, *grpccomm.CommRequest) error {
+		sum += "123"
 		return nil
 	})
 
-	add100x := service.Group("add-100")
-	if !reflect.DeepEqual(add100, add100x) {
-		t.Errorf("unexpect equal group=%v,got %v", add100, add100x)
+	add123x := service.Group("add-123")
+	if !reflect.DeepEqual(add123, add123x) {
+		t.Errorf("unexpect equal group=%v,got %v", add123, add123x)
 		return
 	}
 
-	if err := add100.doPipe(nil, nil); err != nil {
+	addxyz := add123.Group("add-xyz", func(context.Context, *grpccomm.CommRequest) error {
+		sum += "xyz"
+		return nil
+	})
+
+	if err := addxyz.doPipe(nil, nil); err != nil {
 		t.Errorf("unexpect error when do doPipe,%v", err)
 		return
 	}
 
-	if sum != 110 {
-		t.Errorf("doPipe expect sum=110,go %v", sum)
+	if sum != "abc123xyz" {
+		t.Errorf("doPipe expect sum=abc123xyz,go %v", sum)
 		return
 	}
 
-	resultErr := add10.Group("add-100", func(context.Context, *grpccomm.CommRequest) error {
+	resultErr := add123.Group("add-123", func(context.Context, *grpccomm.CommRequest) error {
 		return fmt.Errorf("error")
 	})
 	err := resultErr.doPipe(nil, nil)
