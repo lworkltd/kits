@@ -43,7 +43,7 @@ func TestGrpcClient(t *testing.T) {
 		{
 			name: "normal",
 			getClient: func() grpcinvoke.Client {
-				return service.Grpc("DepositRequest").
+				return service.Unary("DepositRequest").
 					ReqService("Foo").
 					Fallback(func(err error) error { return err }).
 					Body(&testproto.AddRequest{}).
@@ -66,7 +66,7 @@ func TestGrpcClient(t *testing.T) {
 		{
 			name: "service not exist",
 			getClient: func() grpcinvoke.Client {
-				return notExistService.Grpc("DepositRequest").
+				return notExistService.Unary("DepositRequest").
 					UseCircuit(true)
 			},
 			rsp: nil,
@@ -81,7 +81,7 @@ func TestGrpcClient(t *testing.T) {
 		{
 			name: "request timeout",
 			getClient: func() grpcinvoke.Client {
-				return service.Grpc("TimeoutRequest").
+				return service.Unary("TimeoutRequest").
 					UseCircuit(true)
 			},
 			rsp: nil,
@@ -126,7 +126,7 @@ func TestGrpcCommReq(t *testing.T) {
 		{
 			name: "normal ok",
 			getClient: func() grpcinvoke.Client {
-				return service.Grpc("").UseCircuit(true)
+				return service.Unary().UseCircuit(true)
 			},
 			commReq: &grpccomm.CommRequest{
 				ReqInterface: "AddRequest",
@@ -158,7 +158,7 @@ func TestGrpcCommReq(t *testing.T) {
 		{
 			name: "normal timeout",
 			getClient: func() grpcinvoke.Client {
-				return service.Grpc("").UseCircuit(true)
+				return service.Unary().UseCircuit(true)
 			},
 			commReq: &grpccomm.CommRequest{
 				ReqInterface: "TimeoutRequest",
@@ -187,7 +187,7 @@ func TestGrpcCommReq(t *testing.T) {
 		{
 			name: "error response",
 			getClient: func() grpcinvoke.Client {
-				return service.Grpc("").
+				return service.Unary().
 					ReqService("Foo").UseCircuit(true)
 			},
 			commReq: &grpccomm.CommRequest{
