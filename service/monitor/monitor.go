@@ -13,13 +13,13 @@ import (
 )
 
 const (
-	reportInterval                = 1    // 上报到阿里云的时间间隔，1秒
+	reportInterval                = 3    // 上报到阿里云的时间间隔，3秒
 	checkReportDataCountLimit     = 1000 // 当上报checkReportDataCountLimit记录后，检查一次是否该发送数据
 	notReportDataSleepMillisecond = 10   // 没有上报数据时的休眠时间，单位毫秒，避免循环消耗太多CPU
 	delimit                       = "#@#"
-	endpoint                      = "open.cms.aliyun.com"
+	defaultReportAddr             = "open.cms.aliyun.com"
 	reportQueneLength             = 300 // 上报数据队列的长度
-	sendReportDataTimeoutSecond   = 2   // 发送上报数据到阿里云的超时时间，单位为秒
+	sendReportDataTimeoutSecond   = 3   // 发送上报数据到阿里云的超时时间，单位为秒
 )
 
 // generatekey 简易序列化
@@ -251,7 +251,7 @@ type AliyunMetric struct {
 func sendRequestToAliMonitor(metrics []AliyunMetric) error {
 	metricsBytes, _ := json.Marshal(metrics)
 	body := fmt.Sprintf("userId=%v&namespace=%v&metrics=%v", monitorObj.conf.AliUid, monitorObj.conf.AliNamespace, string(metricsBytes))
-	url := "http://" + endpoint + "/metrics/put"
+	url := "http://" + monitorObj.conf.ReportAddr + "/metrics/put"
 	request, err := http.NewRequest("POST", url, strings.NewReader(body))
 	if err != nil {
 		logrus.WithFields(logrus.Fields{"err": err, "url": url, "body": body}).Error("http.NewRequest failed")
