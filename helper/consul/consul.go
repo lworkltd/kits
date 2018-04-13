@@ -220,9 +220,6 @@ func (client *Client) DestroySession(sessionId string) (bool, error) {
 		return true, nil
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"sessionId": sessionId,
-	}).Warn("Consul Session Destroy...")
 	_, err := client.cli.Session().Destroy(sessionId, nil)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
