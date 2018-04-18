@@ -121,6 +121,8 @@ type Monitor struct {
 	AliUid         string   `toml:"aliUid"`             //上报到阿里云监控的Uid
 	AliNamespace   string   `toml:"aliNamespace"`       //上报到阿里云监控的namespace
 	ReportAddr     string   `toml:"reportAddr"`         //上报到阿里云的服务地址，默认："open.cms.aliyun.com"
+	EnableStatsd   bool     `toml:"enableStatsd"`       //是否启用上报到Statsd
+	StatsdAddr     string   `toml:"statsdAddr"`         //statsdAddr的地址，默认上报到"metrics.lwork.com:9125"
 }
 
 func (monitor *Monitor) BeforeParse() {
