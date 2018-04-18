@@ -138,6 +138,7 @@ func (grpcService *grpcService) newGrpcClient(callName string, conn *grpc.Client
 		callName:          callName,
 		conn:              conn,
 		freeConnAfterUsed: grpcService.freeConnAfterUsed,
+		serviceName:       grpcService.name,
 	}
 }
 
