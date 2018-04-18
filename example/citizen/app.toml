@@ -93,3 +93,7 @@ aliUid="1765747156115092"
 aliNamespace="ACS/CUSTOM/1765747156115092"
 #reportAddr，默认："open.cms.aliyun.com", lwork上报代理："open.cms.lwork.com"
 reportAddr=""
+#是否上报到statsd
+enableStatsd=true
+#statsdAddr的地址，默认上报到"metrics.lwork.com:9125"
+statsdAddr="metrics.lwork.com:9125"
