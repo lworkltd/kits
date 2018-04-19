@@ -37,7 +37,7 @@ type Engine interface {
 
 // Service 服务代理
 type Service interface {
-	Grpc(string) Client
+	Unary(...string) Client
 	Close() error
 	Name() string
 
