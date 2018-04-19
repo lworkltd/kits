@@ -11,6 +11,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcinvoke"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
+	"github.com/lworkltd/kits/service/monitor"
 	"github.com/lworkltd/kits/service/restful/code"
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/status"
@@ -153,6 +154,20 @@ func (client *grpcClient) CommRequest(in *grpccomm.CommRequest) *grpccomm.CommRe
 	return rsp
 }
 
+func (client *grpcClient) catchAndReturnError(originErr error) error {
+	if err, yes := originErr.(code.Error); yes {
+		failedReport := &monitor.ReqFailedCountDimension{
+			SName: client.serviceName,
+			TName: client.reqService,
+			Infc:  fmt.Sprintf("ACTIVE_GET_%s", client.callName),
+			Code:  err.Mcode(),
+		}
+		monitor.ReportReqFailed(failedReport)
+	}
+
+	return originErr
+}
+
 func (client *grpcClient) Context(ctx context.Context) grpcinvoke.Client {
 	client.ctx = ctx
 	return client
@@ -160,7 +175,7 @@ func (client *grpcClient) Context(ctx context.Context) grpcinvoke.Client {
 
 func (client *grpcClient) Response(out proto.Message) error {
 	if client.err != nil {
-		return client.err
+		return client.catchAndReturnError(client.err)
 	}
 
 	if client.freeConnAfterUsed {
@@ -171,12 +186,13 @@ func (client *grpcClient) Response(out proto.Message) error {
 
 	in, err := buildGrpcCommRequest(client)
 	if err != nil {
-		return err
+		return client.catchAndReturnError(err)
 	}
 
 	var (
 		rsp *grpccomm.CommResponse
 	)
+	since := time.Now()
 	grpcClient := grpccomm.NewCommServiceClient(client.conn)
 	if !client.useCircuit {
 		rsp, err = grpcClient.RpcRequest(client.ctx, in)
@@ -199,27 +215,44 @@ func (client *grpcClient) Response(out proto.Message) error {
 		if ok {
 			switch stat.Code {
 			default:
-				return code.NewMcode("GRPC_ERROR", err.Error())
+				return client.catchAndReturnError(code.NewMcode("GRPC_ERROR", err.Error()))
 			}
 		}
 
 		if strings.Index(err.Error(), "hystrix: timeout") >= 0 {
-			return code.NewMcode("GRPC_TIMEOUT", err.Error())
+			return client.catchAndReturnError(code.NewMcode("GRPC_TIMEOUT", err.Error()))
 		}
 
-		return code.NewMcode("GRPC_ERROR", err.Error())
+		return client.catchAndReturnError(code.NewMcode("GRPC_ERROR", err.Error()))
 	}
 
 	if rsp.Mcode != "" {
-		return code.NewMcode(rsp.Mcode, rsp.Message)
+		return client.catchAndReturnError(code.NewMcode(rsp.Mcode, rsp.Message))
 	}
 
 	if out != nil {
 		err := proto.Unmarshal(rsp.Body, out)
 		if err != nil {
-			return code.NewMcode("INVOKE_BAD_GRPC_BODY", "bad grpc response body")
+			return client.catchAndReturnError(code.NewMcode("INVOKE_BAD_GRPC_BODY", "bad grpc response body"))
 		}
 	}
+	cost := time.Now().Sub(since)
+
+	// 上报成功
+	monitor.ReportReqSuccess(&monitor.ReqSuccessCountDimension{
+		SName: monitor.GetCurrentServerName(),
+		SIP:   monitor.GetCurrentServerIP(),
+		TName: client.reqService,
+		Infc:  fmt.Sprintf("ACTIVE_GET_%s", client.callName),
+	})
+
+	// 上报成功时间延迟
+	monitor.ReportSuccessAvgTime(&monitor.ReqSuccessAvgTimeDimension{
+		SName: monitor.GetCurrentServerName(),
+		SIP:   monitor.GetCurrentServerIP(),
+		TName: client.reqService,
+		Infc:  fmt.Sprintf("ACTIVE_GET_%s", client.callName),
+	}, int64(cost/time.Millisecond))
 
 	return nil
 }

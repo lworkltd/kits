@@ -20,6 +20,9 @@ type InterfaceGroup struct {
 	infos     map[string]*RegisterInfo
 	parent    *InterfaceGroup
 	service   *Service
+
+	level   int
+	parents []*InterfaceGroup
 }
 
 // Use 添加预处理
@@ -28,24 +31,27 @@ func (group *InterfaceGroup) Use(pipes ...RequestPipeFunc) {
 }
 
 func (group *InterfaceGroup) rpcProxy(ctx context.Context, service grpcinvoke.Service, commReq *grpccomm.CommRequest) *grpccomm.CommResponse {
-	return service.Grpc("").CommRequest(commReq)
+	return service.Unary().CommRequest(commReq)
 }
 
 func (group *InterfaceGroup) doPipe(ctx context.Context, commReq *grpccomm.CommRequest) error {
-	// 预处理
-	for _, pipe := range group.pipelines {
-		err := pipe(ctx, commReq)
+	for _, g := range group.parents {
+		for _, p := range g.pipelines {
+			err := p(ctx, commReq)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, p := range group.pipelines {
+		err := p(ctx, commReq)
 		if err != nil {
 			return err
 		}
 	}
 
-	if group.parent == nil {
-		return nil
-	}
-
-	// 递归
-	return group.parent.doPipe(ctx, commReq)
+	return nil
 }
 
 // RpcRequest 请求处理
@@ -233,8 +239,12 @@ func (group *InterfaceGroup) Name() string {
 
 // Group 获取group
 func (group *InterfaceGroup) Group(name string, pipes ...RequestPipeFunc) *InterfaceGroup {
-	subGroup := group.service.Group(name, pipes...)
-	subGroup.parent = group
+	subGroup, isNew := group.service.newGroup(name, pipes...)
+	if isNew {
+		subGroup.parent = group
+		subGroup.level = group.level + 1
+		subGroup.parents = append(group.parents, group)
+	}
 
 	return subGroup
 }
