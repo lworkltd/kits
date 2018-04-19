@@ -27,7 +27,7 @@ func TestEngineNewGrpcAddr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.engine.newAddr(tt.args.addr, tt.args.freeConnAfterUsed)
-			got.Grpc("NoExistent-GRPC")
+			got.Unary("NoExistent-GRPC")
 		})
 	}
 }
@@ -55,7 +55,7 @@ func TestEngineNewGrpcService(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.engine.newService(tt.args.serviceName, tt.args.discovery, tt.args.freeConnAfterUsed)
-			got.Grpc("No-Existential-GRPC")
+			got.Unary("No-Existential-GRPC")
 		})
 	}
 }

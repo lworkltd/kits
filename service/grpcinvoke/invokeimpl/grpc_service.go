@@ -113,7 +113,7 @@ type grpcService struct {
 }
 
 // Grpc 返回调用实例
-func (grpcService *grpcService) Grpc(callName string) grpcinvoke.Client {
+func (grpcService *grpcService) Unary(args ...string) grpcinvoke.Client {
 	grpcService.mutex.Lock()
 	if grpcService.done {
 		grpcService.mutex.Unlock()
@@ -126,6 +126,10 @@ func (grpcService *grpcService) Grpc(callName string) grpcinvoke.Client {
 		return newErrorGrpcClient(err)
 	}
 
+	var callName string
+	if len(args) > 0 {
+		callName = args[0]
+	}
 	return grpcService.newGrpcClient(callName, conn)
 }
 
@@ -134,6 +138,7 @@ func (grpcService *grpcService) newGrpcClient(callName string, conn *grpc.Client
 		callName:          callName,
 		conn:              conn,
 		freeConnAfterUsed: grpcService.freeConnAfterUsed,
+		serviceName:       grpcService.name,
 	}
 }
 

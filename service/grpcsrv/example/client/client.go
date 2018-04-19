@@ -22,7 +22,7 @@ func main() {
 	)
 	req1 := &testproto.DepositRequest{}
 
-	err = grpcinvoke.Addr("127.0.0.1:8090").Grpc("").Header(&testproto.AccountHeader{
+	err = grpcinvoke.Addr("127.0.0.1:8090").Unary().Header(&testproto.AccountHeader{
 		Account:  "abc",
 		Password: "123",
 	}).Body(req1).Response(nil)
@@ -33,7 +33,7 @@ func main() {
 
 	req2 := &testproto.CalculateStrLenRequest{}
 
-	err = grpcinvoke.Addr("127.0.0.1:8090").Grpc("").Header(&grpccomm.CommHeader{}).Body(req2).Response(nil)
+	err = grpcinvoke.Addr("127.0.0.1:8090").Unary().Header(&grpccomm.CommHeader{}).Body(req2).Response(nil)
 	if err != nil {
 		fmt.Println("Error", err)
 		return
@@ -44,7 +44,7 @@ func main() {
 		B: -2,
 	}
 	rsp3 := &testproto.AddResponse{}
-	err = grpcinvoke.Addr("127.0.0.1:8090").Grpc("").Header(&grpccomm.CommHeader{}).Body(req3).Response(rsp3)
+	err = grpcinvoke.Addr("127.0.0.1:8090").Unary().Header(&grpccomm.CommHeader{}).Body(req3).Response(rsp3)
 	if err != nil {
 		fmt.Println("Error", err)
 		return
@@ -56,7 +56,7 @@ func main() {
 		B: -2,
 	}
 	rsp4 := &testproto.AddResponse{}
-	err = grpcinvoke.Addr("127.0.0.1:8090").Grpc("Agent").Header(&grpccomm.CommHeader{}).Body(req4).Response(rsp4)
+	err = grpcinvoke.Addr("127.0.0.1:8090").Unary("Agent").Header(&grpccomm.CommHeader{}).Body(req4).Response(rsp4)
 	if err != nil {
 		fmt.Println("Error Agent", err)
 		return
@@ -64,7 +64,7 @@ func main() {
 	fmt.Println("AddResponse", rsp4.Sum)
 
 	rsp5 := &testproto.DeleteUserRequest{}
-	err = grpcinvoke.Addr("127.0.0.1:8090").Grpc("").Header(&grpccomm.CommHeader{
+	err = grpcinvoke.Addr("127.0.0.1:8090").Unary().Header(&grpccomm.CommHeader{
 		BaseInfo: &grpccomm.BaseInfo{
 			TenantId:  "T001234",
 			XApiToken: "abc",
@@ -77,14 +77,14 @@ func main() {
 	}
 
 	rsp6 := &testproto.ReportRequest{}
-	err = grpcinvoke.Addr("127.0.0.1:8090").Grpc("").Header(&grpccomm.CommHeader{}).Body(rsp6).Response(nil)
+	err = grpcinvoke.Addr("127.0.0.1:8090").Unary().Header(&grpccomm.CommHeader{}).Body(rsp6).Response(nil)
 	if err != nil {
 		fmt.Println("Error ReportRequest", err)
 		return
 	}
 
 	rsp7 := &testproto.ReportRequest{}
-	err = grpcinvoke.Addr("127.0.0.1:8090").Grpc("Agent").Header(&grpccomm.CommHeader{}).Body(rsp7).Response(nil)
+	err = grpcinvoke.Addr("127.0.0.1:8090").Unary("Agent").Header(&grpccomm.CommHeader{}).Body(rsp7).Response(nil)
 	if err != nil {
 		fmt.Println("Error Agent", err)
 		return
