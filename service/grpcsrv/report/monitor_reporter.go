@@ -53,7 +53,7 @@ func (reporter *MonitorReporter) Report(reqInterface, reqService, fromHost strin
 			Code:  result,
 			Infc:  infc,
 		})
-		monitor.ReportSuccessAvgTime(&monitor.ReqSuccessAvgTimeDimension{
+		monitor.ReportFailedAvgTime(&monitor.ReqFailedAvgTimeDimension{
 			SName: "",
 			SIP:   fromHost,
 			TName: reqService,
