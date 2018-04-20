@@ -172,6 +172,8 @@ func (pro *Profile) Init(tomlFile string) error {
 			AliNamespace:    pro.Monitor.AliNamespace,
 			EnvironmentType: strings.ToLower(pro.Base.Mode),
 			ReportAddr:      pro.Monitor.ReportAddr,
+			EnableStatsd:    pro.Monitor.EnableStatsd,
+			StatsdAddr:      pro.Monitor.StatsdAddr,
 		})
 		if nil != err {
 			return err
