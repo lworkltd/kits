@@ -1,9 +1,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"strings"
+
+	context "golang.org/x/net/context"
 
 	"net/http"
 	_ "net/http/pprof"

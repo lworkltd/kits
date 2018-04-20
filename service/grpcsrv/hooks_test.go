@@ -1,9 +1,10 @@
 package grpcsrv
 
 import (
-	"context"
 	"testing"
 	"time"
+
+	context "golang.org/x/net/context"
 
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
 	"github.com/lworkltd/kits/service/restful/code"
@@ -54,7 +55,7 @@ func TestHookRecover(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			newf := HookRecover(tt.args.f)
+			newf := HookRecovery(tt.args.f)
 			rsp := newf(context.Background(), &grpccomm.CommRequest{})
 			if rsp.Result {
 				t.Errorf("HookRecover want rsp.Result=false,got true")
@@ -152,7 +153,7 @@ func TestDefenceSlowSideHook(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := DefenceSlowSideHook(tt.args.n)
+			got := HookDefenceSlowSide(tt.args.n)
 			f := got(func(ctx context.Context, commReq *grpccomm.CommRequest) (commRsp *grpccomm.CommResponse) {
 				return nil
 			})

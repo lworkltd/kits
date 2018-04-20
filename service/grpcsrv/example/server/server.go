@@ -1,9 +1,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"time"
+
+	context "golang.org/x/net/context"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -13,6 +14,7 @@ import (
 	"github.com/lworkltd/kits/service/grpcsrv"
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
+	"github.com/lworkltd/kits/service/grpcsrv/report"
 	"github.com/lworkltd/kits/service/restful/code"
 )
 
@@ -68,6 +70,11 @@ func Ping() {
 
 }
 
+// MustPanic 必然crash
+func MustPanic() {
+	panic("it's panic")
+}
+
 // CheckAcount 检查信息
 func CheckAcount(ctx context.Context, commReq *grpccomm.CommRequest) error {
 	header := &testproto.AccountHeader{}
@@ -108,10 +115,32 @@ func main() {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		DisableColors: true,
 	})
-	// 钩子使用
-	grpcsrv.UseHook(grpcsrv.DefaultHooks...)
-	// 带参钩子，防止雪崩
-	grpcsrv.UseHook(grpcsrv.DefenceSlowSideHook(2000))
+
+	// 当接收到消息时会首先进入钩子，钩子的顺序为在FILO
+	// 例如： [hook1,hook2,hook3,hook4]
+	// hook1 {
+	//		hook2 {
+	//			hook3 {
+	//				hook4 {
+	//					处理函数
+	//				}
+	//			}
+	//	 	}
+	// }
+	//
+	// 注意：放在HookRecover之后的钩子，会可能因为panic，被跳过处理。
+
+	grpcsrv.UseHook(
+		// 向监控上报请求结果信息
+		grpcsrv.HookReportMonitor(&report.MonitorReporter{}),
+		// 打印日志
+		grpcsrv.HookLogger,
+		// 防止雪崩
+		grpcsrv.HookDefenceSlowSide(2000),
+		// 异常恢复
+		grpcsrv.HookRecovery,
+	)
+
 	// 分组用于预处理
 	// 所有该组下的请求，都会首先通过此函数，如果此函数返回错误，则不进一步处理
 	authGroup := grpcsrv.Group("auth", CheckAcount)
@@ -130,6 +159,8 @@ func main() {
 	grpcsrv.Register("Agent", Agent)
 	// 使用字符串作为接口名称
 	grpcsrv.Register("Ping", Ping)
+	// 导致panic
+	grpcsrv.Register("MustPanic", MustPanic)
 
 	// For pprof
 	go func() {

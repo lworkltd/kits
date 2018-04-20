@@ -1,8 +1,9 @@
 package grpcsrv
 
 import (
-	"context"
 	"reflect"
+
+	context "golang.org/x/net/context"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcinvoke"
