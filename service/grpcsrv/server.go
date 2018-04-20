@@ -1,11 +1,12 @@
 package grpcsrv
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"net/http"
 	"reflect"
+
+	context "golang.org/x/net/context"
 
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
 	"google.golang.org/grpc"
@@ -24,8 +25,8 @@ type Service struct {
 	groups      map[string]*InterfaceGroup
 	methodIndex map[string]*InterfaceGroup
 	proxyRules  []*RouteProxy
-
-	proxies []*ProxyTarget
+	hooks       []HookFunc
+	proxies     []*ProxyTarget
 }
 
 // RouteProxy 代理
@@ -90,11 +91,16 @@ func (service *Service) RpcRequest(ctx context.Context, commReq *grpccomm.CommRe
 	}
 
 	var f = exec
-	for i := range usingHooks {
-		f = usingHooks[len(usingHooks)-1-i](f)
+	for i := range service.hooks {
+		f = service.hooks[len(service.hooks)-1-i](f)
 	}
 
 	return f(ctx, commReq), nil
+}
+
+// UseHook 增加Hook处理
+func (service *Service) UseHook(hooks ...HookFunc) {
+	service.hooks = append(service.hooks, hooks...)
 }
 
 // regProxy 注册一条代理规则
@@ -255,6 +261,11 @@ func Run(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
 // DebugHttpHandler 返回GRPC调试处理
 func DebugHttpHandler() http.Handler {
 	return defaultService.DebugHttpHandler()
+}
+
+// UseHook 使用钩子列表,靠前的钩子最先进入,最后出来
+func UseHook(hooks ...HookFunc) {
+	defaultService.UseHook(hooks...)
 }
 
 // New  新建服务

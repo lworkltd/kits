@@ -10,6 +10,7 @@ import (
 	_ "github.com/lworkltd/kits/service/grpcinvoke/invokeimpl"
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
+	"github.com/lworkltd/kits/service/restful/code"
 )
 
 func main() {
@@ -90,4 +91,10 @@ func main() {
 		return
 	}
 
+	err = grpcinvoke.Addr("127.0.0.1:8090").Unary("MustPanic").Response(nil)
+	if err == nil {
+		fmt.Println("Expect panic error")
+		return
+	}
+	fmt.Println("Got Error", err.(code.Error).Mcode())
 }

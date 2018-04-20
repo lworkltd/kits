@@ -1,13 +1,15 @@
 package grpcsrv
 
 import (
-	"context"
 	"fmt"
 	"runtime/debug"
 	"time"
 
+	context "golang.org/x/net/context"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
+	"github.com/lworkltd/kits/service/grpcsrv/report"
 	"github.com/lworkltd/kits/service/restful/code"
 )
 
@@ -29,8 +31,8 @@ type HandlerFunc func(ctx context.Context, commReq *grpccomm.CommRequest) (commR
 // HookFunc 钩子函数
 type HookFunc func(f HandlerFunc) HandlerFunc
 
-// HookRecover 当handler在收到panic时，能够恢复
-func HookRecover(f HandlerFunc) HandlerFunc {
+// HookRecovery 当handler在收到panic时，能够恢复
+func HookRecovery(f HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, commReq *grpccomm.CommRequest) (commRsp *grpccomm.CommResponse) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -106,11 +108,11 @@ func HookLogger(f HandlerFunc) HandlerFunc {
 // DefaultHooks 默认的钩子列表
 var DefaultHooks = []HookFunc{
 	HookLogger,
-	HookRecover,
+	HookRecovery,
 }
 
-// DefenceSlowSideHook 防止雪崩
-func DefenceSlowSideHook(n int32) HookFunc {
+// HookDefenceSlowSide 防止雪崩
+func HookDefenceSlowSide(n int32) HookFunc {
 	return func(f HandlerFunc) HandlerFunc {
 		return func(ctx context.Context, commReq *grpccomm.CommRequest) (commRsp *grpccomm.CommResponse) {
 			err := checkSnowSlide(n)
@@ -122,11 +124,23 @@ func DefenceSlowSideHook(n int32) HookFunc {
 	}
 }
 
-var (
-	usingHooks []HookFunc
-)
+// HookReportMonitor 监控上报钩子
+func HookReportMonitor(reportor report.RpcReporter) HookFunc {
+	return func(f HandlerFunc) HandlerFunc {
+		return func(ctx context.Context, commReq *grpccomm.CommRequest) (commRsp *grpccomm.CommResponse) {
+			since := time.Now()
+			rsp := f(ctx, commReq)
+			var (
+				code string
+			)
 
-// UseHook 使用钩子列表,靠前的钩子最先进入
-func UseHook(hooks ...HookFunc) {
-	usingHooks = append(usingHooks, hooks...)
+			if rsp != nil && !rsp.Result {
+				code = rsp.Mcode
+			}
+
+			reportor.Report(commReq.ReqInterface, commReq.ReqSercice, "", code, time.Now().Sub(since))
+
+			return rsp
+		}
+	}
 }
