@@ -1,12 +1,13 @@
 package grpcsrv
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	context "golang.org/x/net/context"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
@@ -106,7 +107,6 @@ func createRegInfo(reqBody interface{}, f interface{}) *RegisterInfo {
 	for i := 0; i < ft.NumIn(); i++ {
 		inType := ft.In(i)
 		name := inType.String()
-		//fmt.Println(ft.String(), "index:", i, "desc:", inType.String(), "type:", inType.Kind())
 		// 请求透传
 		if name == "grpccomm.CommRequest" {
 			unexpectError("grpccomm.CommRequest must be a pointer")
