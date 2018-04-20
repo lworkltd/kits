@@ -79,7 +79,7 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	timestampFormat := f.TimestampFormat
 	if timestampFormat == "" {
-		timestampFormat = logrus.DefaultTimestampFormat
+		timestampFormat = time.RFC3339
 	}
 	if !f.DisableTimestamp {
 		f.appendKeyValue(b, "time", entry.Time.Format(timestampFormat))
