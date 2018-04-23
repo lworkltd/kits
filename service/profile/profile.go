@@ -64,19 +64,20 @@ type Service struct {
 	TraceEnabled     bool `toml:"trace_enabled"`      // 启用OpenTrace,需要Zipkin配置
 	AccessLogEnabled bool `toml:"access_log_enabled"` // 访问日志启用
 
-	Reportable     bool     `toml:"reportable"`      // 启用上报
-	ReportIp       string   `toml:"report_ip"`       // 上报IP
-	ReportTags     []string `toml:"report_tags"`     // 上报的标签
-	ReportName     string   `toml:"report_name"`     // 上报名字
-	ReportId       string   `toml:"report_id"`       // 上报的ID
-	CheckInterval  string   `toml:"check_interval"`  // consul健康检测间隔，默认 "5s"
-	CheckTimeout   string   `toml:"check_timeout"`   // consul健康检测超时，默认 "3s"
+	Reportable    bool     `toml:"reportable"`     // 启用上报
+	ReportIp      string   `toml:"report_ip"`      // 上报IP
+	ReportTags    []string `toml:"report_tags"`    // 上报的标签
+	ReportName    string   `toml:"report_name"`    // 上报名字
+	ReportId      string   `toml:"report_id"`      // 上报的ID
+	ReportPort    int16    `toml:"report_port"`    // 上报端口，适用于容器场景，如果没有则会从Host中解析
+	CheckInterval string   `toml:"check_interval"` // consul健康检测间隔，默认 "5s"
+	CheckTimeout  string   `toml:"check_timeout"`  // consul健康检测超时，默认 "3s"
 
 	PprofEnabled    bool   `toml:"pprof_enabled"`     // 启用PPROF
 	PprofPathPrefix string `toml:"pprof_path_prefix"` // PPROF的路径前缀,
 	//srvContext log
-	LogLevel        string `toml:"log_level"`
-	LogFilePath     string `toml:"log_file_path"`
+	LogLevel    string `toml:"log_level"`
+	LogFilePath string `toml:"log_file_path"`
 }
 
 func (service *Service) BeforeParse() {
@@ -115,14 +116,13 @@ func (discovery *Discovery) AfterParse() {
 	}
 }
 
-
 type Monitor struct {
-	EnableReport   bool     `toml:"enable_report"`		//启用上报到阿里云监控
-	AliUid         string   `toml:"aliUid"`             //上报到阿里云监控的Uid
-	AliNamespace   string   `toml:"aliNamespace"`       //上报到阿里云监控的namespace
-	ReportAddr     string   `toml:"reportAddr"`         //上报到阿里云的服务地址，默认："open.cms.aliyun.com"
-	EnableStatsd   bool     `toml:"enableStatsd"`       //是否启用上报到Statsd
-	StatsdAddr     string   `toml:"statsdAddr"`         //statsdAddr的地址，默认上报到"metrics.lwork.com:9125"
+	EnableReport bool   `toml:"enable_report"` //启用上报到阿里云监控
+	AliUid       string `toml:"aliUid"`        //上报到阿里云监控的Uid
+	AliNamespace string `toml:"aliNamespace"`  //上报到阿里云监控的namespace
+	ReportAddr   string `toml:"reportAddr"`    //上报到阿里云的服务地址，默认："open.cms.aliyun.com"
+	EnableStatsd bool   `toml:"enableStatsd"`  //是否启用上报到Statsd
+	StatsdAddr   string `toml:"statsdAddr"`    //statsdAddr的地址，默认上报到"metrics.lwork.com:9125"
 }
 
 func (monitor *Monitor) BeforeParse() {
@@ -154,12 +154,12 @@ func (invoker *Invoker) AfterParse() {}
 // Logger 日志配置
 // 在几乎所有的服务或工具当中，这个配置项目都不应该缺席
 type Logger struct {
-	Format     string     `toml:"format"` // 日志的格式
-	Level      string     `toml:"level"`
-	File       string     `toml:"file"`
-	TimeFormat string     `toml:"time_format"`
-	LogFilePath    string `toml:"log_file_path"`
-	Hooks      [][]string `toml:"hooks"`
+	Format      string     `toml:"format"` // 日志的格式
+	Level       string     `toml:"level"`
+	File        string     `toml:"file"`
+	TimeFormat  string     `toml:"time_format"`
+	LogFilePath string     `toml:"log_file_path"`
+	Hooks       [][]string `toml:"hooks"`
 }
 
 func (logger *Logger) BeforeParse() {
@@ -170,8 +170,8 @@ func (logger *Logger) AfterParse() {}
 
 // Hystrix 熔断和异常请求的配置
 type Hystrix struct {
-	StatsdUrl             string `toml:"statsd_url"`
-	Prefix                string `toml:"prefix"`
+	StatsdUrl                    string `toml:"statsd_url"`
+	Prefix                       string `toml:"prefix"`
 	DefaultTimeout               int    `toml:"default_timeout"`
 	DefaultMaxConcurrentRequests int    `toml:"default_max_concurrent_request"`
 	DefaultErrorPercentThreshold int    `toml:"default_error_percent_threshold"`
