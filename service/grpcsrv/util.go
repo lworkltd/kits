@@ -1,12 +1,13 @@
 package grpcsrv
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	context "golang.org/x/net/context"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
@@ -106,7 +107,6 @@ func createRegInfo(reqBody interface{}, f interface{}) *RegisterInfo {
 	for i := 0; i < ft.NumIn(); i++ {
 		inType := ft.In(i)
 		name := inType.String()
-		//fmt.Println(ft.String(), "index:", i, "desc:", inType.String(), "type:", inType.Kind())
 		// 请求透传
 		if name == "grpccomm.CommRequest" {
 			unexpectError("grpccomm.CommRequest must be a pointer")
@@ -161,9 +161,9 @@ func createRegInfo(reqBody interface{}, f interface{}) *RegisterInfo {
 		}
 		regInfo.rspOutIndex = 0
 		if !ft.Out(1).Implements(interfaceTypeError) {
-			unexpectError("2nd output paramter must implement error")
+			unexpectError("2nd output parameter must implement error")
 		}
-		regInfo.errIndex = 0
+		regInfo.errIndex = 1
 	} else if numOut == 1 {
 		for {
 			if ft.Out(0).Implements(interfaceTypeError) {
@@ -172,7 +172,7 @@ func createRegInfo(reqBody interface{}, f interface{}) *RegisterInfo {
 			}
 			if ft.Out(0).Kind() != reflect.Ptr {
 				unexpectError(
-					"0st output paramter must be error or *grpcomm.CommResponse,got %v",
+					"0st output parameter must be error or *grpcomm.CommResponse,got %v",
 					ft.Out(0).String(),
 				)
 			}
@@ -182,7 +182,7 @@ func createRegInfo(reqBody interface{}, f interface{}) *RegisterInfo {
 				break
 			}
 			unexpectError(
-				"0st output paramter must implement error or be type of *grpcomm.CommResponse,got %v",
+				"0st output parameter must implement error or be type of *grpcomm.CommResponse,got %v",
 				ft.Out(0).String(),
 			)
 		}
