@@ -10,7 +10,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcsrv"
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
