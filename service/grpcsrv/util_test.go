@@ -1,10 +1,11 @@
 package grpcsrv
 
 import (
-	"context"
 	"reflect"
 	"testing"
 	"time"
+
+	context "golang.org/x/net/context"
 
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"

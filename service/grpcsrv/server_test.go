@@ -1,10 +1,11 @@
 package grpcsrv
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
+
+	context "golang.org/x/net/context"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
@@ -125,6 +126,45 @@ func TestListenAndServe(t *testing.T) {
 			if err := ListenAndServe(tt.args.host, tt.args.errPrefix, tt.args.grpcOpts...); (err != nil) != tt.wantErr {
 				t.Errorf("ListenAndServe() error = %v, wantErr %v", err, tt.wantErr)
 			}
+		})
+	}
+}
+
+func TestService_UseHook(t *testing.T) {
+	type args struct {
+		hooks []HookFunc
+	}
+	tests := []struct {
+		name    string
+		service *Service
+		args    args
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.service.UseHook(tt.args.hooks...)
+		})
+	}
+}
+
+func TestUseHook(t *testing.T) {
+	type args struct {
+		hooks []HookFunc
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			args: args{
+				hooks: []HookFunc{},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			UseHook(tt.args.hooks...)
 		})
 	}
 }

@@ -65,7 +65,7 @@ func TestCheckAndResolveProfile(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "normal",
+			name: "use host port",
 			args: args{
 				cfg: &profile.Service{
 					Host:       ":8080",
@@ -75,6 +75,20 @@ func TestCheckAndResolveProfile(t *testing.T) {
 				},
 			},
 			want:    8080,
+			wantErr: false,
+		},
+		{
+			name: "use report port",
+			args: args{
+				cfg: &profile.Service{
+					Host:       ":8080",
+					ReportIp:   "192.168.0.1",
+					ReportName: "my-service",
+					ReportId:   "my-service-1",
+					ReportPort: 16030,
+				},
+			},
+			want:    16030,
 			wantErr: false,
 		},
 	}
