@@ -272,3 +272,13 @@ func UseHook(hooks ...HookFunc) {
 func New() *Service {
 	return newService()
 }
+
+// SetErrPrefix 设置错误码前缀
+func SetErrPrefix(errPrefix string) {
+	errPrefix = errPrefix
+}
+
+// DefaultService 返回默认的服务
+func DefaultService() *Service {
+	return defaultService
+}
