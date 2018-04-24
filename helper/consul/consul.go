@@ -48,8 +48,11 @@ type RegisterOption struct {
 	Ip   string // *服务端口
 	Port int    // *端口
 	// 如果是HTTP服务，则为自定义的健康检测的地址，比如`http://10.0.17.90:8080/health`
-	// 如果是GRPC服务，则为GRPC服务对象的地址，比如`http://10.0.17.90:8080/pb.EchoServer`
-	CheckUrl string // *HTTP 地址
+	// 如果是GRPC服务，则为GRPC服务对象的地址，比如`10.0.17.90:8080/{service}`
+	// 	- 如果service为空,则检测服务器所有服务的状态（实际总是返回健康）
+	//	- 如果service不为空,则检测服务器指定服务的状态，例如`grpc.health.v1.Health`
+	// GRPC 仅支持v1.0.6以上consul版本
+	CheckUrl string
 
 	// 选项配置
 	CheckInterval                string   // 检测间隔，默认 5s
