@@ -41,11 +41,14 @@ type serviceCache struct {
 
 // RegisterOption 注册服务的选项参数
 type RegisterOption struct {
+	ServerType ServerType
 	// 必须配置
-	Name     string // *服务名
-	Id       string // *服务ID,全局唯一
-	Ip       string // *服务端口
-	Port     int    // *端口
+	Name string // *服务名
+	Id   string // *服务ID,全局唯一
+	Ip   string // *服务端口
+	Port int    // *端口
+	// 如果是HTTP服务，则为自定义的健康检测的地址，比如`http://10.0.17.90:8080/health`
+	// 如果是GRPC服务，则为GRPC服务对象的地址，比如`http://10.0.17.90:8080/pb.EchoServer`
 	CheckUrl string // *HTTP 地址
 
 	// 选项配置
@@ -55,7 +58,28 @@ type RegisterOption struct {
 	Tags                         []string // 服务标签
 }
 
-// NewConsulClient 创建一个consul客户端
+// ServerType 服务类型
+type ServerType int32
+
+const (
+	// ServerTypeHttp HTTP服务
+	ServerTypeHttp = iota
+	// ServerTypeGrpc GRPC服务
+	ServerTypeGrpc
+)
+
+func (serverType ServerType) String() string {
+	switch serverType {
+	case ServerTypeHttp:
+		return "HttpServer"
+	case ServerTypeGrpc:
+		return "GrpcServer"
+	}
+
+	return fmt.Sprintf("UnkownServerType[%d]", serverType)
+}
+
+// New 创建一个consul客户端
 func New(host string) (*Client, error) {
 	if !strings.HasPrefix(host, "http") && !strings.HasPrefix(host, "unix") {
 		host = "http://" + host
@@ -77,8 +101,44 @@ func New(host string) (*Client, error) {
 	return consul, nil
 }
 
-// Register 向consul上报一个服务
-func (client *Client) Register(option *RegisterOption) error {
+func (client *Client) registerHttp(option *RegisterOption) error {
+	var tcpStr string
+	if "" == option.CheckUrl {
+		tcpStr = fmt.Sprintf("%v:%v", option.Ip, option.Port)
+	}
+
+	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
+		ID:      option.Id,   // SERVICE_ID
+		Name:    option.Name, // 模块定义 fw_service
+		Port:    option.Port, // 端口
+		Tags:    option.Tags, // 服务标签
+		Address: option.Ip,   // 服务地址
+		Check: &api.AgentServiceCheck{
+			HTTP:     option.CheckUrl,
+			TCP:      tcpStr,
+			Interval: option.CheckInterval,
+			Timeout:  option.CheckTimeout,
+			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
+		}, // 健康检测
+	})
+}
+
+func (client *Client) registerGrpc(option *RegisterOption) error {
+	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
+		ID:      option.Id,
+		Name:    option.Name,
+		Port:    option.Port,
+		Tags:    option.Tags,
+		Address: option.Ip,
+		Check: &api.AgentServiceCheck{
+			GRPC:     option.CheckUrl,
+			Interval: option.CheckInterval,
+			Timeout:  option.CheckTimeout,
+			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
+		}, // 健康检测
+	})
+}
+func checkAndDefaultOption(option *RegisterOption) error {
 	if option.Ip == "" {
 		return fmt.Errorf("ip must be set in option")
 	}
@@ -112,25 +172,24 @@ func (client *Client) Register(option *RegisterOption) error {
 	if err != nil {
 		return fmt.Errorf("check timout %s is not a golang duration", option.CheckTimeout)
 	}
-	var tcpStr string
-	if "" == option.CheckUrl {
-		tcpStr = fmt.Sprintf("%v:%v", option.Ip, option.Port)
+
+	return nil
+}
+
+// Register 向consul上报一个服务
+func (client *Client) Register(option *RegisterOption) error {
+	if err := checkAndDefaultOption(option); err != nil {
+		return err
 	}
 
-	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
-		ID:      option.Id,   // SERVICE_ID
-		Name:    option.Name, // 模块定义 fw_service
-		Port:    option.Port, // 端口
-		Tags:    option.Tags, // 服务标签
-		Address: option.Ip,   // 服务地址
-		Check: &api.AgentServiceCheck{
-			HTTP:     option.CheckUrl,
-			TCP:      tcpStr,
-			Interval: option.CheckInterval,
-			Timeout:  option.CheckTimeout,
-			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
-		}, // 健康检测
-	})
+	switch option.ServerType {
+	case ServerTypeHttp:
+		return client.registerHttp(option)
+	case ServerTypeGrpc:
+		return client.registerGrpc(option)
+	}
+
+	return fmt.Errorf("consul do not support %v", option.ServerType)
 }
 
 // Unregister 删除一个服务节点
@@ -155,7 +214,6 @@ func (client *Client) Discover(name string) ([]string, []string, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-
 		// 有一定的可能会重复查询
 		func() {
 			client.mutex.Lock()
@@ -176,7 +234,7 @@ func (client *Client) Discover(name string) ([]string, []string, error) {
 	return service.hosts, service.ids, nil
 }
 
-// KeyValue 从consul获取一个key值
+// KeyValue 从consul获取一个键值
 func (client *Client) KeyValue(key string) (string, bool, error) {
 	if client == nil || client.cli == nil {
 		return "", false, ErrConsulNotInit
@@ -194,6 +252,7 @@ func (client *Client) KeyValue(key string) (string, bool, error) {
 	return string(pair.Value), true, err
 }
 
+// UpdateKeyValue 更见键值
 func (client *Client) UpdateKeyValue(key, value string) error {
 	if client == nil || client.cli == nil {
 		return ErrConsulNotInit
@@ -333,6 +392,7 @@ func InitConsul(host string) error {
 	return nil
 }
 
+// SetClient 从外部传入Consul客户端
 func SetClient(client *Client) {
 	defaultClient = client
 }
