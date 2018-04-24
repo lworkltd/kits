@@ -29,7 +29,7 @@ grpcsrv.Register("Echo", func(req *pb.EchoRequest) (*pb.EchoResponse, error) {
 grpcsrv.Run(":8090","ECHO_SERVER_")
 ```
 
-##### [客户端代码]((example/echo/client.go))
+##### [客户端代码](example/echo/client.go)
 ```golang
 rsp := pb.EchoResponse{}
 grpcinvoke.Addr("127.0.0.1:8090").Unary("Echo").Body(&pb.EchoRequest{
