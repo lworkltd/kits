@@ -1,0 +1,10 @@
+syntax = "proto3";
+package pb;
+
+message EchoRequest {
+    string str = 1;
+}
+
+message EchoResponse {
+    string str = 1;
+}
