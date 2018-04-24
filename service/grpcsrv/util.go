@@ -8,6 +8,7 @@ import (
 	"time"
 
 	context "golang.org/x/net/context"
+	"google.golang.org/grpc"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
@@ -293,4 +294,12 @@ var (
 
 func debugRegisterInfo(regInfo *RegisterInfo) {
 	//fmt.Println(regInfo.reqName, "func", regInfo.callFuncName, "(", regInfo.inNum, ")(", regInfo.outNum, ")")
+}
+
+func makeCommServer(s *grpc.Server, grpcOpts ...grpc.ServerOption) *grpc.Server {
+	if s == nil {
+		s = grpc.NewServer(grpcOpts...)
+	}
+
+	return s
 }
