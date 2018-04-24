@@ -103,7 +103,7 @@ func TestServiceRpcRequest(t *testing.T) {
 	}
 }
 
-func TestListenAndServe(t *testing.T) {
+func TestRun(t *testing.T) {
 	type args struct {
 		host      string
 		errPrefix string
@@ -123,27 +123,10 @@ func TestListenAndServe(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ListenAndServe(tt.args.host, tt.args.errPrefix, tt.args.grpcOpts...); (err != nil) != tt.wantErr {
+			if err := Run(tt.args.host, tt.args.errPrefix, tt.args.grpcOpts...); (err != nil) != tt.wantErr {
 				t.Errorf("ListenAndServe() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-		})
-	}
-}
-
-func TestService_UseHook(t *testing.T) {
-	type args struct {
-		hooks []HookFunc
-	}
-	tests := []struct {
-		name    string
-		service *Service
-		args    args
-	}{
-	// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.service.UseHook(tt.args.hooks...)
 		})
 	}
 }

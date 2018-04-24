@@ -82,6 +82,50 @@ func makeCheckUrl(ip string, port int, path string) string {
 	return path
 }
 
+// RegisterGrpcServerWithProfile register a grpc server to discovery server/agent
+// Note 1: health server must be serve on GRPC server,code it like:
+// {
+// 	server := grpc.NewServer()
+// 	// Health server serve
+// 	healthServer := health.NewServer()
+// 	hv1.RegisterHealthServer(server, healthServer)
+// 	// Logic server serve
+// 	grpccomm.RegisterCommServiceServer(server, &myServer{})
+// 	// Mark the status of logic server
+// 	healthServer.SetServingStatus("grpccomm.CommService", hv1.HealthCheckResponse_SERVING)
+// }
+//
+// serverOfHealthCheck could be omitted,which mean the check will always success except any grpc errors
+// or one can specify serverOfHealthCheck as name of any served servers.likely,grpccomm.CommService,pb.MyServer,etc.
+//
+// Note 2: health-check will only work on a consul server/agent with the version bigger than v1.0.6
+func RegisterGrpcServerWithProfile(serverOfHealthCheck string, cfg *profile.Service) error {
+	if !cfg.Reportable {
+		return nil
+	}
+
+	// Check the profile arguments valid.
+	port, err := checkAndResolveProfile(cfg)
+	if err != nil {
+		return err
+	}
+
+	// Health format is `server[/serverOfHealthCheck]`
+	checkUrl := fmt.Sprintf("%s:%d/%s", cfg.ReportIp, port, serverOfHealthCheck)
+
+	return discovery.Register(&consul.RegisterOption{
+		ServerType:    consul.ServerTypeGrpc,
+		Ip:            cfg.ReportIp,
+		Port:          port,
+		CheckUrl:      checkUrl,
+		Name:          cfg.ReportName,
+		Id:            cfg.ReportId,
+		Tags:          cfg.ReportTags,
+		CheckInterval: cfg.CheckInterval,
+		CheckTimeout:  cfg.CheckTimeout,
+	})
+}
+
 // checkProfile parse the listen port and check if the profile is configured correctly
 func checkAndResolveProfile(cfg *profile.Service) (int, error) {
 	if cfg.ReportName == "" {
