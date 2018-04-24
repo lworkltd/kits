@@ -255,6 +255,43 @@ func (client *Client) KeyValue(key string) (string, bool, error) {
 	return string(pair.Value), true, err
 }
 
+func (client *Client) CreateSession(service string, LockDelay time.Duration) (string, error) {
+	sessionId, _, err := client.cli.Session().Create(&api.SessionEntry{
+		LockDelay: LockDelay,
+		Checks:    []string{"service:" + service, "serfHealth"},
+	}, nil)
+	if err != nil {
+		return "", err
+	}
+	return sessionId, nil
+}
+
+func (client *Client) Acquire(p *api.KVPair) (bool, error) {
+	success, _, err := client.cli.KV().Acquire(p, nil)
+	return success, err
+}
+
+func (client *Client) SessionInfo(sessionId string) (*api.SessionEntry, error) {
+	sessionInfo, _, err := client.cli.Session().Info(sessionId, nil)
+	return sessionInfo, err
+}
+
+func (client *Client) DestroySession(sessionId string) (bool, error) {
+	if sessionId == "" {
+		return true, nil
+	}
+
+	_, err := client.cli.Session().Destroy(sessionId, nil)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"sessionId": sessionId,
+			"err":       err,
+		}).Warn("Consul Session Destroy fail")
+		return false, err
+	}
+	return true, nil
+}
+
 // UpdateKeyValue 更见键值
 func (client *Client) UpdateKeyValue(key, value string) error {
 	if client == nil || client.cli == nil {
