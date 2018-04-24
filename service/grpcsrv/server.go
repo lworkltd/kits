@@ -10,6 +10,9 @@ import (
 
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+
+	hv1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 var (
@@ -22,6 +25,8 @@ var (
 
 // Service 服务
 type Service struct {
+	server *grpc.Server
+
 	groups      map[string]*InterfaceGroup
 	methodIndex map[string]*InterfaceGroup
 	proxyRules  []*RouteProxy
@@ -162,7 +167,33 @@ func (service *Service) newGroup(name string, pipes ...RequestPipeFunc) (*Interf
 
 // Run 启动服务
 func (service *Service) Run(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
-	return ListenAndServe(host, errPrefix, grpcOpts...)
+	mcodePrefix = errPrefix
+
+	lis, err := net.Listen("tcp", host)
+	if err != nil {
+		return fmt.Errorf("failed to listen: %v", err)
+	}
+	grpcServer := makeCommServer(nil, grpcOpts...)
+	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
+
+	// 注册健康服务
+	healthServer := health.NewServer()
+	hv1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("grpccomm.CommService", hv1.HealthCheckResponse_SERVING)
+
+	service.server = grpcServer
+
+	return grpcServer.Serve(lis)
+}
+
+// Stop 停止服务
+func (service *Service) Stop() {
+	s := service.server
+	if s == nil {
+		return
+	}
+
+	s.Stop()
 }
 
 // ServeHTTP 用于HTTP调试
@@ -196,7 +227,7 @@ type RequestMethod struct {
 }
 
 // ListenAndServe GRPC监听
-func ListenAndServe(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
+func listenAndServe(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
 	mcodePrefix = errPrefix
 
 	lis, err := net.Listen("tcp", host)
@@ -204,6 +235,13 @@ func ListenAndServe(host, errPrefix string, grpcOpts ...grpc.ServerOption) error
 		return fmt.Errorf("failed to listen: %v", err)
 	}
 	grpcServer := grpc.NewServer(grpcOpts...)
+
+	// 注册健康服务
+	healthServer := health.NewServer()
+	hv1.RegisterHealthServer(grpcServer, healthServer)
+
+	// 设置服务状态
+	healthServer.SetServingStatus("grpccomm.CommService", hv1.HealthCheckResponse_SERVING)
 
 	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
 
