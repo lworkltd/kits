@@ -6,6 +6,7 @@ grpcsrv
 - 支持与其他Grpc服务，进行同网络端口监听；
 - 支持服务钩子，源生支持异常恢复，日志，防雪崩，监控上报，当然，也可以自定义钩子传入。
 - 支持健康检测，参见[测试Demo](example/health/health.go)
+- 支持版本查询，其中也包含了一些运行时信息，[测试Demo](example/version/version.go)
 
 
 快速开始
