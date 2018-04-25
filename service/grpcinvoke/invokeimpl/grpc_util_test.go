@@ -57,7 +57,7 @@ func TestDialGrpcConnByDiscovery(t *testing.T) {
 					return []string{}, []string{}, nil
 				},
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 
 		{
