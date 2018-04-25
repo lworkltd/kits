@@ -25,7 +25,7 @@ func init() {
 		grpcsrv.Register("ErrorReqeust", func() error { return code.New(400, "error response") })
 		grpcsrv.Run("0.0.0.0:8090", "TEST_ERROR_")
 	}()
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 }
 func TestGrpcClient(t *testing.T) {
 	type args struct {
