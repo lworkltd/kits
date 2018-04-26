@@ -24,7 +24,7 @@ func newErrorRsp(mcode string, format string, args ...interface{}) *grpccomm.Com
 	return &grpccomm.CommResponse{
 		Result:  false,
 		Mcode:   mcode,
-		Message: fmt.Sprintf("grpcsrv:"+format, args...),
+		Message: fmt.Sprintf(format, args...),
 	}
 }
 
@@ -47,7 +47,7 @@ func newRspFromError(err error) *grpccomm.CommResponse {
 
 var (
 	// CerrCheckSnowProtect 雪崩预警
-	CerrCheckSnowProtect = code.New(10011, "Check Snow Protect")
+	CerrCheckSnowProtect = code.NewMcode("SNOWSLIDE_DENIED", "Check Snow Protect")
 	gCurTime             int64
 	checkSnowMutex       sync.Mutex
 	gCurCount            int32

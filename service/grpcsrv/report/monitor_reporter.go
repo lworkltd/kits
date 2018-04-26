@@ -27,7 +27,7 @@ func (reporter *MonitorReporter) Report(reqInterface, reqService, fromHost strin
 	}()
 
 	isSucc := result == ""
-	infc := fmt.Sprintf("ACTIVE_GRPC_%s", reqInterface)
+	infc := fmt.Sprintf("PASSIVE_GRPC_%s", reqInterface)
 	localIp := monitor.GetCurrentServerIP()
 	delayMs := int64(delay / time.Millisecond)
 	if isSucc {

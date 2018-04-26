@@ -45,7 +45,7 @@ func HookRecovery(f HandlerFunc) HandlerFunc {
 					}
 					// 此类错误一般由服务内部参数，返回了一个数字类型的错误码
 					commRsp = newErrorRsp(
-						fmt.Sprintf("%s%d", mcodePrefix, cerr.Code()),
+						fmt.Sprintf("%s_%d", mcodePrefix, cerr.Code()),
 						cerr.Error())
 
 					return
