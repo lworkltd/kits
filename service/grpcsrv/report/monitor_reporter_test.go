@@ -10,7 +10,6 @@ import (
 func TestMonitorReporter_Report(t *testing.T) {
 	type args struct {
 		reqInterface string
-		reqService   string
 		fromHost     string
 		result       string
 		delay        time.Duration
@@ -29,7 +28,6 @@ func TestMonitorReporter_Report(t *testing.T) {
 			reporter: &MonitorReporter{},
 			args: args{
 				reqInterface: "AddRequest",
-				reqService:   "Calculator",
 				fromHost:     "127.0.0.1",
 				result:       "",
 				delay:        time.Second,
@@ -40,7 +38,6 @@ func TestMonitorReporter_Report(t *testing.T) {
 			reporter: &MonitorReporter{},
 			args: args{
 				reqInterface: "AddRequest",
-				reqService:   "Calculator",
 				fromHost:     "127.0.0.1",
 				result:       "EORROR",
 				delay:        time.Second,
@@ -49,7 +46,7 @@ func TestMonitorReporter_Report(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.reporter.Report(tt.args.reqInterface, tt.args.reqService, tt.args.fromHost, tt.args.result, tt.args.delay)
+			tt.reporter.Report(tt.args.reqInterface, tt.args.fromHost, tt.args.result, tt.args.delay)
 		})
 	}
 }

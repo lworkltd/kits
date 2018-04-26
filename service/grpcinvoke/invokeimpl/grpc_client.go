@@ -35,6 +35,7 @@ type grpcClient struct {
 	ctx         context.Context
 
 	freeConnAfterUsed bool
+	since             time.Time
 }
 
 func newErrorGrpcClient(err error) *grpcClient {
@@ -172,13 +173,15 @@ func (client *grpcClient) CommRequest(in *grpccomm.CommRequest) *grpccomm.CommRe
 
 func (client *grpcClient) catchAndReturnError(originErr error) error {
 	if err, yes := originErr.(code.Error); yes {
-		failedReport := &monitor.ReqFailedCountDimension{
-			SName: client.serviceName,
-			TName: client.reqService,
-			Infc:  fmt.Sprintf("ACTIVE_GET_%s", client.callName),
-			Code:  err.Mcode(),
-		}
-		monitor.ReportReqFailed(failedReport)
+		monitor.CommMonitorReport(
+			err.Mcode(),
+			monitor.GetCurrentServerName(),
+			monitor.GetCurrentServerIP(),
+			client.reqService,
+			"",
+			fmt.Sprintf("ACTIVE_GRPC_%s", client.callName),
+			client.since,
+		)
 	}
 
 	return originErr
@@ -211,7 +214,7 @@ func (client *grpcClient) Response(out proto.Message) error {
 	var (
 		rsp *grpccomm.CommResponse
 	)
-	since := time.Now()
+
 	grpcClient := grpccomm.NewCommServiceClient(client.conn)
 	if !client.useCircuit {
 		rsp, err = grpcClient.RpcRequest(client.ctx, in)
@@ -255,23 +258,16 @@ func (client *grpcClient) Response(out proto.Message) error {
 			return client.catchAndReturnError(code.NewMcode("INVOKE_BAD_GRPC_BODY", "bad grpc response body"))
 		}
 	}
-	cost := time.Now().Sub(since)
 
-	// 上报成功
-	monitor.ReportReqSuccess(&monitor.ReqSuccessCountDimension{
-		SName: monitor.GetCurrentServerName(),
-		SIP:   monitor.GetCurrentServerIP(),
-		TName: client.reqService,
-		Infc:  fmt.Sprintf("ACTIVE_GET_%s", client.callName),
-	})
-
-	// 上报成功时间延迟
-	monitor.ReportSuccessAvgTime(&monitor.ReqSuccessAvgTimeDimension{
-		SName: monitor.GetCurrentServerName(),
-		SIP:   monitor.GetCurrentServerIP(),
-		TName: client.reqService,
-		Infc:  fmt.Sprintf("ACTIVE_GET_%s", client.callName),
-	}, int64(cost/time.Millisecond))
+	monitor.CommMonitorReport(
+		"",
+		monitor.GetCurrentServerName(),
+		monitor.GetCurrentServerIP(),
+		client.reqService,
+		"",
+		fmt.Sprintf("ACTIVE_GRPC_%s", client.callName),
+		client.since,
+	)
 
 	return nil
 }

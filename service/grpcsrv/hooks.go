@@ -138,7 +138,7 @@ func HookReportMonitor(reportor report.RpcReporter) HookFunc {
 				code = rsp.Mcode
 			}
 
-			reportor.Report(commReq.ReqInterface, commReq.ReqSercice, "", code, time.Now().Sub(since))
+			reportor.Report(commReq.ReqInterface, "", code, time.Now().Sub(since))
 
 			return rsp
 		}
