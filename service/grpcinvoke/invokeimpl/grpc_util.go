@@ -147,8 +147,9 @@ func dialGrpcConnByDiscovery(target string, discovery grpcinvoke.DiscoveryFunc) 
 		target,
 		grpc.WithInsecure(),
 		grpc.WithBalancer(balancer),
-		grpc.WithBlock(),
+		// grpc.WithBlock(),
 	)
+	time.Sleep(time.Millisecond * 200)
 	if err != nil {
 		return nil, err
 	}
