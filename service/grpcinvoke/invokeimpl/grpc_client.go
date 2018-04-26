@@ -179,7 +179,7 @@ func (client *grpcClient) catchAndReturnError(originErr error) error {
 			monitor.GetCurrentServerIP(),
 			client.reqService,
 			"",
-			fmt.Sprintf("ACTIVE_GET_%s", client.callName),
+			fmt.Sprintf("ACTIVE_GRPC_%s", client.callName),
 			client.since,
 		)
 	}
@@ -265,7 +265,7 @@ func (client *grpcClient) Response(out proto.Message) error {
 		monitor.GetCurrentServerIP(),
 		client.reqService,
 		"",
-		fmt.Sprintf("ACTIVE_GET_%s", client.callName),
+		fmt.Sprintf("ACTIVE_GRPC_%s", client.callName),
 		client.since,
 	)
 
