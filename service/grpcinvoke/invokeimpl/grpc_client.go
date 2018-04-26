@@ -42,17 +42,30 @@ func newErrorGrpcClient(err error) *grpcClient {
 }
 
 func (client *grpcClient) Header(reqHeader proto.Message) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
 	client.header = reqHeader
 	return client
 }
 
 func (client *grpcClient) ReqService(reqService string) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
 	client.reqService = reqService
-
 	return client
 }
 
 func (client *grpcClient) Body(reqBody proto.Message) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
+	if reqBody == nil {
+		return client
+	}
+
 	client.body = reqBody
 
 	if client.callName == "" {
@@ -64,6 +77,9 @@ func (client *grpcClient) Body(reqBody proto.Message) grpcinvoke.Client {
 }
 
 func (client *grpcClient) Fallback(f func(error) error) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
 	client.fallback = f
 	return client
 }
@@ -169,6 +185,9 @@ func (client *grpcClient) catchAndReturnError(originErr error) error {
 }
 
 func (client *grpcClient) Context(ctx context.Context) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
 	client.ctx = ctx
 	return client
 }
@@ -272,12 +291,20 @@ func (client *grpcClient) updateHystrix() {
 
 // UseCircuit 启用熔断
 func (client *grpcClient) UseCircuit(enable bool) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
 	client.useCircuit = enable
 	return client
 }
 
 // MaxConcurrent 最大并发请求
 func (client *grpcClient) MaxConcurrent(maxConn int) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
 	if maxConn < 30 {
 		maxConn = 30
 	} else if maxConn > 10000 {
@@ -289,6 +316,10 @@ func (client *grpcClient) MaxConcurrent(maxConn int) grpcinvoke.Client {
 
 // Timeout 请求超时立即返回时间
 func (client *grpcClient) Timeout(timeout time.Duration) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
 	if timeout < 10*time.Millisecond {
 		timeout = time.Millisecond * 10
 	} else if timeout > 10000*time.Millisecond {
@@ -302,6 +333,10 @@ func (client *grpcClient) Timeout(timeout time.Duration) grpcinvoke.Client {
 
 // PercentThreshold 最大错误容限
 func (client *grpcClient) PercentThreshold(thresholdPercent int) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
 	if thresholdPercent < 5 {
 		thresholdPercent = 5
 	} else if thresholdPercent > 100 {

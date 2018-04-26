@@ -24,7 +24,7 @@ func newErrorRsp(mcode string, format string, args ...interface{}) *grpccomm.Com
 	return &grpccomm.CommResponse{
 		Result:  false,
 		Mcode:   mcode,
-		Message: fmt.Sprintf("grpcsrv:"+format, args...),
+		Message: fmt.Sprintf(format, args...),
 	}
 }
 
