@@ -17,7 +17,11 @@ type errorImpl struct {
 }
 
 func (err *errorImpl) Error() string {
-	return err.message
+	if err.mcode == "" {
+		return fmt.Sprintf("%d,%s", err.code, err.message)
+	}
+
+	return fmt.Sprintf("%s,%s", err.mcode, err.message)
 }
 
 func (err *errorImpl) Code() int {
@@ -75,7 +79,8 @@ func NewError(code int, err error) Error {
 func NewMcode(mcode string, msg string) Error {
 	return &errorImpl{
 		mcode:   mcode,
-		message: msg, //
+		message: msg,
+		code:    -11,
 	}
 }
 

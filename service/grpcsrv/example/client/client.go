@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"runtime"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 
@@ -21,15 +22,34 @@ func main() {
 	var (
 		err error
 	)
+
+	// 服务发现函数
+	discovery := func(name string) ([]string, []string, error) {
+		if name == "MyService" {
+			return []string{"127.0.0.1:8090"}, []string{"myservice-1"}, nil
+		}
+
+		return nil, nil, fmt.Errorf("service %s not found", name)
+	}
+
+	// 初始化
+	grpcinvoke.Init(&grpcinvoke.Option{
+		Discover:                     discovery,
+		UseCircuit:                   true,
+		DefaultTimeout:               time.Second * 10,
+		DefaultErrorPercentThreshold: 25,
+		DefaultMaxConcurrentRequests: 50,
+	})
+
 	req1 := &testproto.DepositRequest{}
 
-	err = grpcinvoke.Addr("127.0.0.1:8090").Unary().Header(&testproto.AccountHeader{
+	err = grpcinvoke.Name("MyService").Unary().Header(&testproto.AccountHeader{
 		Account:  "abc",
 		Password: "123",
 	}).Body(req1).Response(nil)
 	if err != nil {
 		fmt.Println("Error", err)
-		return
+		//return
 	}
 
 	req2 := &testproto.CalculateStrLenRequest{}
@@ -96,5 +116,31 @@ func main() {
 		fmt.Println("Expect panic error")
 		return
 	}
-	fmt.Println("Got Error", err.(code.Error).Mcode())
+	fmt.Println("Got expeted error", err.(code.Error).Mcode())
+
+	err = grpcinvoke.Name("MyService").
+		Unary("HighDelay").
+		Body(&testproto.HighDelayRequest{
+			DelaySeconds: 2,
+		}).UseCircuit(true).
+		Timeout(time.Second * 1).
+		Response(nil)
+	if err == nil {
+		fmt.Println("Expect timeout error,but got ok")
+		return
+	}
+	fmt.Println("Got expeted error", err.Error())
+
+	err = grpcinvoke.Name("MyService").
+		Unary("HighDelay").
+		Body(&testproto.HighDelayRequest{
+			DelaySeconds: 2,
+		}).UseCircuit(true).
+		Timeout(time.Second * 3).
+		Response(nil)
+	if err != nil {
+		fmt.Println("unexpect error", err.Error())
+		return
+	}
+
 }

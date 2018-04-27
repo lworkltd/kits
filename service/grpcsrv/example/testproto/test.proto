@@ -46,3 +46,11 @@ message ReportRequest{
 
 message DeleteUserRequest{
 }
+
+
+message HighDelayRequest {
+   int32 DelaySeconds = 1;
+}
+
+message HighDelayResponse {
+ }

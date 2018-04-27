@@ -3,6 +3,8 @@ package invoke
 import (
 	"fmt"
 	"testing"
+
+	"github.com/afex/hystrix-go/hystrix"
 )
 
 func TestServiceRemote(t *testing.T) {
@@ -133,7 +135,7 @@ func TestNewRest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := newRest(tt.args.service, tt.args.method, tt.args.path); got == nil {
+			if got := newRest(tt.args.service, hystrix.CommandConfig{}, tt.args.method, tt.args.path); got == nil {
 				t.Errorf("newRest() = nil")
 			}
 		})
