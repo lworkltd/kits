@@ -75,6 +75,11 @@ func MustPanic() {
 	panic("it's panic")
 }
 
+// HighDelay 高延迟
+func HighDelay(req *testproto.HighDelayRequest) {
+	time.Sleep(time.Duration(req.DelaySeconds) * time.Second)
+}
+
 // CheckAcount 检查信息
 func CheckAcount(ctx context.Context, commReq *grpccomm.CommRequest) error {
 	header := &testproto.AccountHeader{}
@@ -161,6 +166,8 @@ func main() {
 	grpcsrv.Register("Ping", Ping)
 	// 导致panic
 	grpcsrv.Register("MustPanic", MustPanic)
+	// 模拟高延迟服务
+	grpcsrv.Register("HighDelay", HighDelay)
 
 	// For pprof
 	go func() {

@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/afex/hystrix-go/hystrix"
 	"github.com/lworkltd/kits/service/grpcinvoke"
 )
 
@@ -18,8 +20,9 @@ type engine struct {
 	useTracing bool
 	useCircuit bool
 
-	mutex      sync.RWMutex
-	serviceMap map[string]grpcinvoke.Service
+	hystrixInfo hystrix.CommandConfig
+	mutex       sync.RWMutex
+	serviceMap  map[string]grpcinvoke.Service
 }
 
 // Init 初始化引擎
@@ -28,6 +31,9 @@ func (engine *engine) Init(option *grpcinvoke.Option) error {
 	engine.lbMode = option.LoadBalanceMode
 	engine.useTracing = option.UseTracing
 	engine.useCircuit = option.UseCircuit
+	engine.hystrixInfo.ErrorPercentThreshold = option.DefaultErrorPercentThreshold
+	engine.hystrixInfo.MaxConcurrentRequests = option.DefaultMaxConcurrentRequests
+	engine.hystrixInfo.Timeout = int(option.DefaultTimeout / time.Millisecond)
 	return nil
 }
 

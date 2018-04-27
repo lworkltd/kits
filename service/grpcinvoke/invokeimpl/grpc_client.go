@@ -171,7 +171,11 @@ func (client *grpcClient) CommRequest(in *grpccomm.CommRequest) *grpccomm.CommRe
 	return rsp
 }
 
-func (client *grpcClient) catchAndReturnError(originErr error) error {
+func (client *grpcClient) catchAndReturnError(originErr error) code.Error {
+	if originErr == nil {
+		return nil
+	}
+
 	if err, yes := originErr.(code.Error); yes {
 		monitor.CommMonitorReport(
 			err.Mcode(),
@@ -182,9 +186,10 @@ func (client *grpcClient) catchAndReturnError(originErr error) error {
 			fmt.Sprintf("ACTIVE_GRPC_%s", client.callName),
 			client.since,
 		)
+		return err
 	}
 
-	return originErr
+	return code.NewMcode("UNKOWN_ERROR", originErr.Error())
 }
 
 func (client *grpcClient) Context(ctx context.Context) grpcinvoke.Client {
@@ -195,7 +200,7 @@ func (client *grpcClient) Context(ctx context.Context) grpcinvoke.Client {
 	return client
 }
 
-func (client *grpcClient) Response(out proto.Message) error {
+func (client *grpcClient) Response(out proto.Message) code.Error {
 	if client.err != nil {
 		return client.catchAndReturnError(client.err)
 	}
@@ -248,14 +253,14 @@ func (client *grpcClient) Response(out proto.Message) error {
 		return client.catchAndReturnError(code.NewMcode("GRPC_ERROR", err.Error()))
 	}
 
-	if rsp.Mcode != "" {
-		return client.catchAndReturnError(code.NewMcode(rsp.Mcode, rsp.Message))
+	if !rsp.Result {
+		return client.catchAndReturnError(rsp.CodeError())
 	}
 
 	if out != nil {
 		err := proto.Unmarshal(rsp.Body, out)
 		if err != nil {
-			return client.catchAndReturnError(code.NewMcode("INVOKE_BAD_GRPC_BODY", "bad grpc response body"))
+			return client.catchAndReturnError(code.NewMcode("GRPC_BAD_BODY", "bad grpc response body"))
 		}
 	}
 
@@ -279,9 +284,7 @@ func (client *grpcClient) hytrixCommand() string {
 func (client *grpcClient) updateHystrix() {
 	if client.useCircuit {
 		command := client.hytrixCommand()
-		if "DEFAULT" != command {
-			hystrix.ConfigureCommand(command, client.hystrixInfo)
-		}
+		hystrix.ConfigureCommand(command, client.hystrixInfo)
 	}
 }
 

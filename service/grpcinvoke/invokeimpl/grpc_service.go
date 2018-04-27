@@ -140,6 +140,9 @@ func (grpcService *grpcService) newGrpcClient(callName string, conn *grpc.Client
 		freeConnAfterUsed: grpcService.freeConnAfterUsed,
 		serviceName:       grpcService.name,
 		since:             time.Now().UTC(),
+		useCircuit:        grpcService.useCircuit,
+		hystrixInfo:       grpcService.hystrixInfo,
+		useTracing:        grpcService.useTracing,
 	}
 }
 
