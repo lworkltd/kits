@@ -23,7 +23,7 @@ type GrpcError struct {
 // 兼容性检测
 var _ code.Error = new(GrpcError)
 
-// Code 返回一个全量的错误，兼容code.Error.Code()
+// Code 返回一个数字错误，兼容code.Error.Code()
 func (grpcError *GrpcError) Code() int {
 	return grpcError.code
 }
