@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"strconv"
 	"strings"
 
 	"fmt"
@@ -165,6 +166,46 @@ func (client *Client) registerTcp(option *RegisterOption) error {
 	})
 }
 
+type consulVersion string
+
+func versionToInts(v string) ([3]int, error) {
+	vers := [3]int{}
+	words := strings.Split(v, ".")
+	for i, word := range words {
+		if i >= 3 {
+			break
+		}
+
+		n, err := strconv.Atoi(word)
+		if err != nil {
+			return vers, err
+		}
+		vers[i] = n
+	}
+
+	return vers, nil
+}
+
+func (ver1 consulVersion) Lt(ver2 string) (bool, error) {
+	va, err := versionToInts(string(ver1))
+	if err != nil {
+		return false, fmt.Errorf("bad version,ver1=%v", ver1)
+	}
+	vb, err := versionToInts(string(ver2))
+	if err != nil {
+		return false, fmt.Errorf("bad version,ver2=%v", ver2)
+	}
+
+	for i := range va {
+		if va[i] == vb[i] {
+			continue
+		}
+		return va[i] < vb[i], nil
+	}
+
+	return false, nil
+}
+
 func (client *Client) registerGrpc(option *RegisterOption) error {
 	ver, err := client.Version()
 	if err != nil {
@@ -172,7 +213,7 @@ func (client *Client) registerGrpc(option *RegisterOption) error {
 	}
 
 	// 低版本使用TCP注册
-	if ver < "1.0.6" {
+	if ok, err := consulVersion(ver).Lt("1.0.6"); !ok || err != nil {
 		return client.registerTcp(option)
 	}
 
