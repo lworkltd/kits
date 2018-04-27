@@ -213,7 +213,7 @@ func (client *Client) registerGrpc(option *RegisterOption) error {
 	}
 
 	// 低版本使用TCP注册
-	if ok, err := consulVersion(ver).Lt("1.0.6"); !ok || err != nil {
+	if ok, err := consulVersion(ver).Lt("1.0.6"); ok || err != nil {
 		return client.registerTcp(option)
 	}
 
