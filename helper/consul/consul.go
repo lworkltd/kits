@@ -126,7 +126,56 @@ func (client *Client) registerHttp(option *RegisterOption) error {
 	})
 }
 
+// Version return the agent version
+func (client *Client) Version() (string, error) {
+	selfInfo, err := client.cli.Agent().Self()
+	if err != nil {
+		return "", err
+	}
+	selfConfig, exist := selfInfo["Config"]
+	if !exist {
+		return "", nil
+	}
+	d, exist := selfConfig["Version"]
+	if !exist {
+		return "", nil
+	}
+	ver, ok := d.(string)
+	if !ok {
+		return "", nil
+	}
+
+	return ver, nil
+}
+
+func (client *Client) registerTcp(option *RegisterOption) error {
+	tcpStr := fmt.Sprintf("%v:%v", option.Ip, option.Port)
+	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
+		ID:      option.Id,   // SERVICE_ID
+		Name:    option.Name, // 模块定义 fw_service
+		Port:    option.Port, // 端口
+		Tags:    option.Tags, // 服务标签
+		Address: option.Ip,   // 服务地址
+		Check: &api.AgentServiceCheck{
+			TCP:      tcpStr,
+			Interval: option.CheckInterval,
+			Timeout:  option.CheckTimeout,
+			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
+		}, // 健康检测
+	})
+}
+
 func (client *Client) registerGrpc(option *RegisterOption) error {
+	ver, err := client.Version()
+	if err != nil {
+		return err
+	}
+
+	// 低版本使用TCP注册
+	if ver < "1.0.6" {
+		return client.registerTcp(option)
+	}
+
 	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
 		ID:      option.Id,
 		Name:    option.Name,
