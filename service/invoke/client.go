@@ -298,8 +298,7 @@ func (client *client) Exec(out interface{}) (int, error) {
 	if !client.useCircuit {
 		status, err = client.exec(out, nil)
 	} else {
-		hytrixCmd := client.hytrixCommand()
-		hystrix.ConfigureCommand(hytrixCmd, client.circuitConfig)
+		client.updateHystrix()
 
 		var cancel context.CancelFunc
 		err = hystrix.Do(client.hytrixCommand(), func() error {
@@ -544,6 +543,15 @@ func (client *client) getResp(cancel *context.CancelFunc) (*http.Response, error
 	return resp, nil
 }
 
+func (client *client) updateHystrix() {
+	hytrixCmd := client.hytrixCommand()
+	if _, exist, _ := hystrix.GetCircuit(hytrixCmd); exist {
+		return
+	}
+
+	hystrix.ConfigureCommand(hytrixCmd, client.circuitConfig)
+}
+
 func (client *client) Response() (*http.Response, error) {
 	if client.useTracing {
 		span, ctx := opentracing.StartSpanFromContext(client.ctx, client.tracingName())
@@ -557,11 +565,10 @@ func (client *client) Response() (*http.Response, error) {
 	if !client.useCircuit {
 		resp, err = client.getResp(nil)
 	} else {
-		hytrixCmd := client.hytrixCommand()
-		hystrix.ConfigureCommand(hytrixCmd, client.circuitConfig)
+		client.updateHystrix()
 
 		var cancel context.CancelFunc
-		err = hystrix.Do(hytrixCmd, func() error {
+		err = hystrix.Do(client.hytrixCommand(), func() error {
 			s, err := client.getResp(&cancel)
 			resp = s
 			return err

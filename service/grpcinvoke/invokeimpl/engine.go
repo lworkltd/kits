@@ -95,6 +95,7 @@ func (engine *engine) newService(serviceName string, discovery grpcinvoke.Discov
 		useTracing:        engine.useTracing,
 		useCircuit:        engine.useCircuit,
 		connLb:            newGrpcConnBalancer(serviceName, 4, discovery),
+		hystrixInfo:       engine.hystrixInfo,
 		remove:            func() { engine.removeGrpcService(serviceName) },
 	}
 }
@@ -106,6 +107,7 @@ func (engine *engine) newAddr(addr string, freeConnAfterUsed bool) grpcinvoke.Se
 		freeConnAfterUsed: freeConnAfterUsed,
 		useTracing:        engine.useTracing,
 		useCircuit:        engine.useCircuit,
+		hystrixInfo:       engine.hystrixInfo,
 		connLb:            newGrpcConnBalancer(addr, 4, createAddrDiscovery(addr)),
 		remove:            func() { engine.removeGrpcService(addr) },
 	}

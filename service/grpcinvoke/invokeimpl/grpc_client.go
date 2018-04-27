@@ -283,8 +283,12 @@ func (client *grpcClient) hytrixCommand() string {
 
 func (client *grpcClient) updateHystrix() {
 	if client.useCircuit {
-		command := client.hytrixCommand()
-		hystrix.ConfigureCommand(command, client.hystrixInfo)
+		hytrixCmd := client.hytrixCommand()
+		if _, exist, _ := hystrix.GetCircuit(hytrixCmd); exist {
+			return
+		}
+
+		hystrix.ConfigureCommand(hytrixCmd, client.hystrixInfo)
 	}
 }
 
