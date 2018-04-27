@@ -1,9 +1,10 @@
 package invoke
 
 import (
+	"context"
 	"fmt"
 	"time"
-	"context"
+
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/lworkltd/kits/utils/co"
 )
@@ -50,12 +51,6 @@ func (service *service) remote() (string, string, error) {
 	}
 	addr, id := remotes[use], ids[use]
 
-	if service.useCircuit {
-		if _, exist, _ := hystrix.GetCircuit(id); !exist {
-			hystrix.ConfigureCommand(id, service.circuitConfig)
-		}
-	}
-
 	return addr, id, nil
 }
 
@@ -81,7 +76,7 @@ func (service *service) Delete(path string) Client {
 
 // Method 使用指定方法请求
 func (service *service) Method(method, path string) Client {
-	return newRest(service, method, path)
+	return newRest(service, service.circuitConfig, method, path)
 }
 
 func (service *service) Remote() (string, string, error) {
@@ -101,7 +96,7 @@ func (service *service) UseCircuit() bool {
 	return service.useCircuit
 }
 
-func newRest(service Service, method string, path string) Client {
+func newRest(service Service, circuitConfig hystrix.CommandConfig, method string, path string) Client {
 	client := &client{
 		createTime: time.Now(),
 		service:    service,
@@ -113,9 +108,10 @@ func newRest(service Service, method string, path string) Client {
 			"method":  method,
 			"path":    path,
 		},
-		ctx:        context.Background(),
-		useTracing: service.UseTracing(),
-		useCircuit: service.UseCircuit(),
+		ctx:           context.Background(),
+		useTracing:    service.UseTracing(),
+		useCircuit:    service.UseCircuit(),
+		circuitConfig: circuitConfig,
 	}
 
 	return client
