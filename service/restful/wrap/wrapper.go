@@ -11,14 +11,15 @@ import (
 	"runtime/debug"
 	"time"
 
+	"io"
+	"strings"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/lworkltd/kits/service/context"
+	"github.com/lworkltd/kits/service/monitor"
 	"github.com/lworkltd/kits/service/restful/code"
 	logutils "github.com/lworkltd/kits/utils/log"
-	"io"
-	"github.com/lworkltd/kits/service/monitor"
-	"strings"
 )
 
 // Wrapper 用于对请求返回结果进行封装的类
@@ -34,16 +35,16 @@ type Wrapper struct {
 	// 服务名称
 	serviceName string
 	// 服务ID
-	serviceId string
+	serviceId        string
 	serviceLogLevel  logrus.Level
 	serviceLogWriter io.Writer
 }
 
 type Option struct {
-	Prefix       string
-	Mode         string
-	LogLevel     string
-	LogFilePath  string
+	Prefix      string
+	Mode        string
+	LogLevel    string
+	LogFilePath string
 }
 
 // NewWrapper 创建一个新的wrapper
@@ -51,7 +52,7 @@ func New(option *Option) *Wrapper {
 	// 设置日志输出IO流，若未配置使用os.Stderr
 	logWriter := os.Stderr
 	if "" != option.LogFilePath {
-		file, err := os.OpenFile(option.LogFilePath, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0660)
+		file, err := os.OpenFile(option.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
 		if nil != err {
 			fmt.Errorf("Open log file failed, err:%v, log file path:%v", err, option.LogFilePath)
 		} else {
@@ -70,8 +71,8 @@ func New(option *Option) *Wrapper {
 	}
 
 	w := &Wrapper{
-		mcodePrefix: option.Prefix,
-		serviceLogLevel: logLevel,
+		mcodePrefix:      option.Prefix,
+		serviceLogLevel:  logLevel,
 		serviceLogWriter: logWriter,
 		pool: sync.Pool{
 			New: func() interface{} {
@@ -90,20 +91,19 @@ type HttpServer interface {
 	Handle(string, string, ...gin.HandlerFunc) gin.IRoutes
 }
 
-
 //上报处理请求结果到Monitor，registPath为注册路径
 func reportProcessResultToMonitor(err code.Error, httpCtx *gin.Context, beginTime time.Time, registPath string) {
 	if nil == httpCtx || false == monitor.EnableReportMonitor() {
 		return
 	}
 	timeNow := time.Now()
-	infc := "PASSIVE_" + httpCtx.Request.Method + "_" + registPath 	//PASSIVE表示被调, httpCtx.Request.URL.Path为实际请求的路径
-	addrs := strings.Split(httpCtx.Request.RemoteAddr, ":")	//httpCtx.Request.RemoteAddr, 例如：118.112.177.203:58425
+	infc := "PASSIVE_" + httpCtx.Request.Method + "_" + registPath //PASSIVE表示被调, httpCtx.Request.URL.Path为实际请求的路径
+	addrs := strings.Split(httpCtx.Request.RemoteAddr, ":")        //httpCtx.Request.RemoteAddr, 例如：118.112.177.203:58425
 	sIP := ""
 	if len(addrs) == 2 && monitor.IsInnerIPv4(addrs[0]) {
-		sIP = addrs[0]				//若远端IP为内网IP则取值，公网IP请求过多会导致Monitor数据标签量太大
+		sIP = addrs[0] //若远端IP为内网IP则取值，公网IP请求过多会导致Monitor数据标签量太大
 	}
-	if nil == err {				//处理成功
+	if nil == err { //处理成功
 		//请求失败，上报失败计数和失败平均耗时
 		timeNow := time.Now()
 		var succCountReport monitor.ReqSuccessCountDimension
@@ -120,8 +120,8 @@ func reportProcessResultToMonitor(err code.Error, httpCtx *gin.Context, beginTim
 		succAvgTimeReport.TName = monitor.GetCurrentServerName()
 		succAvgTimeReport.TIP = monitor.GetCurrentServerIP()
 		succAvgTimeReport.Infc = infc
-		monitor.ReportSuccessAvgTime(&succAvgTimeReport, (timeNow.UnixNano() - beginTime.UnixNano()) / 1e3)		//耗时单位为微秒
-	} else {					//处理失败
+		monitor.ReportSuccessAvgTime(&succAvgTimeReport, (timeNow.UnixNano()-beginTime.UnixNano())/1e3) //耗时单位为微秒
+	} else { //处理失败
 		var failedCountReport monitor.ReqFailedCountDimension
 		failedCountReport.SName = ""
 		failedCountReport.TName = monitor.GetCurrentServerName()
@@ -136,7 +136,7 @@ func reportProcessResultToMonitor(err code.Error, httpCtx *gin.Context, beginTim
 		failedAvgTimeReport.TName = monitor.GetCurrentServerName()
 		failedAvgTimeReport.TIP = monitor.GetCurrentServerIP()
 		failedAvgTimeReport.Infc = infc
-		monitor.ReportFailedAvgTime(&failedAvgTimeReport, (timeNow.UnixNano() - beginTime.UnixNano()) / 1e3)		//耗时单位为微秒
+		monitor.ReportFailedAvgTime(&failedAvgTimeReport, (timeNow.UnixNano()-beginTime.UnixNano())/1e3) //耗时单位为微秒
 	}
 }
 
@@ -195,13 +195,13 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 					httpCtx.JSON(http.StatusOK, map[string]interface{}{
 						"result":  false,
 						"mcode":   cerr.Mcode(),
-						"message": cerr.Error(),
+						"message": cerr.Message(),
 					})
 				} else {
 					httpCtx.JSON(http.StatusOK, map[string]interface{}{
 						"result":  false,
 						"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
-						"message": cerr.Error(),
+						"message": cerr.Message(),
 					})
 				}
 			} else {
@@ -223,7 +223,7 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 			if cerr != nil {
 				l.WithFields(logrus.Fields{
 					"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
-					"message": cerr.Error(),
+					"message": cerr.Message(),
 				}).Error("HTTP request failed")
 			} else {
 				l.Info("HTTP request done")

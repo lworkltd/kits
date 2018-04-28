@@ -85,7 +85,7 @@ func wrapFunc(f func(Context, *gin.Context) (interface{}, code.Error)) func(*gin
             httpCtx.JSON(200, map[string]interface{}{
                 "result":  cerr == nil,
                 "mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
-                "message": cerr.Error(),
+                "message": cerr.Message(),
                 "data":    data,
             })
         }()

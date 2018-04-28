@@ -33,16 +33,22 @@ func newRspFromError(err error) *grpccomm.CommResponse {
 	if is {
 		// 此错误一般由间接调用参数或一些通用错误残生
 		if cerr.Mcode() != "" {
-			return newErrorRsp(cerr.Mcode(), cerr.Error())
+			return newErrorRsp(cerr.Mcode(), cerr.Message())
 		}
-		// 此类错误一般由服务内部参数，返回了一个数字类型的错误码
+
+		if strings.HasSuffix(mcodePrefix, "_") {
+			return newErrorRsp(
+				fmt.Sprintf("%s%d", mcodePrefix, cerr.Code()),
+				cerr.Message())
+		}
+
 		return newErrorRsp(
-			fmt.Sprintf("%s%d", mcodePrefix, cerr.Code()),
-			cerr.Error())
+			fmt.Sprintf("%s_%d", mcodePrefix, cerr.Code()),
+			cerr.Message())
 	}
 
 	// 无法识别的错误
-	return newErrorRsp("GRPC_UNKOWN", "grpc unkown error,%v", err.Error())
+	return newErrorRsp("GRPC_UNKOWN", err.Error())
 }
 
 var (

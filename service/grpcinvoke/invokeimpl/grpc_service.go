@@ -103,6 +103,7 @@ type grpcService struct {
 
 	useTracing  bool
 	useCircuit  bool
+	doLogger    bool
 	hystrixInfo hystrix.CommandConfig
 
 	connLb *GrpcConnBalancer
@@ -130,6 +131,7 @@ func (grpcService *grpcService) Unary(args ...string) grpcinvoke.Client {
 	if len(args) > 0 {
 		callName = args[0]
 	}
+
 	return grpcService.newGrpcClient(callName, conn)
 }
 
@@ -143,6 +145,7 @@ func (grpcService *grpcService) newGrpcClient(callName string, conn *grpc.Client
 		useCircuit:        grpcService.useCircuit,
 		hystrixInfo:       grpcService.hystrixInfo,
 		useTracing:        grpcService.useTracing,
+		doLogger:          grpcService.doLogger,
 	}
 }
 

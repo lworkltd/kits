@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcinvoke"
 	"github.com/lworkltd/kits/service/grpcsrv"
@@ -115,7 +116,7 @@ func TestGrpcCommReq(t *testing.T) {
 	type args struct {
 		f func(error) error
 	}
-	service := grpcinvoke.Addr("127.0.0.1:8090").Timeout(time.Second)
+	service := grpcinvoke.Addr("127.0.0.1:43901").Timeout(time.Second)
 	tests := []struct {
 		name      string
 		getClient func() grpcinvoke.Client
@@ -208,6 +209,32 @@ func TestGrpcCommReq(t *testing.T) {
 			cli := tt.getClient()
 			rsp := cli.CommRequest(tt.commReq)
 			tt.checkRsp(rsp)
+		})
+	}
+}
+
+func TestGrpcClientDoLog(t *testing.T) {
+	type args struct {
+		err   code.Error
+		since time.Time
+	}
+	tests := []struct {
+		name    string
+		client  *grpcClient
+		args    args
+		prepare func()
+	}{
+		{
+			prepare: func() {
+				logrus.SetLevel(logrus.DebugLevel)
+			},
+			client: &grpcClient{},
+		},
+	}
+	for _, tt := range tests {
+		tt.prepare()
+		t.Run(tt.name, func(t *testing.T) {
+			tt.client.doLog(tt.args.err)
 		})
 	}
 }

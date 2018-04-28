@@ -38,6 +38,11 @@ func (grpcError *GrpcError) Error() string {
 	return fmt.Sprintf("%s,%s", grpcError.mcode, grpcError.message)
 }
 
+// Message 返回错误讯息，兼容error.Error
+func (grpcError *GrpcError) Message() string {
+	return grpcError.message
+}
+
 // CodeError 生成一个错误
 func (rsp *CommResponse) CodeError() code.Error {
 	if rsp.Result {

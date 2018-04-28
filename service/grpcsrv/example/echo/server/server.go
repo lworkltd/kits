@@ -1,16 +1,21 @@
 package main
 
 import (
+	"fmt"
+
+	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/grpcsrv"
 	"github.com/lworkltd/kits/service/grpcsrv/example/echo/pb"
 )
 
 func main() {
+	logrus.SetFormatter(&logrus.TextFormatter{DisableColors: true})
+	grpcsrv.UseHook(grpcsrv.HookLogger)
 	grpcsrv.Register("Echo", func(req *pb.EchoRequest) (*pb.EchoResponse, error) {
 		return &pb.EchoResponse{
 			Str: req.Str,
-		}, nil
+		}, fmt.Errorf("error")
 	})
 
-	grpcsrv.Run(":8090", "ECHO_SERVER_")
+	grpcsrv.Run(":8090", "ECHO_SERVER")
 }
