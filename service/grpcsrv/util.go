@@ -48,7 +48,7 @@ func newRspFromError(err error) *grpccomm.CommResponse {
 	}
 
 	// 无法识别的错误
-	return newErrorRsp("GRPC_UNKOWN", "grpc unkown error,%v", err.Error())
+	return newErrorRsp("GRPC_UNKOWN", err.Error())
 }
 
 var (
