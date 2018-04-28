@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcinvoke"
@@ -32,6 +33,7 @@ type grpcClient struct {
 	hystrixInfo hystrix.CommandConfig
 	useTracing  bool
 	useCircuit  bool
+	doLogger    bool
 	ctx         context.Context
 
 	freeConnAfterUsed bool
@@ -175,13 +177,18 @@ func (client *grpcClient) catchAndReturnError(originErr error) code.Error {
 	if originErr == nil {
 		return nil
 	}
+	var (
+		cerr code.Error
+	)
 
 	if err, yes := originErr.(code.Error); yes {
+		client.doLog(err)
+
 		monitor.CommMonitorReport(
 			err.Mcode(),
 			monitor.GetCurrentServerName(),
 			monitor.GetCurrentServerIP(),
-			client.reqService,
+			client.serviceName,
 			"",
 			fmt.Sprintf("ACTIVE_GRPC_%s", client.callName),
 			client.since,
@@ -189,7 +196,11 @@ func (client *grpcClient) catchAndReturnError(originErr error) code.Error {
 		return err
 	}
 
-	return code.NewMcode("UNKOWN_ERROR", originErr.Error())
+	cerr = code.NewMcode("UNKOWN_ERROR", originErr.Error())
+
+	client.doLog(cerr)
+
+	return cerr
 }
 
 func (client *grpcClient) Context(ctx context.Context) grpcinvoke.Client {
@@ -264,11 +275,13 @@ func (client *grpcClient) Response(out proto.Message) code.Error {
 		}
 	}
 
+	client.doLog(nil)
+
 	monitor.CommMonitorReport(
 		"",
 		monitor.GetCurrentServerName(),
 		monitor.GetCurrentServerIP(),
-		client.reqService,
+		client.serviceName,
 		"",
 		fmt.Sprintf("ACTIVE_GRPC_%s", client.callName),
 		client.since,
@@ -300,6 +313,43 @@ func (client *grpcClient) UseCircuit(enable bool) grpcinvoke.Client {
 
 	client.useCircuit = enable
 	return client
+}
+
+func (client *grpcClient) doLog(err code.Error) {
+	if !client.doLogger {
+		return
+	}
+
+	cost := time.Now().Sub(client.since)
+	log := logrus.WithFields(logrus.Fields{
+		"reqName":    client.callName,
+		"reqService": client.serviceName,
+		"latency":    cost,
+	})
+
+	if logrus.StandardLogger().Level >= logrus.DebugLevel {
+		if client.body != nil {
+			log = log.WithFields(logrus.Fields{
+				"body": client.body,
+			})
+		}
+
+		if client.header != nil {
+			log = log.WithFields(logrus.Fields{
+				"header": client.header,
+			})
+		}
+	}
+
+	if err != nil {
+		log = log.WithFields(logrus.Fields{
+			"error": err.Error(),
+		})
+		log.Error("GRPC INVOKE FAILED")
+		return
+	}
+
+	log.Info("GRPC INVOKE DONE")
 }
 
 // MaxConcurrent 最大并发请求
@@ -348,5 +398,10 @@ func (client *grpcClient) PercentThreshold(thresholdPercent int) grpcinvoke.Clie
 
 	client.hystrixInfo.RequestVolumeThreshold = thresholdPercent
 
+	return client
+}
+
+func (client *grpcClient) DoLogger(doLogger bool) grpcinvoke.Client {
+	client.doLogger = true
 	return client
 }

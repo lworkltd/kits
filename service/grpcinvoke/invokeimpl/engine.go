@@ -19,6 +19,7 @@ type engine struct {
 	lbMode     string
 	useTracing bool
 	useCircuit bool
+	doLogger   bool
 
 	hystrixInfo hystrix.CommandConfig
 	mutex       sync.RWMutex
@@ -34,6 +35,8 @@ func (engine *engine) Init(option *grpcinvoke.Option) error {
 	engine.hystrixInfo.ErrorPercentThreshold = option.DefaultErrorPercentThreshold
 	engine.hystrixInfo.MaxConcurrentRequests = option.DefaultMaxConcurrentRequests
 	engine.hystrixInfo.Timeout = int(option.DefaultTimeout / time.Millisecond)
+	engine.doLogger = option.DoLogger
+
 	return nil
 }
 
@@ -97,6 +100,7 @@ func (engine *engine) newService(serviceName string, discovery grpcinvoke.Discov
 		connLb:            newGrpcConnBalancer(serviceName, 4, discovery),
 		hystrixInfo:       engine.hystrixInfo,
 		remove:            func() { engine.removeGrpcService(serviceName) },
+		doLogger:          engine.doLogger,
 	}
 }
 

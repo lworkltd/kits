@@ -61,6 +61,7 @@ type Client interface {
 
 	Response(proto.Message) code.Error
 	CommRequest(*grpccomm.CommRequest) *grpccomm.CommResponse
+	DoLogger(bool) Client
 }
 
 // DefaultEngine 默认的引擎
@@ -100,6 +101,7 @@ func Init(option *Option) error {
 			option.DefaultErrorPercentThreshold = 100
 		}
 	}
+
 	return DefaultEngine.Init(option)
 }
 
