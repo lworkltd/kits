@@ -35,10 +35,16 @@ func newRspFromError(err error) *grpccomm.CommResponse {
 		if cerr.Mcode() != "" {
 			return newErrorRsp(cerr.Mcode(), cerr.Error())
 		}
-		// 此类错误一般由服务内部参数，返回了一个数字类型的错误码
+
+		if strings.HasSuffix(mcodePrefix, "_") {
+			return newErrorRsp(
+				fmt.Sprintf("%s%d", mcodePrefix, cerr.Code()),
+				cerr.Message())
+		}
+
 		return newErrorRsp(
-			fmt.Sprintf("%s%d", mcodePrefix, cerr.Code()),
-			cerr.Error())
+			fmt.Sprintf("%s_%d", mcodePrefix, cerr.Code()),
+			cerr.Message())
 	}
 
 	// 无法识别的错误
