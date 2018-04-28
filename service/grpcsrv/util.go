@@ -33,7 +33,7 @@ func newRspFromError(err error) *grpccomm.CommResponse {
 	if is {
 		// 此错误一般由间接调用参数或一些通用错误残生
 		if cerr.Mcode() != "" {
-			return newErrorRsp(cerr.Mcode(), cerr.Error())
+			return newErrorRsp(cerr.Mcode(), cerr.Message())
 		}
 
 		if strings.HasSuffix(mcodePrefix, "_") {

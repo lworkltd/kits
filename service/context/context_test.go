@@ -157,7 +157,7 @@ func TestContextDebug(t *testing.T) {
 					httpCtx.JSON(200, map[string]interface{}{
 						"result":  false,
 						"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
-						"message": cerr.Error(),
+						"message": cerr.Message(),
 					})
 				} else {
 					httpCtx.JSON(200, map[string]interface{}{
@@ -175,7 +175,7 @@ func TestContextDebug(t *testing.T) {
 				if cerr != nil {
 					l.WithFields(logrus.Fields{
 						"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
-						"message": cerr.Error(),
+						"message": cerr.Message(),
 					}).Error("Http request failed")
 				} else {
 					l.Info("HTTP request done")
