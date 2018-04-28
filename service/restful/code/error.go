@@ -8,6 +8,7 @@ type Error interface {
 	error
 	Code() int // 错误码
 	Mcode() string
+	Message() string
 }
 
 type errorImpl struct {
@@ -22,6 +23,10 @@ func (err *errorImpl) Error() string {
 	}
 
 	return fmt.Sprintf("%s,%s", err.mcode, err.message)
+}
+
+func (err *errorImpl) Message() string {
+	return err.message
 }
 
 func (err *errorImpl) Code() int {
