@@ -175,6 +175,16 @@ func main() {
 		http.ListenAndServe(":8080", nil)
 	}()
 
-	// 监听
-	grpcsrv.Run("0.0.0.0:8090", "TESTECHO_")
+	// 后端grpc服务监听
+	grpcsrv.Run("0.0.0.0:8090", "TESTECHO_", nil)
+/*
+    // grpc web服务监听（供浏览器JS访问）
+    webOption := &grpcsrv.GrpcWebOption{
+        UseGrpcWeb: true,           //true:使用grpc-web模式， false:普通grpc模式
+        EnableTls:  true,           //UseGrpcWeb为true时此参数有效，是否使用Tls(https), true:基于tls的grpc服务, false:基于http的grpc服务
+        CertFile:   "lwork.crt",    //UseGrpcWeb和EnableTls都为true时此参数有效，实际https的证书路径
+        KeyFile:    "lwork.key",    //UseGrpcWeb和EnableTls都为true时此参数有效，实际https的证书路径
+    }
+    grpcsrv.Run("0.0.0.0:8090", "TESTECHO_", webOption)
+*/
 }
