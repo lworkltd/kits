@@ -5,11 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	context "golang.org/x/net/context"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
+	context "golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -148,6 +147,29 @@ func TestUseHook(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			UseHook(tt.args.hooks...)
+		})
+	}
+}
+
+func TestService_Run(t *testing.T) {
+	type args struct {
+		host      string
+		errPrefix string
+		grpcOpts  []grpc.ServerOption
+	}
+	tests := []struct {
+		name    string
+		service *Service
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.service.Run(tt.args.host, tt.args.errPrefix, tt.args.grpcOpts...); (err != nil) != tt.wantErr {
+				t.Errorf("Service.Run() error = %v, wantErr %v", err, tt.wantErr)
+			}
 		})
 	}
 }

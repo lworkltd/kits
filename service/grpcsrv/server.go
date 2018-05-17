@@ -1,304 +1,327 @@
 package grpcsrv
 
 import (
-    "fmt"
-    "net"
-    "net/http"
-    "reflect"
+	"fmt"
+	"net"
+	"net/http"
+	"reflect"
 
-    context "golang.org/x/net/context"
+	context "golang.org/x/net/context"
 
-    "github.com/lworkltd/kits/service/grpcsrv/grpccomm"
-    "github.com/lworkltd/kits/service/version"
-    "google.golang.org/grpc"
-    "google.golang.org/grpc/health"
+	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
+	"github.com/lworkltd/kits/service/version"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
 
-    hv1 "google.golang.org/grpc/health/grpc_health_v1"
-    "github.com/improbable-eng/grpc-web/go/grpcweb"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	hv1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 var (
-    emptyRsp         = &grpccomm.CommResponse{}
-    emptyHeader      = reflect.ValueOf(&grpccomm.CommHeader{})
-    mcodePrefix      string
-    defaultService   *Service
-    defaultGroupName = "defaultGrp"
+	emptyRsp         = &grpccomm.CommResponse{}
+	emptyHeader      = reflect.ValueOf(&grpccomm.CommHeader{})
+	mcodePrefix      string
+	defaultService   *Service
+	defaultGroupName = "defaultGrp"
 )
 
 // Service 服务
 type Service struct {
-    server *grpc.Server
+	server *grpc.Server
 
-    groups      map[string]*InterfaceGroup
-    methodIndex map[string]*InterfaceGroup
-    proxyRules  []*RouteProxy
-    hooks       []HookFunc
-    proxies     []*ProxyTarget
+	groups      map[string]*InterfaceGroup
+	methodIndex map[string]*InterfaceGroup
+	proxyRules  []*RouteProxy
+	hooks       []HookFunc
+	proxies     []*ProxyTarget
 }
 
 // RouteProxy 代理
 type RouteProxy struct {
-    group  *InterfaceGroup
-    target *ProxyTarget
-}
-
-//GrpcWeb服务的参数
-type GrpcWebOption struct {
-    UseGrpcWeb bool   //true:使用grpc-web模式， false:普通grpc模式
-    EnableTls  bool   //UseGrpcWeb为true时此参数有效，是否使用Tls(https), true:基于tls的grpc服务, false:基于http的grpc服务
-    CertFile   string //UseGrpcWeb和EnableTls都为true时此参数有效，实际https的证书路径
-    KeyFile    string //UseGrpcWeb和EnableTls都为true时此参数有效，实际https的证书路径
+	group  *InterfaceGroup
+	target *ProxyTarget
 }
 
 // Do 执行代理
 func (routeProxy *RouteProxy) Do(ctx context.Context, req *grpccomm.CommRequest) (*grpccomm.CommResponse, bool) {
-    ok, service, err := routeProxy.target.detect(ctx, req)
-    if !ok {
-        return nil, false
-    }
+	ok, service, err := routeProxy.target.detect(ctx, req)
+	if !ok {
+		return nil, false
+	}
 
-    if err != nil {
-        return newRspFromError(err), false
-    }
+	if err != nil {
+		return newRspFromError(err), false
+	}
 
-    if err := routeProxy.group.doPipe(ctx, req); err != nil {
-        return newRspFromError(err), true
-    }
+	if err := routeProxy.group.doPipe(ctx, req); err != nil {
+		return newRspFromError(err), true
+	}
 
-    return service.Unary().Context(ctx).CommRequest(req), true
+	return service.Unary().Context(ctx).CommRequest(req), true
 }
 
 func init() {
-    defaultService = newService()
+	defaultService = newService()
 }
 
 func newService() *Service {
-    service := &Service{}
-    service.Group(defaultGroupName)
-    service.registerVersion()
+	service := &Service{}
+	service.Group(defaultGroupName)
+	service.registerVersion()
 
-    return service
+	return service
 }
 
 // RpcRequest 处理请求
 func (service *Service) RpcRequest(ctx context.Context, commReq *grpccomm.CommRequest) (*grpccomm.CommResponse, error) {
-    exec := func(ctx context.Context, commReq *grpccomm.CommRequest) *grpccomm.CommResponse {
-        if commReq.ReqInterface == "" {
-            return newErrorRsp("GRPC_METHOD_NOTFOUND", "grpc method missing")
-        }
+	exec := func(ctx context.Context, commReq *grpccomm.CommRequest) *grpccomm.CommResponse {
+		if commReq.ReqInterface == "" {
+			return newErrorRsp("GRPC_METHOD_NOTFOUND", "grpc method missing")
+		}
 
-        // 查找本地是否处理
-        group, exist := service.methodIndex[commReq.ReqInterface]
-        if exist {
-            return group.RpcRequest(ctx, commReq)
-        }
+		// 查找本地是否处理
+		group, exist := service.methodIndex[commReq.ReqInterface]
+		if exist {
+			return group.RpcRequest(ctx, commReq)
+		}
 
-        // 在代理里面寻找处理
-        for _, rule := range service.proxyRules {
-            rsp, executed := rule.Do(ctx, commReq)
-            if !executed {
-                continue
-            }
+		// 在代理里面寻找处理
+		for _, rule := range service.proxyRules {
+			rsp, executed := rule.Do(ctx, commReq)
+			if !executed {
+				continue
+			}
 
-            return rsp
-        }
+			return rsp
+		}
 
-        return newErrorRsp("GRPC_METHOD_NOTFOUND", "grpc %s not registered", commReq.ReqInterface)
-    }
+		return newErrorRsp("GRPC_METHOD_NOTFOUND", "grpc %s not registered", commReq.ReqInterface)
+	}
 
-    var f = exec
-    for i := range service.hooks {
-        f = service.hooks[len(service.hooks)-1-i](f)
-    }
+	var f = exec
+	for i := range service.hooks {
+		f = service.hooks[len(service.hooks)-1-i](f)
+	}
 
-    return f(ctx, commReq), nil
+	return f(ctx, commReq), nil
 }
 
 // UseHook 增加Hook处理
 func (service *Service) UseHook(hooks ...HookFunc) {
-    service.hooks = append(service.hooks, hooks...)
+	service.hooks = append(service.hooks, hooks...)
 }
 
 func (service *Service) registerVersion() {
-    service.Register("_AppVersion", func() (*version.VersionResponse, error) {
-        return version.GetVersionInfo(), nil
-    })
+	service.Register("_AppVersion", func() (*version.VersionResponse, error) {
+		return version.GetVersionInfo(), nil
+	})
 }
 
 // regProxy 注册一条代理规则
 func (service *Service) regProxy(group *InterfaceGroup, t *ProxyTarget) {
-    service.proxyRules = append(service.proxyRules, &RouteProxy{
-        group:  group,
-        target: t,
-    })
+	service.proxyRules = append(service.proxyRules, &RouteProxy{
+		group:  group,
+		target: t,
+	})
 }
 
 // regGroup 注册一个接口
 func (service *Service) regInterface(g *InterfaceGroup, reqName string) error {
-    if service.methodIndex == nil {
-        service.methodIndex = make(map[string]*InterfaceGroup, 1)
-    }
-    _, exist := service.methodIndex[reqName]
-    if exist {
-        unexpectError("duplicate register %v", reqName)
-    }
+	if service.methodIndex == nil {
+		service.methodIndex = make(map[string]*InterfaceGroup, 1)
+	}
+	_, exist := service.methodIndex[reqName]
+	if exist {
+		unexpectError("duplicate register %v", reqName)
+	}
 
-    service.methodIndex[reqName] = g
+	service.methodIndex[reqName] = g
 
-    return nil
+	return nil
 }
 
 // Group 获取一个规则分组，如果不存在，则创建一个
 func (service *Service) Group(name string, pipes ...RequestPipeFunc) *InterfaceGroup {
-    group, isNew := service.newGroup(name, pipes...)
-    if isNew {
-        group.parents = []*InterfaceGroup{}
-    }
+	group, isNew := service.newGroup(name, pipes...)
+	if isNew {
+		group.parents = []*InterfaceGroup{}
+	}
 
-    return group
+	return group
 }
 
 func (service *Service) newGroup(name string, pipes ...RequestPipeFunc) (*InterfaceGroup, bool) {
-    if service.groups == nil {
-        service.groups = make(map[string]*InterfaceGroup, 1)
-    }
+	if service.groups == nil {
+		service.groups = make(map[string]*InterfaceGroup, 1)
+	}
 
-    group, exist := service.groups[name]
-    if !exist {
-        stdGroup := &InterfaceGroup{
-            name:    name,
-            infos:   map[string]*RegisterInfo{},
-            service: service,
-        }
+	group, exist := service.groups[name]
+	if !exist {
+		stdGroup := &InterfaceGroup{
+			name:    name,
+			infos:   map[string]*RegisterInfo{},
+			service: service,
+		}
 
-        service.groups[name] = stdGroup
-        group = stdGroup
-    }
+		service.groups[name] = stdGroup
+		group = stdGroup
+	}
 
-    if len(pipes) > 0 {
-        group.Use(pipes...)
-    }
+	if len(pipes) > 0 {
+		group.Use(pipes...)
+	}
 
-    return group, !exist
+	return group, !exist
+}
+
+// RunWebTLS 启动WebTLS服务
+func (service *Service) RunWebTLS(host, errPrefix, certFile, keyFile string, grpcOpts ...grpc.ServerOption) error {
+	mcodePrefix = errPrefix
+
+	// 构建Grpc服务
+	grpcServer := makeCommServer(nil, grpcOpts...)
+	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
+	service.server = grpcServer
+
+	// 构建WebServer对象
+	wrappedServer := grpcweb.WrapServer(grpcServer)
+	handler := func(resp http.ResponseWriter, req *http.Request) {
+		wrappedServer.ServeHTTP(resp, req)
+	}
+	httpServer := http.Server{
+		Addr:    host,
+		Handler: http.HandlerFunc(handler),
+	}
+
+	// 启动服务
+	return httpServer.ListenAndServeTLS(certFile, keyFile)
+}
+
+// RunWeb 启动Web服务
+func (service *Service) RunWeb(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
+	mcodePrefix = errPrefix
+
+	// 构建Grpc服务
+	grpcServer := makeCommServer(nil, grpcOpts...)
+	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
+	service.server = grpcServer
+
+	// 构建WebServer对象
+	wrappedServer := grpcweb.WrapServer(grpcServer)
+	handler := func(resp http.ResponseWriter, req *http.Request) {
+		wrappedServer.ServeHTTP(resp, req)
+	}
+	httpServer := http.Server{
+		Addr:    host,
+		Handler: http.HandlerFunc(handler),
+	}
+
+	// 启动服务
+	return httpServer.ListenAndServe()
 }
 
 // Run 启动服务
-func (service *Service) Run(host, errPrefix string, webOption *GrpcWebOption, grpcOpts ...grpc.ServerOption) error {
-    mcodePrefix = errPrefix
-    grpcServer := makeCommServer(nil, grpcOpts...)
-    grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
-    service.server = grpcServer
+func (service *Service) Run(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
+	mcodePrefix = errPrefix
 
-    if nil != webOption && true == webOption.UseGrpcWeb {
-        wrappedServer := grpcweb.WrapServer(grpcServer)
-        handler := func(resp http.ResponseWriter, req *http.Request) {
-            wrappedServer.ServeHTTP(resp, req)
-        }
-        httpServer := http.Server{
-            Addr:    host,
-            Handler: http.HandlerFunc(handler),
-        }
+	// 注册Grpc服务
+	grpcServer := makeCommServer(nil, grpcOpts...)
+	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
+	service.server = grpcServer
 
-        if webOption.EnableTls {
-            return httpServer.ListenAndServeTLS(webOption.CertFile, webOption.KeyFile)
-        } else {
-            return httpServer.ListenAndServe()
-        }
-    } else {
-        lis, err := net.Listen("tcp", host)
-        if err != nil {
-            return fmt.Errorf("failed to listen: %v", err)
-        }
+	lis, err := net.Listen("tcp", host)
+	if err != nil {
+		return fmt.Errorf("failed to listen: %v", err)
+	}
 
-        // 注册健康服务
-        healthServer := health.NewServer()
-        hv1.RegisterHealthServer(grpcServer, healthServer)
-        healthServer.SetServingStatus("grpccomm.CommService", hv1.HealthCheckResponse_SERVING)
-        return grpcServer.Serve(lis)
-    }
-    return nil
+	// 注册健康服务
+	healthServer := health.NewServer()
+	hv1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("grpccomm.CommService", hv1.HealthCheckResponse_SERVING)
+
+	return grpcServer.Serve(lis)
 }
 
 // Stop 停止服务
 func (service *Service) Stop() {
-    s := service.server
-    if s == nil {
-        return
-    }
+	s := service.server
+	if s == nil {
+		return
+	}
 
-    s.Stop()
+	s.Stop()
 }
 
 // ServeHTTP 用于HTTP调试
 func (service *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    service.debugHttp(w, r)
+	service.debugHttp(w, r)
 }
 
 // DebugHttpHandler 返回HTTP调试
 func (service *Service) DebugHttpHandler() http.Handler {
-    return service
+	return service
 }
 
 // Register 绑定函数
 func (service *Service) Register(reqBody interface{}, f interface{}) {
-    service.groups[defaultGroupName].Register(reqBody, f)
+	service.groups[defaultGroupName].Register(reqBody, f)
 }
 
 // ProxyService 反向代理服务
 func (service *Service) ProxyService(serviceName string, target interface{}, reqTypes ...interface{}) {
-    service.groups[defaultGroupName].ProxyService(serviceName, target, reqTypes...)
+	service.groups[defaultGroupName].ProxyService(serviceName, target, reqTypes...)
 }
 
 // ProxyInterface 反向代理接口
 func (service *Service) ProxyInterface(req interface{}, target interface{}) {
-    service.groups[defaultGroupName].ProxyInterface(req, target)
+	service.groups[defaultGroupName].ProxyInterface(req, target)
 }
 
 // RequestMethod 请求处理
 type RequestMethod struct {
-    f func(ctx context.Context, commReq *grpccomm.CommRequest) *grpccomm.CommResponse
+	f func(ctx context.Context, commReq *grpccomm.CommRequest) *grpccomm.CommResponse
 }
 
 // ListenAndServe GRPC监听
 func listenAndServe(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
-    mcodePrefix = errPrefix
+	mcodePrefix = errPrefix
 
-    lis, err := net.Listen("tcp", host)
-    if err != nil {
-        return fmt.Errorf("failed to listen: %v", err)
-    }
-    grpcServer := grpc.NewServer(grpcOpts...)
+	lis, err := net.Listen("tcp", host)
+	if err != nil {
+		return fmt.Errorf("failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer(grpcOpts...)
 
-    // 注册健康服务
-    healthServer := health.NewServer()
-    hv1.RegisterHealthServer(grpcServer, healthServer)
+	// 注册健康服务
+	healthServer := health.NewServer()
+	hv1.RegisterHealthServer(grpcServer, healthServer)
 
-    // 设置服务状态
-    healthServer.SetServingStatus("grpccomm.CommService", hv1.HealthCheckResponse_SERVING)
+	// 设置服务状态
+	healthServer.SetServingStatus("grpccomm.CommService", hv1.HealthCheckResponse_SERVING)
 
-    grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
+	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
 
-    return grpcServer.Serve(lis)
+	return grpcServer.Serve(lis)
 }
 
 // RegisterInfo 注册信息
 type RegisterInfo struct {
-    ctxInIndex    int // ctx 位于函数输入的位置,-1 表示无此输入参数
-    reqInIndex    int // req 位于函数输入的位置,-1 表示无此输入参数
-    headerInIndex int // header 位于函数输入的位置, -1 表示无此输入参数
-    commReqIndex  int // commReq 位于函数输入的位置，-1 表示无此输入参数
-    inNum         int
+	ctxInIndex    int // ctx 位于函数输入的位置,-1 表示无此输入参数
+	reqInIndex    int // req 位于函数输入的位置,-1 表示无此输入参数
+	headerInIndex int // header 位于函数输入的位置, -1 表示无此输入参数
+	commReqIndex  int // commReq 位于函数输入的位置，-1 表示无此输入参数
+	inNum         int
 
-    rspOutIndex     int // rsp 位于函数输出的位置，-1 表示无输此输出参数
-    errIndex        int // err 位于函数输出的位置，-1 表示无此输出参数
-    commRspOutIndex int // commRsp 位于函数输入位置，-1 表示无此输出参数
-    outNum          int
+	rspOutIndex     int // rsp 位于函数输出的位置，-1 表示无输此输出参数
+	errIndex        int // err 位于函数输出的位置，-1 表示无此输出参数
+	commRspOutIndex int // commRsp 位于函数输入位置，-1 表示无此输出参数
+	outNum          int
 
-    newBody      func() reflect.Value
-    newHeader    func() reflect.Value
-    call         func(in []reflect.Value) []reflect.Value
-    callFuncName string
-    reqName      string
+	newBody      func() reflect.Value
+	newHeader    func() reflect.Value
+	call         func(in []reflect.Value) []reflect.Value
+	callFuncName string
+	reqName      string
 }
 
 // PipeLineFunc 管道函数
@@ -306,55 +329,65 @@ type PipeLineFunc func(*grpccomm.CommRequest) error
 
 // Register 绑定函数
 func Register(reqBody interface{}, f interface{}) {
-    defaultService.Register(reqBody, f)
+	defaultService.Register(reqBody, f)
 }
 
 // ProxyService 反向代理服务
 func ProxyService(serviceName string, target interface{}, reqTypes ...interface{}) {
-    defaultService.ProxyService(serviceName, target, reqTypes...)
+	defaultService.ProxyService(serviceName, target, reqTypes...)
 }
 
 // ProxyInterface 反向代理接口
 func ProxyInterface(req interface{}, target interface{}) {
-    defaultService.ProxyInterface(req, target)
+	defaultService.ProxyInterface(req, target)
 }
 
 // Group 返回指定名称的接口组
 func Group(name string, pipes ...RequestPipeFunc) *InterfaceGroup {
-    return defaultService.Group(name, pipes...)
+	return defaultService.Group(name, pipes...)
 }
 
 // Run 启动默认服务
-func Run(host, errPrefix string, webOption *GrpcWebOption, grpcOpts ...grpc.ServerOption) error {
-    return defaultService.Run(host, errPrefix, webOption, grpcOpts...)
+func Run(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
+	return defaultService.Run(host, errPrefix, grpcOpts...)
+}
+
+// RunWeb 启动默认Web服务
+func RunWeb(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
+	return defaultService.RunWeb(host, errPrefix, grpcOpts...)
+}
+
+// RunWebTLS 启动默认WebTLS服务
+func RunWebTLS(host, errPrefix, certFile, keyFile string, grpcOpts ...grpc.ServerOption) error {
+	return defaultService.RunWebTLS(host, errPrefix, certFile, keyFile, grpcOpts...)
 }
 
 // DebugHttpHandler 返回GRPC调试处理
 func DebugHttpHandler() http.Handler {
-    return defaultService.DebugHttpHandler()
+	return defaultService.DebugHttpHandler()
 }
 
 // UseHook 使用钩子列表,靠前的钩子最先进入,最后出来
 func UseHook(hooks ...HookFunc) {
-    defaultService.UseHook(hooks...)
+	defaultService.UseHook(hooks...)
 }
 
 // Stop 停止服务
 func Stop() {
-    defaultService.Stop()
+	defaultService.Stop()
 }
 
 // New  新建服务
 func New() *Service {
-    return newService()
+	return newService()
 }
 
 // SetErrPrefix 设置错误码前缀
 func SetErrPrefix(errPrefix string) {
-    errPrefix = errPrefix
+	errPrefix = errPrefix
 }
 
 // DefaultService 返回默认的服务
 func DefaultService() *Service {
-    return defaultService
+	return defaultService
 }
