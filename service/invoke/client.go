@@ -545,9 +545,9 @@ func (client *client) getResp(cancel *context.CancelFunc) (*http.Response, error
 
 func (client *client) updateHystrix() {
 	hytrixCmd := client.hytrixCommand()
-	if _, exist, _ := hystrix.GetCircuit(hytrixCmd); exist {
-		return
-	}
+	//if _, exist, _ := hystrix.GetCircuit(hytrixCmd); exist {
+	//	return
+	//}
 
 	hystrix.ConfigureCommand(hytrixCmd, client.circuitConfig)
 }
