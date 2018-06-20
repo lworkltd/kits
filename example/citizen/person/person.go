@@ -6,9 +6,9 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/example/citizen/model"
 	loc "github.com/lworkltd/kits/example/location/model"
-	invokeutils"github.com/lworkltd/kits/utils/invoke"
 	"github.com/lworkltd/kits/service/invoke"
 	"github.com/lworkltd/kits/service/restful/code"
+	invokeutils "github.com/lworkltd/kits/utils/invoke"
 )
 
 type PersonReatimeInfo struct {
@@ -36,13 +36,13 @@ func GetPerson(cxt context.Context, age int8) ([]*PersonReatimeInfo, code.Error)
 		status, invokeerr := invoke.Name("kits-location").
 			Get("/v1/location").
 			Query("id", person.Id).
-			Hystrix(800,100,20).
+			Hystrix(800, 100, 20).
 			Exec(res)
 		cerr := invokeutils.ExtractHeader("kits-location", invokeerr, status, res, &location)
 		if cerr != nil {
 			logrus.WithFields(logrus.Fields{
 				"id":    person.Id,
-				"error": cerr.Error(),
+				"error": cerr.Message(),
 				"code":  cerr.Mcode(),
 			}).Warn("Read person location failed")
 			continue

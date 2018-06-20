@@ -3,7 +3,6 @@ package invoke
 import (
 	"context"
 	"net/http"
-	"github.com/afex/hystrix-go/hystrix"
 )
 
 var doLogger = true
@@ -14,11 +13,11 @@ type DiscoveryFunc func(name string) ([]string, []string, error)
 // Option 用于初始化引擎的参数
 type (
 	Option struct {
-		Discover        DiscoveryFunc
-		LoadBalanceMode string
-		UseTracing      bool
-		UseCircuit      bool
-		DoLogger        bool
+		Discover                     DiscoveryFunc
+		LoadBalanceMode              string
+		UseTracing                   bool
+		UseCircuit                   bool
+		DoLogger                     bool
 		DefaultTimeout               int
 		DefaultMaxConcurrentRequests int
 		DefaultErrorPercentThreshold int
@@ -39,7 +38,7 @@ type (
 		Delete(string) Client         // DELETE
 		Method(string, string) Client // 自定义方法
 
-		Name() string                    // 服务名称
+		Name() string // 服务名称
 		UseTracing() bool
 		UseCircuit() bool
 		Remote() (string, string, error) // 获取一个服务地址和ID
@@ -47,21 +46,21 @@ type (
 
 	// Client 客户端
 	Client interface {
-		Headers(map[string]string) Client    // 添加头部
-		Header(string, string) Client        // 添加头部
-		Query(string, string) Client         // 添加查询参数
-		QueryArray(string, ...string) Client // 添加查询参数
-		Queries(map[string][]string) Client  // 添加查询参数
-		Route(string, string) Client         // 添加路径参数
-		Routes(map[string]string) Client     // 添加路径参数
-		Json(interface{}) Client             // 添加Json消息体
-		Body([]byte) Client             	 // 添加byte消息体
+		Headers(map[string]string) Client                                 // 添加头部
+		Header(string, string) Client                                     // 添加头部
+		Query(string, string) Client                                      // 添加查询参数
+		QueryArray(string, ...string) Client                              // 添加查询参数
+		Queries(map[string][]string) Client                               // 添加查询参数
+		Route(string, string) Client                                      // 添加路径参数
+		Routes(map[string]string) Client                                  // 添加路径参数
+		Json(interface{}) Client                                          // 添加Json消息体
+		Body([]byte) Client                                               // 添加byte消息体
 		Hystrix(timeOutMillisecond, maxConn, thresholdPercent int) Client //添加熔断参数
-		Tls() Client                         // 使用HTTPS
-		Context(context.Context) Client      // 上下文
-		Fallback(func(error) error) Client   // 失败触发器
-		Exec(interface{}) (int, error)       // 执行请求
-		Response() (*http.Response, error)   // 执行请求，返回标准的http.Response
+		Tls() Client                                                      // 使用HTTPS
+		Context(context.Context) Client                                   // 上下文
+		Fallback(func(error) error) Client                                // 失败触发器
+		Exec(interface{}) (int, error)                                    // 执行请求
+		Response() (*http.Response, error)                                // 执行请求，返回标准的http.Response
 	}
 )
 
@@ -89,19 +88,14 @@ func Init(option *Option) error {
 		}
 		if option.DefaultMaxConcurrentRequests < 30 {
 			option.DefaultMaxConcurrentRequests = 30
-		}else if option.DefaultMaxConcurrentRequests > 10000 {
+		} else if option.DefaultMaxConcurrentRequests > 10000 {
 			option.DefaultMaxConcurrentRequests = 10000
 		}
 		if option.DefaultErrorPercentThreshold < 5 {
 			option.DefaultErrorPercentThreshold = 5
-		}else if option.DefaultErrorPercentThreshold > 100 {
+		} else if option.DefaultErrorPercentThreshold > 100 {
 			option.DefaultErrorPercentThreshold = 100
 		}
-		hystrix.ConfigureCommand("DEFAULT", hystrix.CommandConfig{		//添加一个默认的熔断策略
-			Timeout:               option.DefaultTimeout,
-			MaxConcurrentRequests: option.DefaultMaxConcurrentRequests,
-			ErrorPercentThreshold: option.DefaultErrorPercentThreshold,
-		})
 	}
 	return eng.Init(option)
 }

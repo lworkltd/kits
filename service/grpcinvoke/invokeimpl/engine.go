@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/afex/hystrix-go/hystrix"
 	"github.com/lworkltd/kits/service/grpcinvoke"
 )
 
@@ -17,9 +19,11 @@ type engine struct {
 	lbMode     string
 	useTracing bool
 	useCircuit bool
+	doLogger   bool
 
-	mutex      sync.RWMutex
-	serviceMap map[string]grpcinvoke.Service
+	hystrixInfo hystrix.CommandConfig
+	mutex       sync.RWMutex
+	serviceMap  map[string]grpcinvoke.Service
 }
 
 // Init 初始化引擎
@@ -28,6 +32,11 @@ func (engine *engine) Init(option *grpcinvoke.Option) error {
 	engine.lbMode = option.LoadBalanceMode
 	engine.useTracing = option.UseTracing
 	engine.useCircuit = option.UseCircuit
+	engine.hystrixInfo.ErrorPercentThreshold = option.DefaultErrorPercentThreshold
+	engine.hystrixInfo.MaxConcurrentRequests = option.DefaultMaxConcurrentRequests
+	engine.hystrixInfo.Timeout = int(option.DefaultTimeout / time.Millisecond)
+	engine.doLogger = option.DoLogger
+
 	return nil
 }
 
@@ -89,7 +98,9 @@ func (engine *engine) newService(serviceName string, discovery grpcinvoke.Discov
 		useTracing:        engine.useTracing,
 		useCircuit:        engine.useCircuit,
 		connLb:            newGrpcConnBalancer(serviceName, 4, discovery),
+		hystrixInfo:       engine.hystrixInfo,
 		remove:            func() { engine.removeGrpcService(serviceName) },
+		doLogger:          engine.doLogger,
 	}
 }
 
@@ -100,6 +111,7 @@ func (engine *engine) newAddr(addr string, freeConnAfterUsed bool) grpcinvoke.Se
 		freeConnAfterUsed: freeConnAfterUsed,
 		useTracing:        engine.useTracing,
 		useCircuit:        engine.useCircuit,
+		hystrixInfo:       engine.hystrixInfo,
 		connLb:            newGrpcConnBalancer(addr, 4, createAddrDiscovery(addr)),
 		remove:            func() { engine.removeGrpcService(addr) },
 	}

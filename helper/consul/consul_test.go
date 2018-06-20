@@ -143,3 +143,105 @@ func TestServerTypeString(t *testing.T) {
 		})
 	}
 }
+
+func TestConsulVersionLt(t *testing.T) {
+	type args struct {
+		ver2 string
+	}
+	tests := []struct {
+		name    string
+		ver1    consulVersion
+		args    args
+		want    bool
+		wantErr bool
+	}{
+		// true
+		{
+			ver1: "1.0.5",
+			args: args{
+				ver2: "1.0.6",
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			ver1: "0.9.6",
+			args: args{
+				ver2: "1.0.6",
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			ver1: "1.0.6",
+			args: args{
+				ver2: "1.0.10",
+			},
+			want:    true,
+			wantErr: false,
+		},
+
+		// false
+		{
+			ver1: "2.0.5",
+			args: args{
+				ver2: "1.0.6",
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			ver1: "1.0.10",
+			args: args{
+				ver2: "1.0.6",
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			ver1: "1.2",
+			args: args{
+				ver2: "1.0.6",
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			ver1: "1.0.6",
+			args: args{
+				ver2: "1.0.6",
+			},
+			want:    false,
+			wantErr: false,
+		},
+		// error
+		{
+			ver1: "1.a",
+			args: args{
+				ver2: "1.0.6",
+			},
+			want:    false,
+			wantErr: true,
+		},
+		{
+			ver1: "1.0",
+			args: args{
+				ver2: "1.0.",
+			},
+			want:    false,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.ver1.Lt(tt.args.ver2)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("consulVersion.Lt() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("consulVersion.Lt() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

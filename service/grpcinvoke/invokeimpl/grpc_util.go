@@ -1,6 +1,7 @@
 package invokeimpl
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -137,12 +138,18 @@ func dialGrpcConnByDiscovery(target string, discovery grpcinvoke.DiscoveryFunc) 
 	// 实现将服务名到地址的映射关系
 	balancer := grpc.RoundRobin(newResolveWatcher(target, discovery))
 
+	dialCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
 	// GRPC内部会使用balancer取获取地址，而balancer会根据ResolveWatcher去初始化和更新服务器的地址
-	conn, err := grpc.Dial(
+	conn, err := grpc.DialContext(
+		dialCtx,
 		target,
 		grpc.WithInsecure(),
 		grpc.WithBalancer(balancer),
+		// grpc.WithBlock(),
 	)
+	time.Sleep(time.Millisecond * 200)
 	if err != nil {
 		return nil, err
 	}

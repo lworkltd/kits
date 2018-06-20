@@ -9,6 +9,7 @@ import (
 	context "golang.org/x/net/context"
 
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
+	"github.com/lworkltd/kits/service/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 
@@ -65,6 +66,7 @@ func init() {
 func newService() *Service {
 	service := &Service{}
 	service.Group(defaultGroupName)
+	service.registerVersion()
 
 	return service
 }
@@ -106,6 +108,12 @@ func (service *Service) RpcRequest(ctx context.Context, commReq *grpccomm.CommRe
 // UseHook 增加Hook处理
 func (service *Service) UseHook(hooks ...HookFunc) {
 	service.hooks = append(service.hooks, hooks...)
+}
+
+func (service *Service) registerVersion() {
+	service.Register("_AppVersion", func() (*version.VersionResponse, error) {
+		return version.GetVersionInfo(), nil
+	})
 }
 
 // regProxy 注册一条代理规则
@@ -304,6 +312,11 @@ func DebugHttpHandler() http.Handler {
 // UseHook 使用钩子列表,靠前的钩子最先进入,最后出来
 func UseHook(hooks ...HookFunc) {
 	defaultService.UseHook(hooks...)
+}
+
+// Stop 停止服务
+func Stop() {
+	defaultService.Stop()
 }
 
 // New  新建服务

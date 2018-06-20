@@ -40,13 +40,13 @@ func HookRecovery(f HandlerFunc) HandlerFunc {
 				if is {
 					// 此错误一般由间接调用参数或一些通用错误残生
 					if cerr.Mcode() != "" {
-						commRsp = newErrorRsp(cerr.Mcode(), cerr.Error())
+						commRsp = newErrorRsp(cerr.Mcode(), cerr.Message())
 						return
 					}
 					// 此类错误一般由服务内部参数，返回了一个数字类型的错误码
 					commRsp = newErrorRsp(
-						fmt.Sprintf("%s%d", mcodePrefix, cerr.Code()),
-						cerr.Error())
+						fmt.Sprintf("%s_%d", mcodePrefix, cerr.Code()),
+						cerr.Message())
 
 					return
 				}
@@ -138,7 +138,7 @@ func HookReportMonitor(reportor report.RpcReporter) HookFunc {
 				code = rsp.Mcode
 			}
 
-			reportor.Report(commReq.ReqInterface, commReq.ReqSercice, "", code, time.Now().Sub(since))
+			reportor.Report(commReq.ReqInterface, "", code, time.Now().Sub(since))
 
 			return rsp
 		}

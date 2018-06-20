@@ -76,7 +76,8 @@ func TestClientExec(t *testing.T) {
 		discovery: func(string) ([]string, []string, error) {
 			return []string{"127.0.0.1:26403"}, []string{"service-id"}, nil
 		},
-		name: "test-service",
+		name:       "test-service",
+		useCircuit: true,
 	}
 	var response Response
 	_, err := service.Post("/v1/country/{country}/city/{city}/street/{street}").

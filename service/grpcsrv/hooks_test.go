@@ -15,7 +15,7 @@ func TestHookRecover(t *testing.T) {
 		f HandlerFunc
 	}
 
-	mcodePrefix = "ERROR_"
+	mcodePrefix = "ERROR"
 	tests := []struct {
 		name      string
 		args      args

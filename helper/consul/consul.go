@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"strconv"
 	"strings"
 
 	"fmt"
@@ -126,7 +127,96 @@ func (client *Client) registerHttp(option *RegisterOption) error {
 	})
 }
 
+// Version return the agent version
+func (client *Client) Version() (string, error) {
+	selfInfo, err := client.cli.Agent().Self()
+	if err != nil {
+		return "", err
+	}
+	selfConfig, exist := selfInfo["Config"]
+	if !exist {
+		return "", nil
+	}
+	d, exist := selfConfig["Version"]
+	if !exist {
+		return "", nil
+	}
+	ver, ok := d.(string)
+	if !ok {
+		return "", nil
+	}
+
+	return ver, nil
+}
+
+func (client *Client) registerTcp(option *RegisterOption) error {
+	tcpStr := fmt.Sprintf("%v:%v", option.Ip, option.Port)
+	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
+		ID:      option.Id,   // SERVICE_ID
+		Name:    option.Name, // 模块定义 fw_service
+		Port:    option.Port, // 端口
+		Tags:    option.Tags, // 服务标签
+		Address: option.Ip,   // 服务地址
+		Check: &api.AgentServiceCheck{
+			TCP:      tcpStr,
+			Interval: option.CheckInterval,
+			Timeout:  option.CheckTimeout,
+			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
+		}, // 健康检测
+	})
+}
+
+type consulVersion string
+
+func versionToInts(v string) ([3]int, error) {
+	vers := [3]int{}
+	words := strings.Split(v, ".")
+	for i, word := range words {
+		if i >= 3 {
+			break
+		}
+
+		n, err := strconv.Atoi(word)
+		if err != nil {
+			return vers, err
+		}
+		vers[i] = n
+	}
+
+	return vers, nil
+}
+
+func (ver1 consulVersion) Lt(ver2 string) (bool, error) {
+	va, err := versionToInts(string(ver1))
+	if err != nil {
+		return false, fmt.Errorf("bad version,ver1=%v", ver1)
+	}
+	vb, err := versionToInts(string(ver2))
+	if err != nil {
+		return false, fmt.Errorf("bad version,ver2=%v", ver2)
+	}
+
+	for i := range va {
+		if va[i] == vb[i] {
+			continue
+		}
+		return va[i] < vb[i], nil
+	}
+
+	return false, nil
+}
+
 func (client *Client) registerGrpc(option *RegisterOption) error {
+	ver, err := client.Version()
+	if err != nil {
+		return err
+	}
+
+	// 低版本使用TCP注册
+	if ok, err := consulVersion(ver).Lt("1.0.6"); ok || err != nil {
+		return client.registerTcp(option)
+	}
+
 	return client.cli.Agent().ServiceRegister(&api.AgentServiceRegistration{
 		ID:      option.Id,
 		Name:    option.Name,

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcinvoke"
@@ -32,9 +33,11 @@ type grpcClient struct {
 	hystrixInfo hystrix.CommandConfig
 	useTracing  bool
 	useCircuit  bool
+	doLogger    bool
 	ctx         context.Context
 
 	freeConnAfterUsed bool
+	since             time.Time
 }
 
 func newErrorGrpcClient(err error) *grpcClient {
@@ -42,17 +45,30 @@ func newErrorGrpcClient(err error) *grpcClient {
 }
 
 func (client *grpcClient) Header(reqHeader proto.Message) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
 	client.header = reqHeader
 	return client
 }
 
 func (client *grpcClient) ReqService(reqService string) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
 	client.reqService = reqService
-
 	return client
 }
 
 func (client *grpcClient) Body(reqBody proto.Message) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
+	if reqBody == nil {
+		return client
+	}
+
 	client.body = reqBody
 
 	if client.callName == "" {
@@ -64,6 +80,9 @@ func (client *grpcClient) Body(reqBody proto.Message) grpcinvoke.Client {
 }
 
 func (client *grpcClient) Fallback(f func(error) error) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
 	client.fallback = f
 	return client
 }
@@ -154,26 +173,45 @@ func (client *grpcClient) CommRequest(in *grpccomm.CommRequest) *grpccomm.CommRe
 	return rsp
 }
 
-func (client *grpcClient) catchAndReturnError(originErr error) error {
+func (client *grpcClient) catchAndReturnError(originErr error) code.Error {
+	if originErr == nil {
+		return nil
+	}
+	var (
+		cerr code.Error
+	)
+
 	if err, yes := originErr.(code.Error); yes {
-		failedReport := &monitor.ReqFailedCountDimension{
-			SName: client.serviceName,
-			TName: client.reqService,
-			Infc:  fmt.Sprintf("ACTIVE_GET_%s", client.callName),
-			Code:  err.Mcode(),
-		}
-		monitor.ReportReqFailed(failedReport)
+		client.doLog(err)
+
+		monitor.CommMonitorReport(
+			err.Mcode(),
+			monitor.GetCurrentServerName(),
+			monitor.GetCurrentServerIP(),
+			client.serviceName,
+			"",
+			fmt.Sprintf("ACTIVE_GRPC_%s", client.callName),
+			client.since,
+		)
+		return err
 	}
 
-	return originErr
+	cerr = code.NewMcode("UNKOWN_ERROR", originErr.Error())
+
+	client.doLog(cerr)
+
+	return cerr
 }
 
 func (client *grpcClient) Context(ctx context.Context) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
 	client.ctx = ctx
 	return client
 }
 
-func (client *grpcClient) Response(out proto.Message) error {
+func (client *grpcClient) Response(out proto.Message) code.Error {
 	if client.err != nil {
 		return client.catchAndReturnError(client.err)
 	}
@@ -192,7 +230,7 @@ func (client *grpcClient) Response(out proto.Message) error {
 	var (
 		rsp *grpccomm.CommResponse
 	)
-	since := time.Now()
+
 	grpcClient := grpccomm.NewCommServiceClient(client.conn)
 	if !client.useCircuit {
 		rsp, err = grpcClient.RpcRequest(client.ctx, in)
@@ -226,33 +264,28 @@ func (client *grpcClient) Response(out proto.Message) error {
 		return client.catchAndReturnError(code.NewMcode("GRPC_ERROR", err.Error()))
 	}
 
-	if rsp.Mcode != "" {
-		return client.catchAndReturnError(code.NewMcode(rsp.Mcode, rsp.Message))
+	if !rsp.Result {
+		return client.catchAndReturnError(rsp.CodeError())
 	}
 
 	if out != nil {
 		err := proto.Unmarshal(rsp.Body, out)
 		if err != nil {
-			return client.catchAndReturnError(code.NewMcode("INVOKE_BAD_GRPC_BODY", "bad grpc response body"))
+			return client.catchAndReturnError(code.NewMcode("GRPC_BAD_BODY", "bad grpc response body"))
 		}
 	}
-	cost := time.Now().Sub(since)
 
-	// 上报成功
-	monitor.ReportReqSuccess(&monitor.ReqSuccessCountDimension{
-		SName: monitor.GetCurrentServerName(),
-		SIP:   monitor.GetCurrentServerIP(),
-		TName: client.reqService,
-		Infc:  fmt.Sprintf("ACTIVE_GET_%s", client.callName),
-	})
+	client.doLog(nil)
 
-	// 上报成功时间延迟
-	monitor.ReportSuccessAvgTime(&monitor.ReqSuccessAvgTimeDimension{
-		SName: monitor.GetCurrentServerName(),
-		SIP:   monitor.GetCurrentServerIP(),
-		TName: client.reqService,
-		Infc:  fmt.Sprintf("ACTIVE_GET_%s", client.callName),
-	}, int64(cost/time.Millisecond))
+	monitor.CommMonitorReport(
+		"",
+		monitor.GetCurrentServerName(),
+		monitor.GetCurrentServerIP(),
+		client.serviceName,
+		"",
+		fmt.Sprintf("ACTIVE_GRPC_%s", client.callName),
+		client.since,
+	)
 
 	return nil
 }
@@ -263,21 +296,68 @@ func (client *grpcClient) hytrixCommand() string {
 
 func (client *grpcClient) updateHystrix() {
 	if client.useCircuit {
-		command := client.hytrixCommand()
-		if "DEFAULT" != command {
-			hystrix.ConfigureCommand(command, client.hystrixInfo)
+		hytrixCmd := client.hytrixCommand()
+		if _, exist, _ := hystrix.GetCircuit(hytrixCmd); exist {
+			return
 		}
+
+		hystrix.ConfigureCommand(hytrixCmd, client.hystrixInfo)
 	}
 }
 
 // UseCircuit 启用熔断
 func (client *grpcClient) UseCircuit(enable bool) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
 	client.useCircuit = enable
 	return client
 }
 
+func (client *grpcClient) doLog(err code.Error) {
+	if !client.doLogger {
+		return
+	}
+
+	cost := time.Now().Sub(client.since)
+	log := logrus.WithFields(logrus.Fields{
+		"reqName":    client.callName,
+		"reqService": client.serviceName,
+		"latency":    cost,
+	})
+
+	if logrus.StandardLogger().Level >= logrus.DebugLevel {
+		if client.body != nil {
+			log = log.WithFields(logrus.Fields{
+				"body": client.body,
+			})
+		}
+
+		if client.header != nil {
+			log = log.WithFields(logrus.Fields{
+				"header": client.header,
+			})
+		}
+	}
+
+	if err != nil {
+		log = log.WithFields(logrus.Fields{
+			"error": err.Error(),
+		})
+		log.Error("GRPC INVOKE FAILED")
+		return
+	}
+
+	log.Info("GRPC INVOKE DONE")
+}
+
 // MaxConcurrent 最大并发请求
 func (client *grpcClient) MaxConcurrent(maxConn int) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
 	if maxConn < 30 {
 		maxConn = 30
 	} else if maxConn > 10000 {
@@ -289,6 +369,10 @@ func (client *grpcClient) MaxConcurrent(maxConn int) grpcinvoke.Client {
 
 // Timeout 请求超时立即返回时间
 func (client *grpcClient) Timeout(timeout time.Duration) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
 	if timeout < 10*time.Millisecond {
 		timeout = time.Millisecond * 10
 	} else if timeout > 10000*time.Millisecond {
@@ -302,6 +386,10 @@ func (client *grpcClient) Timeout(timeout time.Duration) grpcinvoke.Client {
 
 // PercentThreshold 最大错误容限
 func (client *grpcClient) PercentThreshold(thresholdPercent int) grpcinvoke.Client {
+	if client.err != nil {
+		return client
+	}
+
 	if thresholdPercent < 5 {
 		thresholdPercent = 5
 	} else if thresholdPercent > 100 {
@@ -310,5 +398,10 @@ func (client *grpcClient) PercentThreshold(thresholdPercent int) grpcinvoke.Clie
 
 	client.hystrixInfo.RequestVolumeThreshold = thresholdPercent
 
+	return client
+}
+
+func (client *grpcClient) DoLogger(doLogger bool) grpcinvoke.Client {
+	client.doLogger = true
 	return client
 }
