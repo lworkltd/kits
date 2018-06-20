@@ -8,8 +8,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/Sirupsen/logrus"
-
 	"github.com/BurntSushi/toml"
 	"github.com/lworkltd/kits/utils/tags"
 )
@@ -249,9 +247,6 @@ func parseEnv(v interface{}, parseStatus *parseStatus) (err error) {
 	parseEnv0(reflect.ValueOf(v), parseStatus, &parseStatus.root)
 	folderToText(&parseStatus.Buffer, &parseStatus.root)
 	text := parseStatus.Buffer.String()
-	logrus.WithFields(logrus.Fields{
-		"text": text,
-	}).Info("Generate toml from env")
 	_, err = toml.Decode(text, v)
 	return err
 }
@@ -310,13 +305,7 @@ func parseEnv0(v reflect.Value, parseStatus *parseStatus, fd *folder) (err error
 			continue
 		}
 		key := tag
-		envKey := parseStatus.routes(tag)
 		value, exist := syscall.Getenv(parseStatus.routes(tag))
-		logrus.WithFields(logrus.Fields{
-			"environmentKey": envKey,
-			"value":          value,
-			"type":           field.Type().String(),
-		}).Infoln("Read environment key")
 		if !exist {
 			continue
 		}
