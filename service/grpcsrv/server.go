@@ -384,7 +384,7 @@ func New() *Service {
 
 // SetErrPrefix 设置错误码前缀
 func SetErrPrefix(errPrefix string) {
-	errPrefix = errPrefix
+	mcodePrefix = errPrefix
 }
 
 // DefaultService 返回默认的服务
