@@ -64,14 +64,15 @@ type Service struct {
 	TraceEnabled     bool `toml:"trace_enabled"`      // 启用OpenTrace,需要Zipkin配置
 	AccessLogEnabled bool `toml:"access_log_enabled"` // 访问日志启用
 
-	Reportable    bool     `toml:"reportable"`     // 启用上报
-	ReportIp      string   `toml:"report_ip"`      // 上报IP
-	ReportTags    []string `toml:"report_tags"`    // 上报的标签
-	ReportName    string   `toml:"report_name"`    // 上报名字
-	ReportId      string   `toml:"report_id"`      // 上报的ID
-	ReportPort    int16    `toml:"report_port"`    // 上报端口，适用于容器场景，如果没有则会从Host中解析
-	CheckInterval string   `toml:"check_interval"` // consul健康检测间隔，默认 "5s"
-	CheckTimeout  string   `toml:"check_timeout"`  // consul健康检测超时，默认 "3s"
+	SnowSlideLimit int32    `toml:"snow_slide_limit"` // 过载保护限制
+	Reportable     bool     `toml:"reportable"`       // 启用上报
+	ReportIp       string   `toml:"report_ip"`        // 上报IP
+	ReportTags     []string `toml:"report_tags"`      // 上报的标签
+	ReportName     string   `toml:"report_name"`      // 上报名字
+	ReportId       string   `toml:"report_id"`        // 上报的ID
+	ReportPort     int16    `toml:"report_port"`      // 上报端口，适用于容器场景，如果没有则会从Host中解析
+	CheckInterval  string   `toml:"check_interval"`   // consul健康检测间隔，默认 "5s"
+	CheckTimeout   string   `toml:"check_timeout"`    // consul健康检测超时，默认 "3s"
 
 	PprofEnabled    bool   `toml:"pprof_enabled"`     // 启用PPROF
 	PprofPathPrefix string `toml:"pprof_path_prefix"` // PPROF的路径前缀,

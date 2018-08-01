@@ -5,7 +5,7 @@ import (
 	"github.com/lworkltd/kits/example/citizen/api/server"
 	"github.com/lworkltd/kits/example/citizen/conf"
 	"github.com/lworkltd/kits/example/citizen/model"
-	"gopkg.in/mgo.v2"
+	mgo "gopkg.in/mgo.v2"
 )
 
 func panicErr(err error) {
