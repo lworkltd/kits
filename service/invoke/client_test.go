@@ -18,6 +18,7 @@ func TestClientExec(t *testing.T) {
 		Age  int    `json:"age"`
 	}
 
+	doLoggerParam = true
 	go func() {
 		http.HandleFunc("/v1/country/china/city/chengdu/street/longjiangroad", func(w http.ResponseWriter, r *http.Request) {
 			if err := r.ParseForm(); err != nil {
