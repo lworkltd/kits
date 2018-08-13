@@ -175,6 +175,12 @@ func main() {
 		http.ListenAndServe(":8080", nil)
 	}()
 
-	// 监听
-	grpcsrv.Run("0.0.0.0:8090", "TESTECHO_")
+	// 后端grpc服务监听
+	// grpcsrv.Run("0.0.0.0:8090", "TESTECHO_")
+
+	// 启动WebServer
+	// grpcsrv.RunWeb("0.0.0.0:8090", "TESTECHO_")
+
+	// 启动WebServer TLS
+	grpcsrv.RunWebTLS("0.0.0.0:8090", "TESTECHO_", "lwork.crt", "lwork.key")
 }

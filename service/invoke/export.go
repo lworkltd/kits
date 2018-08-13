@@ -5,7 +5,10 @@ import (
 	"net/http"
 )
 
-var doLogger = true
+var (
+	doLogger      = true
+	doLoggerParam = false
+)
 
 // DiscoveryFunc 服务发现的函数
 type DiscoveryFunc func(name string) ([]string, []string, error)
@@ -13,24 +16,29 @@ type DiscoveryFunc func(name string) ([]string, []string, error)
 // Option 用于初始化引擎的参数
 type (
 	Option struct {
-		Discover                     DiscoveryFunc
-		LoadBalanceMode              string
-		UseTracing                   bool
-		UseCircuit                   bool
-		DoLogger                     bool
+		Discover        DiscoveryFunc
+		LoadBalanceMode string
+		UseTracing      bool
+		UseCircuit      bool
+
+		// 日志打印
+		DoLogger bool
+		// 日志打印时打印请求参数，包括query,route,header
+		DoLoggerParam bool
+
 		DefaultTimeout               int
 		DefaultMaxConcurrentRequests int
 		DefaultErrorPercentThreshold int
 	}
 
-	// IEngine 引擎
+	// Engine 引擎
 	Engine interface {
 		Service(string) Service // 获取一个服务
 		Addr(string) Service    // 创建一个匿名服务
 		Init(*Option) error     // 初始化
 	}
 
-	// IService 服务
+	// Service 服务
 	Service interface {
 		Get(string) Client            // GET
 		Post(string) Client           // POST
@@ -69,6 +77,7 @@ var eng Engine = newEngine()
 // Init 初始化
 func Init(option *Option) error {
 	doLogger = option.DoLogger
+	doLoggerParam = option.DoLoggerParam
 	if true == option.UseCircuit {
 		//未设置时的默认值
 		if 0 == option.DefaultTimeout {

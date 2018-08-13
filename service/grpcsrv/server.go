@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	hv1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
@@ -173,23 +174,70 @@ func (service *Service) newGroup(name string, pipes ...RequestPipeFunc) (*Interf
 	return group, !exist
 }
 
+// RunWebTLS 启动WebTLS服务
+func (service *Service) RunWebTLS(host, errPrefix, certFile, keyFile string, grpcOpts ...grpc.ServerOption) error {
+	mcodePrefix = errPrefix
+
+	// 构建Grpc服务
+	grpcServer := makeCommServer(nil, grpcOpts...)
+	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
+	service.server = grpcServer
+
+	// 构建WebServer对象
+	wrappedServer := grpcweb.WrapServer(grpcServer)
+	handler := func(resp http.ResponseWriter, req *http.Request) {
+		wrappedServer.ServeHTTP(resp, req)
+	}
+	httpServer := http.Server{
+		Addr:    host,
+		Handler: http.HandlerFunc(handler),
+	}
+
+	// 启动服务
+	return httpServer.ListenAndServeTLS(certFile, keyFile)
+}
+
+// RunWeb 启动Web服务
+func (service *Service) RunWeb(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
+	mcodePrefix = errPrefix
+
+	// 构建Grpc服务
+	grpcServer := makeCommServer(nil, grpcOpts...)
+	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
+	service.server = grpcServer
+
+	// 构建WebServer对象
+	wrappedServer := grpcweb.WrapServer(grpcServer)
+	handler := func(resp http.ResponseWriter, req *http.Request) {
+		wrappedServer.ServeHTTP(resp, req)
+	}
+	httpServer := http.Server{
+		Addr:    host,
+		Handler: http.HandlerFunc(handler),
+	}
+
+	// 启动服务
+	return httpServer.ListenAndServe()
+}
+
 // Run 启动服务
 func (service *Service) Run(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
 	mcodePrefix = errPrefix
+
+	// 注册Grpc服务
+	grpcServer := makeCommServer(nil, grpcOpts...)
+	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
+	service.server = grpcServer
 
 	lis, err := net.Listen("tcp", host)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
-	grpcServer := makeCommServer(nil, grpcOpts...)
-	grpccomm.RegisterCommServiceServer(grpcServer, defaultService)
 
 	// 注册健康服务
 	healthServer := health.NewServer()
 	hv1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("grpccomm.CommService", hv1.HealthCheckResponse_SERVING)
-
-	service.server = grpcServer
 
 	return grpcServer.Serve(lis)
 }
@@ -304,6 +352,16 @@ func Run(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
 	return defaultService.Run(host, errPrefix, grpcOpts...)
 }
 
+// RunWeb 启动默认Web服务
+func RunWeb(host, errPrefix string, grpcOpts ...grpc.ServerOption) error {
+	return defaultService.RunWeb(host, errPrefix, grpcOpts...)
+}
+
+// RunWebTLS 启动默认WebTLS服务
+func RunWebTLS(host, errPrefix, certFile, keyFile string, grpcOpts ...grpc.ServerOption) error {
+	return defaultService.RunWebTLS(host, errPrefix, certFile, keyFile, grpcOpts...)
+}
+
 // DebugHttpHandler 返回GRPC调试处理
 func DebugHttpHandler() http.Handler {
 	return defaultService.DebugHttpHandler()
@@ -326,7 +384,7 @@ func New() *Service {
 
 // SetErrPrefix 设置错误码前缀
 func SetErrPrefix(errPrefix string) {
-	errPrefix = errPrefix
+	mcodePrefix = errPrefix
 }
 
 // DefaultService 返回默认的服务

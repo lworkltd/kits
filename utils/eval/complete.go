@@ -2,8 +2,6 @@ package eval
 
 import (
 	"reflect"
-
-	"github.com/Sirupsen/logrus"
 )
 
 func complete(v interface{}) error {
@@ -19,11 +17,6 @@ func completeString(v reflect.Value) error {
 	if newString == v.String() {
 		return nil
 	}
-
-	logrus.WithFields(logrus.Fields{
-		"from": v.String(),
-		"to":   newString,
-	}).Debug("Explain")
 
 	v.SetString(newString)
 	return nil

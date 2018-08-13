@@ -22,6 +22,11 @@ import (
 	logutils "github.com/lworkltd/kits/utils/log"
 )
 
+var (
+	// DefaultSnowSlideLimit  默认过载保护
+	DefaultSnowSlideLimit int32 = 20000
+)
+
 // Wrapper 用于对请求返回结果进行封装的类
 // TODO:需要增加单元测试 wrapper_test.go
 type Wrapper struct {
@@ -38,6 +43,8 @@ type Wrapper struct {
 	serviceId        string
 	serviceLogLevel  logrus.Level
 	serviceLogWriter io.Writer
+
+	snowSlide *SnowSlide
 }
 
 type Option struct {
@@ -45,9 +52,12 @@ type Option struct {
 	Mode        string
 	LogLevel    string
 	LogFilePath string
+
+	// SnowSlideLimit 过载保护数，<=0 时，不受限，大于0时，限制秒内最大请求数
+	SnowSlideLimit int32
 }
 
-// NewWrapper 创建一个新的wrapper
+// New 创建一个新的wrapper
 func New(option *Option) *Wrapper {
 	// 设置日志输出IO流，若未配置使用os.Stderr
 	logWriter := os.Stderr
@@ -59,6 +69,7 @@ func New(option *Option) *Wrapper {
 			logWriter = file
 		}
 	}
+
 	// 设置日志等级，若未配置，使用logrus.InfoLevel
 	logLevel := logrus.InfoLevel
 	if option.LogLevel != "" {
@@ -70,6 +81,16 @@ func New(option *Option) *Wrapper {
 		}
 	}
 
+	//  初始化过载保护
+	var snowSlide *SnowSlide
+	if option.SnowSlideLimit <= 0 {
+		option.SnowSlideLimit = DefaultSnowSlideLimit
+	}
+	snowSlide = &SnowSlide{
+		LimitCnt: option.SnowSlideLimit,
+		Service:  option.Prefix,
+	}
+
 	w := &Wrapper{
 		mcodePrefix:      option.Prefix,
 		serviceLogLevel:  logLevel,
@@ -79,6 +100,7 @@ func New(option *Option) *Wrapper {
 				return new(Response)
 			},
 		},
+		snowSlide: snowSlide,
 	}
 
 	return w
@@ -230,7 +252,16 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 			}
 		}()
 
-		data, cerr = f(serviceCtx, httpCtx)
+		// 过载保护
+		if wrapper.snowSlide != nil {
+			cerr = wrapper.snowSlide.Check()
+			if cerr == nil {
+				data, cerr = f(serviceCtx, httpCtx)
+			}
+		} else {
+			data, cerr = f(serviceCtx, httpCtx)
+		}
+
 		reportProcessResultToMonitor(cerr, httpCtx, since, registPath)
 	}
 }

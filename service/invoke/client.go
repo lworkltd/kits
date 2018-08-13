@@ -318,13 +318,17 @@ func (client *client) Exec(out interface{}) (int, error) {
 			"service_id": client.serverid,
 			"method":     client.method,
 			"path":       client.path,
-			"queries":    client.queries,
-			"headers":    client.headers,
-			"routes":     client.routes,
 			"endpoint":   client.host,
 			"cost":       time.Since(client.createTime),
-			"payload":    client.logFields["payload"],
 		}
+
+		if doLoggerParam {
+			fileds["headers"] = client.headers
+			fileds["queries"] = client.queries
+			fileds["routes"] = client.routes
+			fileds["payload"] = client.payload
+		}
+
 		if err != nil {
 			logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
 		} else {
@@ -545,9 +549,9 @@ func (client *client) getResp(cancel *context.CancelFunc) (*http.Response, error
 
 func (client *client) updateHystrix() {
 	hytrixCmd := client.hytrixCommand()
-	if _, exist, _ := hystrix.GetCircuit(hytrixCmd); exist {
-		return
-	}
+	//if _, exist, _ := hystrix.GetCircuit(hytrixCmd); exist {
+	//	return
+	//}
 
 	hystrix.ConfigureCommand(hytrixCmd, client.circuitConfig)
 }
@@ -585,12 +589,15 @@ func (client *client) Response() (*http.Response, error) {
 			"service_id": client.serverid,
 			"method":     client.method,
 			"path":       client.path,
-			"queries":    client.queries,
-			"headers":    client.headers,
-			"routes":     client.routes,
 			"endpoint":   client.host,
 			"cost":       time.Since(client.createTime),
-			"payload":    client.logFields["payload"],
+		}
+
+		if doLoggerParam {
+			fileds["headers"] = client.headers
+			fileds["queries"] = client.queries
+			fileds["routes"] = client.routes
+			fileds["payload"] = client.payload
 		}
 
 		if err != nil {

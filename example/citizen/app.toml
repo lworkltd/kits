@@ -24,6 +24,7 @@ mcode_profix="kits_citizen"
 trace_enabled=true
 access_log_enabled=true
 
+snow_slide_limit=20000
 reportable=true
 report_ip="${ip_of_interface,}"
 report_tags=["master","v0.2.1"]
@@ -39,10 +40,10 @@ log_level="info"
 log_file_path=""
 
 [mongo]
-url="${kv_of_consul,kits/mongo/url-external}"
+url=""
 
 [redis]
-url="${kv_of_consul,kits/redis/endpoint-external}"
+url=""
 password="abc123"
 db=1
 
@@ -50,7 +51,7 @@ db=1
 # TODO:xxxx
 
 [zipkin]
-host="${kv_of_consul,kits/zipkin/url-external}"
+host=""
 
 [consul]
 endpoint=""
@@ -60,12 +61,11 @@ auto_sync_enabled = true
 enable_consul = true
 enable_static = true
 static_services=[
-    "rancher ${kv_of_consul,kits/rancher/url-external}",
     "product_service 127.0.0.1:1923 127.0.0.1:2023"
 ]
 
 [hystrix]
-statsd_url="${kv_of_consul,kits/statsd/url-external}"
+statsd_url=""
 default_timeout=1000
 default_max_concurrent_request=200
 default_error_percent_threshold=20
