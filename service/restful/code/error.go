@@ -92,6 +92,6 @@ func NewMcode(mcode string, msg string) Error {
 func NewMcodef(mcode string, format string, args ...interface{}) Error {
 	return &errorImpl{
 		mcode:   mcode,
-		message: fmt.Sprintf(format, args),
+		message: fmt.Sprintf(format, args...),
 	}
 }
