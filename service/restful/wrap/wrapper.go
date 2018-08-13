@@ -211,6 +211,12 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 				}
 			}
 
+			l := serviceCtx.WithFields(logrus.Fields{
+				"method": httpCtx.Request.Method,
+				"path":   httpCtx.Request.URL.Path,
+				"delay":  time.Since(since),
+			})
+
 			// 错误的返回
 			if cerr != nil {
 				if cerr.Mcode() != "" {
@@ -219,11 +225,20 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 						"mcode":   cerr.Mcode(),
 						"message": cerr.Message(),
 					})
+
+					l = l.WithFields(logrus.Fields{
+						"mcode": cerr.Mcode(),
+					})
 				} else {
+					mcode := fmt.Sprintf("%s_%d", Prefix, cerr.Code())
 					httpCtx.JSON(http.StatusOK, map[string]interface{}{
 						"result":  false,
-						"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
+						"mcode":   mcode,
 						"message": cerr.Message(),
+					})
+
+					l = l.WithFields(logrus.Fields{
+						"mcode": mcode,
 					})
 				}
 			} else {
@@ -235,16 +250,9 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 				}
 				httpCtx.JSON(http.StatusOK, resp)
 			}
-			// 正确的返回
-			l := serviceCtx.WithFields(logrus.Fields{
-				"method": httpCtx.Request.Method,
-				"path":   httpCtx.Request.URL.Path,
-				"delay":  time.Since(since),
-			})
 
 			if cerr != nil {
 				l.WithFields(logrus.Fields{
-					"mcode":   fmt.Sprintf("%s_%d", Prefix, cerr.Code()),
 					"message": cerr.Message(),
 				}).Error("HTTP request failed")
 			} else {
