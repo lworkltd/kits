@@ -85,7 +85,7 @@ func Init(option *Option) error {
 		//设置值不合理时调整
 		if option.DefaultTimeout < 10*time.Millisecond {
 			option.DefaultTimeout = 10 * time.Millisecond
-		} else if option.DefaultTimeout > 10*time.Second {
+		} else if option.DefaultTimeout >= 10*time.Second {
 			option.DefaultTimeout = 10 * time.Second
 		}
 
