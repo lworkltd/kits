@@ -137,6 +137,8 @@ func ReportReqSuccess(oneData *ReqSuccessCountDimension) {
     if nil == oneData || false == EnableReportMonitor() {
         return
     }
+    oneData.SIP = ""  //为减少序列数，暂时停止IP上报
+    oneData.TIP = ""
     select {
     case monitorObj.reqSuccCountChan <- oneData:
         //do nothing
@@ -150,6 +152,7 @@ func ReportReqFailed(oneData *ReqFailedCountDimension) {
     if nil == oneData || false == EnableReportMonitor() {
         return
     }
+    oneData.TIP = ""//为减少序列数，暂时停止IP上报
     select {
     case monitorObj.reqFailedCountChan <- oneData:
         //do nothing
@@ -164,6 +167,8 @@ func ReportSuccessAvgTime(oneData *ReqSuccessAvgTimeDimension, timeConsume int64
     if nil == oneData || false == EnableReportMonitor() || timeConsume <= 0 {
         return
     }
+    oneData.SIP = ""  //为减少序列数，暂时停止IP上报
+    oneData.TIP = ""
     var temp reqSuccessTimeConsumeInfo
     temp.succAvgTimeDimension = oneData
     temp.timeConsume = timeConsume
@@ -181,6 +186,8 @@ func ReportFailedAvgTime(oneData *ReqFailedAvgTimeDimension, timeConsume int64) 
     if nil == oneData || false == EnableReportMonitor() {
         return
     }
+    oneData.SIP = ""  //为减少序列数，暂时停止IP上报
+    oneData.TIP = ""
     var temp reqFailedTimeConsumeInfo
     temp.failedAvgTimeDimension = oneData
     temp.timeConsume = timeConsume

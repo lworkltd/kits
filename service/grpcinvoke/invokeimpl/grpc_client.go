@@ -166,7 +166,7 @@ func (client *grpcClient) CommRequest(in *grpccomm.CommRequest) *grpccomm.CommRe
 		return &grpccomm.CommResponse{
 			Result:  false,
 			Mcode:   "INVOKE_FAILED",
-			Message: fmt.Sprintf("invoke %v failed,%v", client.serviceName, client.err),
+			Message: fmt.Sprintf("invoke %v failed,%v", client.serviceName, err),
 		}
 	}
 
@@ -297,10 +297,6 @@ func (client *grpcClient) hytrixCommand() string {
 func (client *grpcClient) updateHystrix() {
 	if client.useCircuit {
 		hytrixCmd := client.hytrixCommand()
-		if _, exist, _ := hystrix.GetCircuit(hytrixCmd); exist {
-			return
-		}
-
 		hystrix.ConfigureCommand(hytrixCmd, client.hystrixInfo)
 	}
 }
