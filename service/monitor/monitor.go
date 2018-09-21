@@ -174,7 +174,7 @@ func (me *monitorInfo) checkAndReportData() bool {
     me.succAvgTimeMap = make(map[string]countInfo)
     me.failedAvgTimeMap = make(map[string]countInfo)
 
-    aliRuntimeMetrics, statsdRuntimeMetrics := getRuntimeMetrics(timeNow)  //获取程序运行状态信息
+    _, statsdRuntimeMetrics := getRuntimeMetrics(timeNow)  //获取程序运行状态信息
     if monitorObj.conf.EnableReport { //上报到阿里云
         succCountMetrics := getSuccCountAliyunMetrics(succCountMap, timeNow)
         failedCountMetrics := getFailedCountAliyunMetrics(failedCountMap, timeNow)
@@ -183,7 +183,7 @@ func (me *monitorInfo) checkAndReportData() bool {
         aliMetrics := append(succCountMetrics, failedCountMetrics...)
         aliMetrics = append(aliMetrics, succAvgMetrics...)
         aliMetrics = append(aliMetrics, failedAvgMetrics...)
-        aliMetrics = append(aliMetrics, aliRuntimeMetrics...)
+        //aliMetrics = append(aliMetrics, aliRuntimeMetrics...)  //去除metrics上报到阿里云，以减少时间序列数
         go sendRequestToAliMonitor(aliMetrics)
     }
 
