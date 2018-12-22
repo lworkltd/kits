@@ -174,7 +174,7 @@ func (me *monitorInfo) checkAndReportData() bool {
     me.succAvgTimeMap = make(map[string]countInfo)
     me.failedAvgTimeMap = make(map[string]countInfo)
 
-    aliRuntimeMetrics, statsdRuntimeMetrics := getRuntimeMetrics(timeNow)  //获取程序运行状态信息
+    _, statsdRuntimeMetrics := getRuntimeMetrics(timeNow)  //获取程序运行状态信息
     if monitorObj.conf.EnableReport { //上报到阿里云
         succCountMetrics := getSuccCountAliyunMetrics(succCountMap, timeNow)
         failedCountMetrics := getFailedCountAliyunMetrics(failedCountMap, timeNow)
@@ -183,7 +183,7 @@ func (me *monitorInfo) checkAndReportData() bool {
         aliMetrics := append(succCountMetrics, failedCountMetrics...)
         aliMetrics = append(aliMetrics, succAvgMetrics...)
         aliMetrics = append(aliMetrics, failedAvgMetrics...)
-        aliMetrics = append(aliMetrics, aliRuntimeMetrics...)
+        //aliMetrics = append(aliMetrics, aliRuntimeMetrics...)  //去除metrics上报到阿里云，以减少时间序列数
         go sendRequestToAliMonitor(aliMetrics)
     }
 
@@ -488,7 +488,7 @@ func getSuccCountStatsdMetrics(succCountMap map[string]countInfo, reportTime tim
             dimessionObj.TName += "_" + monitorObj.conf.EnvironmentType
         }
 
-        metric := fmt.Sprintf("req.success.count.%v.%v.%v.%v.%v:%v|c", dimessionObj.SName, dimessionObj.SIP, dimessionObj.TName, dimessionObj.TIP, dimessionObj.Infc, countObj.counter)
+        metric := fmt.Sprintf("req.success.count.%v.%v.%v.%v.%v:%v|c", dimessionObj.SName, dimessionObj.SIP, dimessionObj.TName, dimessionObj.TIP, strings.Replace(dimessionObj.Infc,":","-", -1), countObj.counter)
         metrics = append(metrics, metric)
     }
     return metrics
@@ -510,7 +510,7 @@ func getFailedCountStatsdMetrics(failedCountMap map[string]countInfo, reportTime
             dimessionObj.TName += "_" + monitorObj.conf.EnvironmentType
         }
 
-        metric := fmt.Sprintf("req.failed.count.%v.%v.%v.%v.%v:%v|c", dimessionObj.SName, dimessionObj.TName, dimessionObj.TIP, dimessionObj.Code, dimessionObj.Infc, countObj.counter)
+        metric := fmt.Sprintf("req.failed.count.%v.%v.%v.%v.%v:%v|c", dimessionObj.SName, dimessionObj.TName, dimessionObj.TIP, dimessionObj.Code, strings.Replace(dimessionObj.Infc, ":", "-", -1), countObj.counter)
         metrics = append(metrics, metric)
     }
     return metrics
@@ -532,7 +532,7 @@ func getSuccAvgTimeStatsdMetrics(succAvgTimeMap map[string]countInfo, reportTime
             dimessionObj.TName += "_" + monitorObj.conf.EnvironmentType
         }
 
-        metric := fmt.Sprintf("req.success.avg.time.%v.%v.%v.%v.%v:%v|ms", dimessionObj.SName, dimessionObj.SIP, dimessionObj.TName, dimessionObj.TIP, dimessionObj.Infc, countObj.sum/countObj.counter)
+        metric := fmt.Sprintf("req.success.avg.time.%v.%v.%v.%v.%v:%v|ms", dimessionObj.SName, dimessionObj.SIP, dimessionObj.TName, dimessionObj.TIP, strings.Replace(dimessionObj.Infc, ":", "-", -1), countObj.sum/countObj.counter)
         metrics = append(metrics, metric)
     }
     return metrics
@@ -554,7 +554,7 @@ func getFailedAvgTimeStatsdMetrics(failedAvgTimeMap map[string]countInfo, report
             dimessionObj.TName += "_" + monitorObj.conf.EnvironmentType
         }
 
-        metric := fmt.Sprintf("req.failed.avg.time.%v.%v.%v.%v.%v:%v|ms", dimessionObj.SName, dimessionObj.SIP, dimessionObj.TName, dimessionObj.TIP, dimessionObj.Infc, countObj.sum/countObj.counter)
+        metric := fmt.Sprintf("req.failed.avg.time.%v.%v.%v.%v.%v:%v|ms", dimessionObj.SName, dimessionObj.SIP, dimessionObj.TName, dimessionObj.TIP, strings.Replace(dimessionObj.Infc, ":", "-", -1), countObj.sum/countObj.counter)
         metrics = append(metrics, metric)
     }
     return metrics
