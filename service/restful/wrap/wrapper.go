@@ -221,9 +221,10 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 			if cerr != nil {
 				if cerr.Mcode() != "" {
 					httpCtx.JSON(http.StatusOK, map[string]interface{}{
-						"result":  false,
-						"mcode":   cerr.Mcode(),
-						"message": cerr.Message(),
+						"result":    false,
+						"mcode":     cerr.Mcode(),
+						"message":   cerr.Message(),
+						"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
 					})
 
 					l = l.WithFields(logrus.Fields{
@@ -232,9 +233,10 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 				} else {
 					mcode := fmt.Sprintf("%s_%d", Prefix, cerr.Code())
 					httpCtx.JSON(http.StatusOK, map[string]interface{}{
-						"result":  false,
-						"mcode":   mcode,
-						"message": cerr.Message(),
+						"result":    false,
+						"mcode":     mcode,
+						"message":   cerr.Message(),
+						"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
 					})
 
 					l = l.WithFields(logrus.Fields{
@@ -243,7 +245,8 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 				}
 			} else {
 				resp := map[string]interface{}{
-					"result": true,
+					"result":    true,
+					"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
 				}
 				if data != nil {
 					resp["data"] = data

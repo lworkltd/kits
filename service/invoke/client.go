@@ -585,19 +585,37 @@ func (client *client) Response() (*http.Response, error) {
 
 	if doLogger {
 		fileds := logrus.Fields{
-			"service":    client.service.Name(),
-			"service_id": client.serverid,
-			"method":     client.method,
-			"path":       client.path,
-			"endpoint":   client.host,
-			"cost":       time.Since(client.createTime),
+			"service":  client.service.Name(),
+			"method":   client.method,
+			"path":     client.path,
+			"endpoint": client.host,
+			"scheme":   client.scheme,
+			"cost":     time.Since(client.createTime),
+		}
+		if client.service.Name() != client.serverid {
+			fileds["service_id"] = client.serverid
 		}
 
 		if doLoggerParam {
-			fileds["headers"] = client.headers
-			fileds["queries"] = client.queries
-			fileds["routes"] = client.routes
-			fileds["payload"] = client.payload
+			if len(client.headers) != 0 {
+				fileds["headers"] = client.headers
+			}
+			if len(client.queries) != 0 {
+				fileds["queries"] = client.queries
+			}
+			if len(client.routes) != 0 {
+				fileds["routes"] = client.routes
+			}
+			if client.payload != nil {
+				pl := func() string {
+					b, _ := client.payload()
+					return string(b)
+				}()
+
+				if pl != "" && pl != "{}" {
+					fileds["payload"] = pl
+				}
+			}
 		}
 
 		if err != nil {
