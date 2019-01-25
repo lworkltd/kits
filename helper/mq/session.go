@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -59,19 +58,12 @@ func newSession(url string) (*Session, error) {
 	sess.keepAlive = true
 	sess.Closed = make(chan bool, 1)
 	go func() {
-		log.Debugln("Watch amqp for close events")
 	WATCH_LOOP:
 		for {
 			select {
-			case err := <-sess.closes:
-				if err != nil {
-					log.Debugln("AMQP close", err)
-				} else {
-					log.Debugln("AMQP close manually")
-				}
+			case <-sess.closes:
 				break WATCH_LOOP
-			case block := <-sess.blocks:
-				log.Debugln("AMQP block ", block)
+			case <-sess.blocks:
 				continue
 			}
 		}
@@ -160,7 +152,6 @@ func (sess *Session) ConsumeQueue(fn func(*amqp.Delivery), queue string, setting
 	sess.wait.Add(1)
 	acount := 0
 	go func() {
-		log.WithField("queue", queue).Debugln("Consume start")
 		defer sess.wait.Done()
 		for msg := range messages {
 			if !autoAck {
@@ -169,11 +160,6 @@ func (sess *Session) ConsumeQueue(fn func(*amqp.Delivery), queue string, setting
 			acount++
 			fn(&msg)
 		}
-
-		log.WithFields(log.Fields{
-			"queue":                 queue,
-			"handled_message_count": acount,
-		}).Debugln("Handle queue close")
 	}()
 
 	return nil
@@ -196,7 +182,6 @@ func (sess *Session) DelareExchange(name, kind string, settings map[string]bool)
 	exchangeSettings := defaultExchangeSettings()
 
 	filterBooleanConfigs(&exchangeSettings, exchangeSettingPrefix, settings, false)
-	log.Debugf("delare exchange(%s,%s):%#v", name, kind, exchangeSettings)
 	return sess.recvChannel.ExchangeDeclare(
 		name, kind,
 		exchangeSettings[settingDurable],
@@ -286,17 +271,6 @@ func makePublishing(body []byte, options ...PublishOption) *amqp.Publishing {
 
 func (sess *Session) Publish(body []byte, exchange, queueOrKey string, options ...PublishOption) error {
 	publishing := makePublishing(body, options...)
-
-	log.WithFields(log.Fields{
-		"send_to":        queueOrKey,
-		"exchange":       exchange,
-		"content_type":   publishing.ContentType,
-		"reply_to":       publishing.ReplyTo,
-		"timestamp":      publishing.Timestamp,
-		"correlation_id": publishing.CorrelationId,
-		"expiration":     publishing.Expiration,
-	}).Debug("Publish amqp content")
-
 	if err := sess.sendChannel.Publish(
 		exchange,
 		queueOrKey,

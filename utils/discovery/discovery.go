@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/helper/consul"
 	"github.com/lworkltd/kits/service/discovery"
 	"github.com/lworkltd/kits/service/profile"
@@ -36,25 +35,12 @@ func RegisterServerWithProfile(checkUrl string, cfg *profile.Service) error {
 		for index, ep := range endpoints {
 			if cfg.ReportId == ids[index] {
 				if ep != newEp {
-					logrus.WithFields(logrus.Fields{
-						"id":  cfg.ReportId,
-						"old": ep,
-						"new": newEp,
-					}).Warn("Service has same id,but endpoint changed")
+					// TODO:xxx
 				}
 			}
 			// TODO:Warn which the same ip port belong to differet service
 		}
 	}
-
-	logrus.WithFields(logrus.Fields{
-		"report_name": cfg.ReportName,
-		"report_id":   cfg.ReportId,
-		"report_ip":   cfg.ReportIp,
-		"report_port": port,
-		"check_url":   checkUrl,
-		"report_tags": cfg.ReportTags,
-	}).Info("Register service info")
 
 	if "" != checkUrl {
 		checkUrl = makeCheckUrl(cfg.ReportIp, port, checkUrl)

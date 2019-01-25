@@ -9,7 +9,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/grpcinvoke"
 	"github.com/lworkltd/kits/service/grpcsrv"
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
@@ -35,9 +34,6 @@ func DynamicProxy(ctx context.Context, req *grpccomm.CommRequest) (grpcinvoke.Se
 }
 
 func main() {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		DisableColors: true,
-	})
 	// 静态代理
 	staticProxyGroup := grpcsrv.Group("static-proxy", ProxyCheck)
 	// 自定义请求匹配规则，匹配则转发到指定微服务

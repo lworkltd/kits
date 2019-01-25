@@ -3,11 +3,11 @@ package invokeimpl
 import (
 	"context"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcinvoke"
@@ -317,35 +317,18 @@ func (client *grpcClient) doLog(err code.Error) {
 	}
 
 	cost := time.Now().Sub(client.since)
-	log := logrus.WithFields(logrus.Fields{
-		"reqName":    client.callName,
-		"reqService": client.serviceName,
-		"latency":    cost,
-	})
 
-	if logrus.StandardLogger().Level >= logrus.DebugLevel {
-		if client.body != nil {
-			log = log.WithFields(logrus.Fields{
-				"body": client.body,
-			})
-		}
-
-		if client.header != nil {
-			log = log.WithFields(logrus.Fields{
-				"header": client.header,
-			})
-		}
-	}
+	logFields := map[string]interface{}{}
+	logFields["reqName"] = client.callName
+	logFields["reqService"] = client.serviceName
+	logFields["latency"] = cost.String()
 
 	if err != nil {
-		log = log.WithFields(logrus.Fields{
-			"error": err.Error(),
-		})
-		log.Error("GRPC INVOKE FAILED")
+		logFields["error"] = err.Error()
 		return
 	}
 
-	log.Info("GRPC INVOKE DONE")
+	log.Println("GRPC INVOKE DONE", logFields)
 }
 
 // MaxConcurrent 最大并发请求

@@ -3,16 +3,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/grpcinvoke"
 	_ "github.com/lworkltd/kits/service/grpcinvoke/invokeimpl"
 	"github.com/lworkltd/kits/service/grpcsrv/example/echo/pb"
 )
 
 func main() {
-	logrus.SetFormatter(&logrus.TextFormatter{DisableColors: true})
 	rsp := pb.EchoResponse{}
-	logrus.SetLevel(logrus.DebugLevel)
 	grpcinvoke.Init(&grpcinvoke.Option{
 		Discover: func(n string) ([]string, []string, error) {
 			if n == "MyService" {

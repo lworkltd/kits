@@ -9,7 +9,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcsrv"
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
@@ -117,9 +116,6 @@ func TenantCheck(ctx context.Context, commReq *grpccomm.CommRequest) error {
 }
 
 func main() {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		DisableColors: true,
-	})
 
 	// 当接收到消息时会首先进入钩子，钩子的顺序为在FILO
 	// 例如： [hook1,hook2,hook3,hook4]

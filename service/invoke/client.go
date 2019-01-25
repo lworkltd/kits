@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
 	"strconv"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/monitor"
@@ -313,26 +313,27 @@ func (client *client) Exec(out interface{}) (int, error) {
 	client.processExecMonitorReport(status, err, beginTime)
 
 	if doLogger {
-		fileds := logrus.Fields{
+		fields := map[string]interface{}{
 			"service":    client.service.Name(),
 			"service_id": client.serverid,
 			"method":     client.method,
 			"path":       client.path,
 			"endpoint":   client.host,
-			"cost":       time.Since(client.createTime),
+			"cost":       time.Since(client.createTime).String(),
 		}
 
 		if doLoggerParam {
-			fileds["headers"] = client.headers
-			fileds["queries"] = client.queries
-			fileds["routes"] = client.routes
-			fileds["payload"] = client.payload
+			fields["headers"] = client.headers
+			fields["queries"] = client.queries
+			fields["routes"] = client.routes
+			fields["payload"] = client.payload
 		}
 
 		if err != nil {
-			logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
+			fields["error"] = err.Error()
+			log.Println("Invoke service failed", fields)
 		} else {
-			logrus.WithFields(fileds).Error("Invoke service done")
+			log.Println("Invoke service done", fields)
 		}
 	}
 
@@ -557,6 +558,10 @@ func (client *client) updateHystrix() {
 }
 
 func (client *client) Response() (*http.Response, error) {
+	return client.response()
+}
+
+func (client *client) response() (*http.Response, error) {
 	if client.useTracing {
 		span, ctx := opentracing.StartSpanFromContext(client.ctx, client.tracingName())
 		client.ctx = ctx
@@ -584,7 +589,7 @@ func (client *client) Response() (*http.Response, error) {
 	client.processResponseMonitorReport(resp, beginTime) //若resp为nil则上报错误，否则添加请求信息到header待进一步上报monitor数据
 
 	if doLogger {
-		fileds := logrus.Fields{
+		fields := map[string]interface{}{
 			"service":  client.service.Name(),
 			"method":   client.method,
 			"path":     client.path,
@@ -593,18 +598,18 @@ func (client *client) Response() (*http.Response, error) {
 			"cost":     time.Since(client.createTime),
 		}
 		if client.service.Name() != client.serverid {
-			fileds["service_id"] = client.serverid
+			fields["service_id"] = client.serverid
 		}
 
 		if doLoggerParam {
 			if len(client.headers) != 0 {
-				fileds["headers"] = client.headers
+				fields["headers"] = fmt.Sprintln(client.headers)
 			}
 			if len(client.queries) != 0 {
-				fileds["queries"] = client.queries
+				fields["queries"] = fmt.Sprintln(client.queries)
 			}
 			if len(client.routes) != 0 {
-				fileds["routes"] = client.routes
+				fields["routes"] = fmt.Sprintln(client.routes)
 			}
 			if client.payload != nil {
 				pl := func() string {
@@ -613,18 +618,18 @@ func (client *client) Response() (*http.Response, error) {
 				}()
 
 				if pl != "" && pl != "{}" {
-					fileds["payload"] = pl
+					fields["payload"] = pl
 				}
 			}
 		}
 
 		if err != nil {
-			logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
+			fields["error"] = err.Error()
+			log.Println("Invoke service failed", fields)
 		} else {
-			logrus.WithFields(fileds).Info("Invoke service done")
+			log.Println("Invoke service done", fields)
 		}
 	}
 
 	return resp, err
-
 }

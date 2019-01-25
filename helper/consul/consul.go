@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"log"
 	"strconv"
 	"strings"
 
@@ -12,7 +13,6 @@ import (
 
 	"errors"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -373,10 +373,7 @@ func (client *Client) DestroySession(sessionId string) (bool, error) {
 
 	_, err := client.cli.Session().Destroy(sessionId, nil)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"sessionId": sessionId,
-			"err":       err,
-		}).Warn("Consul Session Destroy fail")
+		log.Printf("kits.consul:Consul Session Destroy fail,sessionId=%s,err=%v\n", sessionId, err)
 		return false, err
 	}
 	return true, nil
@@ -442,11 +439,7 @@ func (client *Client) loop() {
 func (client *Client) service(service string) (*serviceCache, error) {
 	entrys, _, err := client.cli.Health().Service(service, "", true, nil)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"error":   err,
-			"service": service,
-		}).Warn("Get service from consul failed")
-
+		log.Printf("Get service from consul failed,error=%v,service=%s\n", err, service)
 		return &serviceCache{
 			err: err,
 		}, err
@@ -454,10 +447,7 @@ func (client *Client) service(service string) (*serviceCache, error) {
 
 	if len(entrys) == 0 {
 		err := fmt.Errorf("not found health service on consul")
-		logrus.WithFields(logrus.Fields{
-			"error":   err,
-			"service": service,
-		}).Warn("Get service from consul failed")
+		log.Printf("Get service from consul failed,error=%v,service=%s\n", err, service)
 		return &serviceCache{
 			err: err,
 		}, err
@@ -484,12 +474,6 @@ func (client *Client) mergeServices(newServices map[string]*serviceCache) {
 	defer client.mutex.Unlock()
 	for name, info := range newServices {
 		client.serviceCache[name] = info
-		logrus.WithFields(logrus.Fields{
-			"name":  name,
-			"hosts": info.hosts,
-			"ids":   info.ids,
-			"err":   info.err,
-		}).Debug("Update service discovery")
 	}
 }
 
@@ -499,10 +483,6 @@ func (client *Client) removeServices(names []string) {
 	defer client.mutex.Unlock()
 
 	for _, name := range names {
-		logrus.WithFields(logrus.Fields{
-			"name": name,
-		}).Debug("Remove unuse service")
-
 		delete(client.serviceCache, name)
 	}
 }

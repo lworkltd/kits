@@ -2,12 +2,12 @@ package grpcsrv
 
 import (
 	"fmt"
+	"log"
 	"runtime/debug"
 	"time"
 
 	context "golang.org/x/net/context"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
 	"github.com/lworkltd/kits/service/grpcsrv/report"
 	"github.com/lworkltd/kits/service/restful/code"
@@ -73,33 +73,20 @@ func HookLogger(f HandlerFunc) HandlerFunc {
 		since := time.Now().UTC()
 		r := f(ctx, commReq)
 		costTime := time.Now().Sub(since)
-
-		log := logrus.WithFields(logrus.Fields{
-			"latency": costTime.String(),
-			"reqName": commReq.ReqInterface,
-		})
-
-		if commReq.ReqSercice != "" {
-			log = log.WithField("reqService", commReq.ReqSercice)
-		}
+		fields := make(map[string]string, 5)
+		fields["cost"] = costTime.String()
+		fields["reqName"] = commReq.ReqInterface
+		fields["reqService"] = commReq.ReqSercice
 
 		// 错误返回
 		if r != nil && r.Result == false {
-			log.WithFields(logrus.Fields{
-				"mcode":   r.Mcode,
-				"message": r.Message,
-			}).Error("GRPC FAILED")
+			fields["mcode"] = r.Mcode
+			fields["message"] = r.Message
+			log.Println("GRPC FAILED", fields)
 			return r
 		}
 
-		// 高延迟返回
-		if costTime >= MinWarningDelay {
-			log.Warn("GRPC LATENCY")
-			return r
-		}
-
-		// 正常返回
-		log.Info("GRPC DONE")
+		log.Println("GRPC DONE", fields)
 
 		return r
 	}

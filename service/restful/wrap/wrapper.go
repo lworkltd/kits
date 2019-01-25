@@ -14,12 +14,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
-	"github.com/lworkltd/kits/service/context"
 	"github.com/lworkltd/kits/service/monitor"
 	"github.com/lworkltd/kits/service/restful/code"
-	logutils "github.com/lworkltd/kits/utils/log"
 )
 
 var (
@@ -41,9 +38,9 @@ type Wrapper struct {
 	serviceName string
 	// 服务ID
 	serviceId        string
-	serviceLogLevel  logrus.Level
 	serviceLogWriter io.Writer
 
+	logLevel  string
 	snowSlide *SnowSlide
 }
 
@@ -64,20 +61,9 @@ func New(option *Option) *Wrapper {
 	if "" != option.LogFilePath {
 		file, err := os.OpenFile(option.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
 		if nil != err {
-			fmt.Errorf("Open log file failed, err:%v, log file path:%v", err, option.LogFilePath)
+			log.Printf("Open log file failed, err:%v, log file path:%v\n", err, option.LogFilePath)
 		} else {
 			logWriter = file
-		}
-	}
-
-	// 设置日志等级，若未配置，使用logrus.InfoLevel
-	logLevel := logrus.InfoLevel
-	if option.LogLevel != "" {
-		logLevelParse, err := logrus.ParseLevel(option.LogLevel)
-		if err != nil {
-			fmt.Errorf("cannot parse logger level %s", option.LogLevel)
-		} else {
-			logLevel = logLevelParse
 		}
 	}
 
@@ -92,8 +78,8 @@ func New(option *Option) *Wrapper {
 	}
 
 	w := &Wrapper{
+		logLevel:         option.LogLevel,
 		mcodePrefix:      option.Prefix,
-		serviceLogLevel:  logLevel,
 		serviceLogWriter: logWriter,
 		pool: sync.Pool{
 			New: func() interface{} {
@@ -107,7 +93,7 @@ func New(option *Option) *Wrapper {
 }
 
 // WrappedFunc 是用于封装GIN HTTP接口返回为通用接口的函数定义
-type WrappedFunc func(srvContext context.Context, ctx *gin.Context) (interface{}, code.Error)
+type WrappedFunc func(ctx *gin.Context) (interface{}, code.Error)
 
 type HttpServer interface {
 	Handle(string, string, ...gin.HandlerFunc) gin.IRoutes
@@ -166,30 +152,6 @@ func reportProcessResultToMonitor(err code.Error, httpCtx *gin.Context, beginTim
 func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 	return func(httpCtx *gin.Context) {
 		Prefix := wrapper.mcodePrefix // 错误码前缀
-		logger := logrus.New()
-		// 设置日志输出IO流
-		logger.Out = wrapper.serviceLogWriter
-		// 设置日志等级
-		logger.Level = wrapper.serviceLogLevel
-
-		// 设置日志格式,让附加的TAG放在最前面
-		formatter := &logutils.TextFormatter{
-			TimestampFormat: "01-02 15:04:05.999",
-		}
-		logger.Formatter = formatter
-		// 附加服务ID
-		logger.Hooks.Add(logutils.NewServiceTagHook(wrapper.serviceName, wrapper.serviceId, wrapper.mode))
-		// 附加日志文件行号
-		logger.Hooks.Add(logutils.NewFileLineHook(log.Lshortfile))
-		// 附加Tracing TAG
-		logger.Hooks.Add(logutils.NewTracingLogHook())
-		serviceCtx := context.FromHttpRequest(httpCtx.Request, logger)
-		defer serviceCtx.Finish()
-
-		// 附加Tracing Id
-		tracingHeader := http.Header{}
-		serviceCtx.Inject(tracingHeader)
-		logger.Hooks.Add(logutils.NewTracingTagHook(serviceCtx.TracingId()))
 
 		since := time.Now()
 		var (
@@ -204,18 +166,16 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 					cerr = codeErr
 				} else {
 					cerr = code.New(100000000, "Service internal error")
-					serviceCtx.WithFields(logrus.Fields{
-						"error": r,
-						"stack": string(debug.Stack()),
-					}).Errorln("Panic")
+					fmt.Println(r)
+					fmt.Println(string(debug.Stack()))
 				}
 			}
 
-			l := serviceCtx.WithFields(logrus.Fields{
+			fields := map[string]interface{}{
 				"method": httpCtx.Request.Method,
 				"path":   httpCtx.Request.URL.Path,
 				"delay":  time.Since(since),
-			})
+			}
 
 			// 错误的返回
 			if cerr != nil {
@@ -226,10 +186,7 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 						"message":   cerr.Message(),
 						"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
 					})
-
-					l = l.WithFields(logrus.Fields{
-						"mcode": cerr.Mcode(),
-					})
+					fields["mcode"] = cerr.Mcode()
 				} else {
 					mcode := fmt.Sprintf("%s_%d", Prefix, cerr.Code())
 					httpCtx.JSON(http.StatusOK, map[string]interface{}{
@@ -238,10 +195,7 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 						"message":   cerr.Message(),
 						"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
 					})
-
-					l = l.WithFields(logrus.Fields{
-						"mcode": mcode,
-					})
+					fields["mcode"] = mcode
 				}
 			} else {
 				resp := map[string]interface{}{
@@ -255,11 +209,10 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 			}
 
 			if cerr != nil {
-				l.WithFields(logrus.Fields{
-					"message": cerr.Message(),
-				}).Error("HTTP request failed")
+				fields["message"] = cerr.Message()
+				log.Println("HTTP request failed", fields)
 			} else {
-				l.Info("HTTP request done")
+				log.Println("HTTP request done", fields)
 			}
 		}()
 
@@ -267,10 +220,10 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 		if wrapper.snowSlide != nil {
 			cerr = wrapper.snowSlide.Check()
 			if cerr == nil {
-				data, cerr = f(serviceCtx, httpCtx)
+				data, cerr = f(httpCtx)
 			}
 		} else {
-			data, cerr = f(serviceCtx, httpCtx)
+			data, cerr = f(httpCtx)
 		}
 
 		reportProcessResultToMonitor(cerr, httpCtx, since, registPath)

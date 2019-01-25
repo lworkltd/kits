@@ -5,8 +5,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Sirupsen/logrus"
-
 	"github.com/lworkltd/kits/service/grpcinvoke"
 	_ "github.com/lworkltd/kits/service/grpcinvoke/invokeimpl"
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
@@ -16,9 +14,6 @@ import (
 
 func main() {
 	runtime.GOMAXPROCS(2)
-	logrus.SetFormatter(&logrus.TextFormatter{
-		DisableColors: true,
-	})
 	var (
 		err error
 	)

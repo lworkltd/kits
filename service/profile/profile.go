@@ -1,9 +1,5 @@
 package profile
 
-import (
-	"github.com/Sirupsen/logrus"
-)
-
 // Profile 用于适配配置项目的接口，对于实现了此接口的配置项目，将在配置加载后执行Init
 // 这样一来，适配的对象将有机会在没有充分的配置时使用默认配置
 type Profile interface {
@@ -48,9 +44,6 @@ func (consul *Consul) BeforeParse() {
 
 func (consul *Consul) AfterParse() {
 	if consul.Url == "" {
-		logrus.WithFields(logrus.Fields{
-			"profile": "Consul",
-		}).Error("Url is empty")
 	}
 }
 
@@ -92,9 +85,6 @@ func (service *Service) BeforeParse() {
 func (service *Service) AfterParse() {
 	if service.Reportable {
 		if service.ReportIp == "" || service.ReportName == "" || service.ReportId == "" {
-			logrus.WithFields(logrus.Fields{
-				"profile": "Service",
-			}).Error("Reportable is set,you need a report ip, name and id")
 		}
 	}
 }
@@ -113,7 +103,6 @@ func (discovery *Discovery) BeforeParse() {
 
 func (discovery *Discovery) AfterParse() {
 	if !discovery.EnableConsul && !discovery.EnableStatic {
-		logrus.Warn("No discovery method enabled")
 	}
 }
 
@@ -132,7 +121,6 @@ func (monitor *Monitor) BeforeParse() {
 
 func (monitor *Monitor) AfterParse() {
 	if true == monitor.EnableReport && ("" == monitor.AliUid || "" == monitor.AliNamespace) {
-		logrus.Warn("Monitor conf abnormal")
 	}
 }
 
@@ -181,9 +169,6 @@ type Hystrix struct {
 func (hystrix *Hystrix) BeforeParse() {}
 func (hystrix *Hystrix) AfterParse() {
 	if hystrix.StatsdUrl == "" {
-		logrus.WithFields(logrus.Fields{
-			"profile": "Hystrix",
-		}).Warn("StatsdUrl is still empty")
 	}
 }
 
@@ -195,8 +180,5 @@ type Zipkin struct {
 func (zipkin *Zipkin) BeforeParse() {}
 func (zipkin *Zipkin) AfterParse() {
 	if zipkin.Url == "" {
-		logrus.WithFields(logrus.Fields{
-			"profile": "Zipkin",
-		}).Warn("Url is empty")
 	}
 }

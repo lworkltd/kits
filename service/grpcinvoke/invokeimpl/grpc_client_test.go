@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcinvoke"
 	"github.com/lworkltd/kits/service/grpcsrv"
@@ -226,7 +225,6 @@ func TestGrpcClientDoLog(t *testing.T) {
 	}{
 		{
 			prepare: func() {
-				logrus.SetLevel(logrus.DebugLevel)
 			},
 			client: &grpcClient{},
 		},
