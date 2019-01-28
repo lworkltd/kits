@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/lworkltd/kits/service/grpcinvoke"
 	_ "github.com/lworkltd/kits/service/grpcinvoke/invokeimpl"

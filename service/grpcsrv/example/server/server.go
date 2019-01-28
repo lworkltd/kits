@@ -9,13 +9,13 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/grpcsrv"
 	"github.com/lworkltd/kits/service/grpcsrv/example/testproto"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
 	"github.com/lworkltd/kits/service/grpcsrv/report"
 	"github.com/lworkltd/kits/service/restful/code"
+	"github.com/sirupsen/logrus"
 )
 
 // InvokeTestEcho 处理函数

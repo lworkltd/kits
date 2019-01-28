@@ -12,8 +12,8 @@ import (
 
 	"errors"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/hashicorp/consul/api"
+	"github.com/sirupsen/logrus"
 )
 
 const (
