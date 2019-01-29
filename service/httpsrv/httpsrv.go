@@ -14,14 +14,29 @@ var (
 
 // Option 服务的配置选项
 type Option struct {
-	WrapFunc       func(f interface{}) gin.HandlerFunc // 自定义函数转换，将自定义的处理函数转化成为gin框架的处理函数，如果设置了这个选项，其他选项都不会生效
-	Prefix         string                              // 如果返回的错误码中只有code，就会使用prefix创建一个mcode，格式：<Prefix>_<code>
-	Logger         *logrus.Logger                      // 默认日志打印对象，不传就会使用logrus.StdLogger
-	SnowSlide      SnowSlide                           // 自定义防雪崩拦截器，如果不设置就会使用SnowSlideLimit创建一个默认的
-	SnowSlideLimit int32                               // 使用默认的SnowSlide，表示最大未返回的请求数，SnowSlide未设置时有效
-	Report         ReportFunc                          // 自定义上报函数
+	// 如果返回的错误码中只有code，就会使用prefix创建一个mcode，格式：<Prefix>_<code>
+	Prefix string
+
+	// 以下为自定义函数，可以根据自己的需要修改，但是出现panic需要自己负责
+	// 默认日志打印对象，不传就会使用logrus.StdLogger
+	Logger *logrus.Logger
+	// 自定义防雪崩拦截器，如果不设置就会使用SnowSlideLimit创建一个默认的
+	SnowSlide SnowSlide
+	// 使用默认的SnowSlide，表示最大未返回的请求数，SnowSlide未设置时有效
+	SnowSlideLimit int32
+	// 自定义上报函数
+	Report ReportFunc
+	// 打印日志函数
+	LogFunc LogFunc
+	// 将返回写到网络IO中
+	WriteResult WriteResultFunc
+
+	// 不建议使用，自定义转换函数，修改本函数后会重新定义本函数后，其他的选项均不生效，需要使用者自己全部重写
+	// 使用者如果需要注册自定义的函数格式使使用
+	WrapFunc func(f interface{}) gin.HandlerFunc
 }
 
+// useDefault 补全配置
 func (option *Option) useDefault() {
 	if option.SnowSlide == nil {
 		if option.SnowSlideLimit <= 0 {
@@ -36,13 +51,20 @@ func (option *Option) useDefault() {
 			}
 		}
 	}
-
 	if option.Report == nil {
-		option.Report = defaultReportProcessResultToMonitor
+		option.Report = DefaultReport
 	}
 
 	if option.Logger == nil {
 		option.Logger = logrus.StandardLogger()
+	}
+
+	if option.LogFunc == nil {
+		option.LogFunc = DefaultLogFunc
+	}
+
+	if option.WriteResult == nil {
+		option.WriteResult = DefaultWriteResultFunc
 	}
 }
 
@@ -67,6 +89,10 @@ type Wrapper struct {
 	wrapFunc func(f interface{}) gin.HandlerFunc
 	// 上报处理
 	report ReportFunc
+	// 日志处理函数
+	logFunc LogFunc
+	// 结果IO处理
+	writeResult WriteResultFunc
 }
 
 // New 创建一个新的wrapper
@@ -77,33 +103,23 @@ func New(option *Option) *Wrapper {
 		mcodePrefix: option.Prefix,
 		pool: sync.Pool{
 			New: func() interface{} {
-				return new(Response)
+				return new(DefaultResponse)
 			},
 		},
-		snowSlide: option.SnowSlide,
-		wrapFunc:  option.WrapFunc,
-		report:    option.Report,
-		logger:    option.Logger,
+		snowSlide:   option.SnowSlide,
+		wrapFunc:    option.WrapFunc,
+		report:      option.Report,
+		logger:      option.Logger,
+		writeResult: option.WriteResult,
+		logFunc:     option.LogFunc,
 	}
+
 	if w.wrapFunc == nil {
-		w.wrapFunc = w.defaultWrap
+		w.wrapFunc = w.DefaultWrap
 	}
 
 	return w
 }
-
-// WrapFunc 封装函数返回一个能够被gin直接使用的回调函数,提供足够的伸缩新
-// f 是自定义的回调函数
-// path 是HTTP的路径
-// 以DefaultWrappedFunc作为f的类型为例：
-// func(f interface{}) gin.HandlerFunc {
-//	return func(ginCtx *gin.Context){
-//		realf := f.(func(ginCtx*gin.Context)(interface,error)
-//		retData,err:= realf(ginCtx)
-// 		...
-// 	}
-// }
-type WrapFunc func(f interface{}) gin.HandlerFunc
 
 // HttpServer 抽象gin的Group和Root
 type HttpServer interface {
@@ -150,8 +166,8 @@ func (wrapper *Wrapper) Delete(srv HttpServer, path string, f interface{}) {
 	wrapper.Handle("DELETE", srv, path, f)
 }
 
-// Response 默认的返回
-type Response struct {
+// DefaultResponse 默认的返回
+type DefaultResponse struct {
 	Result    bool        `json:"result"`
 	Mcode     string      `json:"mcode,omitempty"`
 	Message   string      `json:"message,omitempty"`
