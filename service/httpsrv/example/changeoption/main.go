@@ -11,6 +11,8 @@ import (
 )
 
 func main() {
+	testDemo()
+
 	// 自定义上报的方式
 	//testReplaceReportFunc()
 	// 自定义写日志的方式
@@ -21,28 +23,27 @@ func main() {
 	//testReplaceWrapFunc()
 }
 
+// 标准DEMO
 func testDemo() {
-	// 替换自定义的防雪崩对象
-	root := gin.New()
 	wrapper := httpsrv.New(&httpsrv.Option{
 		Prefix: "USER",
 	})
-	wrapper.Get(root, "/v1/hello", func(ctx *gin.Context) (interface{}, code.Error) {
+	wrapper.Get("/v1/hello", func(ctx *gin.Context) (interface{}, code.Error) {
 		return []string{"Hello", "World"}, nil
 	})
-	wrapper.Get(root, "/v1/error", func(ctx *gin.Context) (interface{}, code.Error) {
+
+	wrapper.Get("/v1/error", func(ctx *gin.Context) (interface{}, code.Error) {
 		return nil, code.NewMcode("ERROR", "test error")
 	})
 
-	root.Run(":8080")
+	wrapper.Run(":8080")
 }
 
-func testReplaceWrapFunc() {
-	// 替换封装函数
-	// 使用者可以根据自己的需要替换最主要的转换函数，但是其中所有的东西都得使用者负责
-	root := gin.New()
+// 替换封装函数
+// 使用者可以根据自己的需要替换最主要的转换函数，但是其中所有的东西都得使用者负责
+func testOptionReplaceWrapFunc() {
 	wrapper := httpsrv.New(&httpsrv.Option{
-		WrapFunc: func(fx interface{}) gin.HandlerFunc {
+		WrapFunc: func(fx interface{}) gin.HandlerFunc { // 替换部分
 			f := fx.(func(userId string, ctx *gin.Context) (interface{}, error))
 			return func(ctx *gin.Context) {
 				userId := ctx.Query("userId")
@@ -55,63 +56,64 @@ func testReplaceWrapFunc() {
 			}
 		},
 	})
-	wrapper.Get(root, "/v1/hello", func(userId string, ctx *gin.Context) (interface{}, error) {
+
+	wrapper.Get("/v1/hello", func(userId string, ctx *gin.Context) (interface{}, error) {
 		return []string{"Hello", "World"}, nil
 	})
-	wrapper.Get(root, "/v1/error", func(userId string, ctx *gin.Context) (interface{}, error) {
+	wrapper.Get("/v1/error", func(userId string, ctx *gin.Context) (interface{}, error) {
 		return nil, code.NewMcodef("ERROR", "error happened")
 	})
 
-	v2 := root.Group("/v2")
-	wrapper.Get(v2, "/hello", func(userId string, ctx *gin.Context) (interface{}, error) {
+	v2 := wrapper.Group("/v2")
+	v2.Get("/hello", func(userId string, ctx *gin.Context) (interface{}, error) {
 		return []string{"Hello", "World"}, nil
 	})
-	wrapper.Get(v2, "/error", func(userId string, ctx *gin.Context) (interface{}, error) {
+
+	v2.Get("/error", func(userId string, ctx *gin.Context) (interface{}, error) {
 		return nil, code.New(1000, "error")
 	})
 
-	root.Run(":8080")
+	wrapper.Run(":8080")
 }
 
-func testReplaceReportFunc() {
-	// 替换上报函数
-	root := gin.New()
+// 替换上报函数
+// 自定义上报方式
+func testOptionReplaceReportFunc() {
 	wrapper := httpsrv.New(&httpsrv.Option{
-		Report: func(err code.Error, httpCtx *gin.Context, beginTime time.Time) {
+		Report: func(err code.Error, httpCtx *gin.Context, status int, beginTime time.Time) { // 替换部分
 			fmt.Println(err)
 		},
 	})
-	wrapper.Get(root, "/v1/error", func(ctx *gin.Context) (interface{}, code.Error) {
+	wrapper.Get("/v1/error", func(ctx *gin.Context) (interface{}, code.Error) {
 		return nil, code.NewMcodef("ERROR", "error happened")
 	})
 
-	root.Run(":8080")
+	wrapper.Run(":8080")
 }
 
-func testReplaceLogFunc() {
-	// 替换日志打印函数
-	root := gin.New()
+// 替换日志打印函数
+// 自定义日志方式和格式
+func testOptionReplaceLogFunc() {
 	wrapper := httpsrv.New(&httpsrv.Option{
-		LogFunc: func(logger *logrus.Logger, ctx *gin.Context, since time.Time, data interface{}, cerr code.Error) {
+		LogFunc: func(logger *logrus.Logger, ctx *gin.Context, status int, since time.Time, data interface{}, cerr code.Error) { // 替换部分
 			logger.Infof("Result %v path=%v cost=%v", cerr != nil, ctx.Request.URL.Path, time.Now().Sub(since))
 		},
 	})
 
-	wrapper.Get(root, "/v1/error", func(ctx *gin.Context) (interface{}, code.Error) {
+	wrapper.Get("/v1/error", func(ctx *gin.Context) (interface{}, code.Error) {
 		return nil, code.NewMcodef("ERROR", "error happened")
 	})
-	wrapper.Get(root, "/v1/hello", func(ctx *gin.Context) (interface{}, code.Error) {
+	wrapper.Get("/v1/hello", func(ctx *gin.Context) (interface{}, code.Error) {
 		return []string{"Hello", "World"}, nil
 	})
 
-	root.Run(":8080")
+	wrapper.Run(":8080")
 }
 
-func testReplaceWriteResultFunc() {
-	// 替换写结果的函数
-	root := gin.New()
+// 替换写结果的函数
+func testOptionReplaceWriteResultFunc() {
 	wrapper := httpsrv.New(&httpsrv.Option{
-		WriteResult: func(ctx *gin.Context, prefix string, data interface{}, cerr code.Error) {
+		WriteResult: func(ctx *gin.Context, marshal httpsrv.MarshalFunc, status int, prefix string, data interface{}, cerr code.Error) { // 替换部分
 			type userResult struct {
 				Code string
 				Data interface{} `json:",inline,omitempty"`
@@ -132,18 +134,18 @@ func testReplaceWriteResultFunc() {
 		},
 	})
 
-	wrapper.Get(root, "/v1/error", func(ctx *gin.Context) (interface{}, code.Error) {
+	wrapper.Get("/v1/error", func(ctx *gin.Context) (interface{}, code.Error) {
 		return nil, code.NewMcodef("ERROR", "error happened")
 	})
-	wrapper.Get(root, "/v1/errorwithdata", func(ctx *gin.Context) (interface{}, code.Error) {
+	wrapper.Get("/v1/errorwithdata", func(ctx *gin.Context) (interface{}, code.Error) {
 		return []string{"Hello", "World"}, code.NewMcodef("ERROR", "error happened")
 	})
-	wrapper.Get(root, "/v1/hello", func(ctx *gin.Context) (interface{}, code.Error) {
+	wrapper.Get("/v1/hello", func(ctx *gin.Context) (interface{}, code.Error) {
 		return []string{"Hello", "World"}, nil
 	})
-	wrapper.Get(root, "/v1/nodata", func(ctx *gin.Context) (interface{}, code.Error) {
+	wrapper.Get("/v1/nodata", func(ctx *gin.Context) (interface{}, code.Error) {
 		return nil, nil
 	})
 
-	root.Run(":8080")
+	wrapper.Run(":8080")
 }

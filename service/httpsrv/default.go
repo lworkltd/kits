@@ -1,8 +1,10 @@
 package httpsrv
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -31,12 +33,10 @@ var (
 // }
 type WrapFunc func(f interface{}) gin.HandlerFunc
 
-// DefaultWrap 默认的函数转换
-func (wrapper *Wrapper) DefaultWrap(fx interface{}) gin.HandlerFunc {
-	f := fx.(func(ginCtx *gin.Context) (interface{}, code.Error))
+// wrapperInterfaceCodeerror 注册函数类型为： func(ginCtx *gin.Context) (interface{}, code.Error)
+func (wrapper *Wrapper) wrapperDataCodeerror(f func(ginCtx *gin.Context) (interface{}, code.Error)) func(httpCtx *gin.Context) {
 	return func(httpCtx *gin.Context) {
 		since := time.Now()
-
 		var (
 			data interface{}
 			cerr code.Error
@@ -47,28 +47,304 @@ func (wrapper *Wrapper) DefaultWrap(fx interface{}) gin.HandlerFunc {
 				if codeErr, ok := r.(code.Error); ok { // 接受上层业务通过Panic(code.Error)的方式来返回错误,但是请慎用这种方式
 					cerr = codeErr
 				} else {
-					fmt.Println("Panic reason:", r)
-					fmt.Println(string(debug.Stack()))
+					DoPanic(r)
 					cerr = CerrIntervalError
 				}
 			}
 
-			wrapper.writeResult(httpCtx, wrapper.mcodePrefix, data, cerr)
-			wrapper.logFunc(wrapper.logger, httpCtx, since, data, cerr)
+			wrapper.writeResult(httpCtx, wrapper.marshal, http.StatusOK, wrapper.mcodePrefix, data, cerr)
+			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, data, cerr)
+			wrapper.report(cerr, httpCtx, http.StatusOK, since)
 		}()
 
 		// 过载保护
 		if wrapper.snowSlide != nil {
 			cerr = wrapper.snowSlide.Check(httpCtx)
-			if cerr == nil {
-				data, cerr = f(httpCtx)
+			if cerr != nil {
+				return
 			}
-		} else {
-			data, cerr = f(httpCtx)
 		}
 
-		wrapper.report(cerr, httpCtx, since)
+		data, cerr = f(httpCtx)
 	}
+}
+
+// wrapperInterfaceError 注册函数类型为: func(ginCtx *gin.Context) (interface{}, error)
+func (wrapper *Wrapper) wrapperDataError(f func(ginCtx *gin.Context) (interface{}, error)) func(httpCtx *gin.Context) {
+	return func(httpCtx *gin.Context) {
+		since := time.Now()
+		var (
+			data interface{}
+			cerr code.Error
+		)
+
+		defer func() {
+			if r := recover(); r != nil {
+				if codeErr, ok := r.(code.Error); ok { // 接受上层业务通过Panic(code.Error)的方式来返回错误,但是请慎用这种方式
+					cerr = codeErr
+				} else {
+					DoPanic(r)
+					cerr = CerrIntervalError
+				}
+			}
+
+			wrapper.writeResult(httpCtx, wrapper.marshal, http.StatusOK, wrapper.mcodePrefix, data, cerr)
+			wrapper.report(cerr, httpCtx, http.StatusOK, since)
+			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, data, cerr)
+		}()
+
+		// 过载保护
+		if wrapper.snowSlide != nil {
+			cerr = wrapper.snowSlide.Check(httpCtx)
+			if cerr != nil {
+				return
+			}
+		}
+
+		d, err := f(httpCtx)
+		data = d
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+// wrapperNormal 注册函数类型为：func(ginCtx *gin.Context)
+// 该注册类型不向IO写入数据
+func (wrapper *Wrapper) wrapperNormal(f func(ginCtx *gin.Context)) func(httpCtx *gin.Context) {
+	return func(httpCtx *gin.Context) {
+		since := time.Now()
+		var (
+			data interface{}
+			cerr code.Error
+		)
+
+		defer func() {
+			if r := recover(); r != nil {
+				if codeErr, ok := r.(code.Error); ok { // 接受上层业务通过Panic(code.Error)的方式来返回错误,但是请慎用这种方式
+					cerr = codeErr
+				} else {
+					DoPanic(r)
+					cerr = CerrIntervalError
+				}
+			}
+
+			wrapper.report(cerr, httpCtx, http.StatusOK, since)
+			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, data, cerr)
+		}()
+
+		// 过载保护
+		if wrapper.snowSlide != nil {
+			cerr = wrapper.snowSlide.Check(httpCtx)
+			if cerr != nil {
+				return
+			}
+		}
+
+		f(httpCtx)
+	}
+}
+
+// wrapperError 注册函数类型为：func(ginCtx *gin.Context) error
+// 该注册函数认为没有数据需要返回
+func (wrapper *Wrapper) wrapperError(f func(ginCtx *gin.Context) error) func(httpCtx *gin.Context) {
+	return func(httpCtx *gin.Context) {
+		since := time.Now()
+		var (
+			cerr code.Error
+		)
+
+		defer func() {
+			if r := recover(); r != nil {
+				if codeErr, ok := r.(code.Error); ok { // 接受上层业务通过Panic(code.Error)的方式来返回错误,但是请慎用这种方式
+					cerr = codeErr
+				} else {
+					DoPanic(r)
+					cerr = CerrIntervalError
+				}
+			}
+
+			wrapper.writeResult(httpCtx, wrapper.marshal, http.StatusOK, wrapper.mcodePrefix, nil, cerr)
+			wrapper.report(cerr, httpCtx, http.StatusOK, since)
+			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, nil, cerr)
+		}()
+
+		// 过载保护
+		if wrapper.snowSlide != nil {
+			cerr = wrapper.snowSlide.Check(httpCtx)
+			if cerr != nil {
+				return
+			}
+		}
+
+		err := f(httpCtx)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+// wrapperError 注册函数类型为：func(ginCtx *gin.Context) code.Error
+// 该注册函数认为没有数据需要返回
+func (wrapper *Wrapper) wrapperCodeError(f func(ginCtx *gin.Context) code.Error) func(httpCtx *gin.Context) {
+	return func(httpCtx *gin.Context) {
+		since := time.Now()
+		var (
+			cerr code.Error
+		)
+
+		defer func() {
+			if r := recover(); r != nil {
+				if codeErr, ok := r.(code.Error); ok { // 接受上层业务通过Panic(code.Error)的方式来返回错误,但是请慎用这种方式
+					cerr = codeErr
+				} else {
+					DoPanic(r)
+					cerr = CerrIntervalError
+				}
+			}
+
+			wrapper.writeResult(httpCtx, wrapper.marshal, http.StatusOK, wrapper.mcodePrefix, nil, cerr)
+			wrapper.report(cerr, httpCtx, http.StatusOK, since)
+			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, nil, cerr)
+		}()
+
+		// 过载保护
+		if wrapper.snowSlide != nil {
+			cerr = wrapper.snowSlide.Check(httpCtx)
+			if cerr != nil {
+				return
+			}
+		}
+
+		cerr = f(httpCtx)
+	}
+}
+
+// wrapperNoWrapperStatus 注册函数类型为：func(ginCtx *gin.Context)  (NoWrapperResponse, int)
+// 该注册函数认为返回数据不需要额外封装，直接序列化后写入IO即可
+// 返回的第一参数：无额外封装数据
+// 返回的第二参数：http状态码，>= 400 表示失败
+func (wrapper *Wrapper) wrapperNoWrapperStatus(f func(ginCtx *gin.Context) (NoWrapperResponse, int)) func(httpCtx *gin.Context) {
+	return func(httpCtx *gin.Context) {
+		since := time.Now()
+		var (
+			data       interface{}
+			status     int
+			statusData string
+		)
+
+		defer func() {
+			if r := recover(); r != nil {
+				DoPanic(r)
+				status = http.StatusInternalServerError
+				statusData = "ServiceIntervalError"
+			}
+
+			if status == 0 {
+				status = http.StatusOK
+			}
+
+			contentType, body := wrapper.marshal(httpCtx, data)
+			httpCtx.Data(status, contentType, body)
+
+			var cerr code.Error
+			if status >= 400 {
+				cerr = code.NewMcode(fmt.Sprintf("HTTP_STATUS_%d", status), statusData)
+			}
+			wrapper.report(cerr, httpCtx, status, since)
+			wrapper.logFunc(wrapper.logger, httpCtx, status, since, nil, cerr)
+		}()
+
+		// 过载保护
+		if wrapper.snowSlide != nil {
+			cerr := wrapper.snowSlide.Check(httpCtx)
+			if cerr != nil {
+				status = http.StatusTooManyRequests
+				data = "too many request"
+				return
+			}
+		}
+
+		data, status = f(httpCtx)
+	}
+}
+
+// wrapperNoWrapperStatus 注册函数类型为：func(ginCtx *gin.Context) NoWrapperResponse
+// 该注册函数认为返回数据不需要额外封装，直接序列化后写入IO即可，除拦截器和异常外，一律返回200
+// 返回的第一参数：无额外封装数据
+func (wrapper *Wrapper) wrapperNoWrapper(f func(ginCtx *gin.Context) NoWrapperResponse) func(httpCtx *gin.Context) {
+	return func(httpCtx *gin.Context) {
+		since := time.Now()
+		var (
+			data       interface{}
+			status     = http.StatusOK
+			statusData string
+		)
+
+		defer func() {
+			if r := recover(); r != nil {
+				DoPanic(r)
+				status = http.StatusInternalServerError
+				statusData = "ServiceIntervalError"
+			}
+
+			contentType, body := wrapper.marshal(httpCtx, data)
+			httpCtx.Data(status, contentType, body)
+
+			var cerr code.Error
+			if status != http.StatusOK {
+				cerr = code.NewMcode(fmt.Sprintf("HTTP_STATUS_%d", status), statusData)
+			}
+			wrapper.report(cerr, httpCtx, status, since)
+			wrapper.logFunc(wrapper.logger, httpCtx, status, since, nil, cerr)
+		}()
+
+		// 过载保护
+		if wrapper.snowSlide != nil {
+			cerr := wrapper.snowSlide.Check(httpCtx)
+			if cerr != nil {
+				status = http.StatusTooManyRequests
+				data = "too many request"
+				return
+			}
+		}
+
+		data = f(httpCtx)
+	}
+}
+
+// NoWrapperResponse 返回数据不需要额外封装的接口
+// 如果注册函数返回类型实现func(ginCtx *gin.Context) NoWrapperPlease
+// 则返回数据将不做额外封装，直接将数据序列化后返回
+type NoWrapperResponse interface {
+	NoWrapperPlease()
+}
+
+// DefaultWrap 默认的函数转换
+func (wrapper *Wrapper) DefaultWrap(fx interface{}) gin.HandlerFunc {
+	switch fx.(type) {
+	case func(ginCtx *gin.Context) (interface{}, code.Error):
+		return wrapper.wrapperDataCodeerror(fx.(func(ginCtx *gin.Context) (interface{}, code.Error)))
+	case func(ginCtx *gin.Context) (interface{}, error):
+		return wrapper.wrapperDataError(fx.(func(ginCtx *gin.Context) (interface{}, error)))
+	case func(ginCtx *gin.Context):
+		return wrapper.wrapperNormal(fx.(func(ginCtx *gin.Context)))
+	case func(ginCtx *gin.Context) error:
+		return wrapper.wrapperError(fx.(func(ginCtx *gin.Context) error))
+	case func(ginCtx *gin.Context) code.Error:
+		return wrapper.wrapperCodeError(fx.(func(ginCtx *gin.Context) code.Error))
+	case func(ginCtx *gin.Context) (NoWrapperResponse, int):
+		return wrapper.wrapperNoWrapperStatus(fx.(func(ginCtx *gin.Context) (NoWrapperResponse, int)))
+	case func(ginCtx *gin.Context) NoWrapperResponse:
+		return wrapper.wrapperNoWrapper(fx.(func(ginCtx *gin.Context) NoWrapperResponse))
+	}
+	panic(fmt.Sprintf("Unsupport register function type:%v", reflect.TypeOf(fx).String()))
+}
+
+// DoPanic 拦截到panic时执行
+var DoPanic = func(r interface{}) {
+	fmt.Println("Panic reason:", r)
+	fmt.Println(string(debug.Stack()))
 }
 
 // LogFunc 日志处理函数
@@ -77,10 +353,10 @@ func (wrapper *Wrapper) DefaultWrap(fx interface{}) gin.HandlerFunc {
 // cerr 本次请求的错误
 // data 返回的数据
 // since 开始处理请求的时间
-type LogFunc func(logger *logrus.Logger, ctx *gin.Context, since time.Time, data interface{}, cerr code.Error)
+type LogFunc func(logger *logrus.Logger, ctx *gin.Context, status int, since time.Time, data interface{}, cerr code.Error)
 
 // DefaultLogFunc 默认的日志打印函数
-func DefaultLogFunc(logger *logrus.Logger, ctx *gin.Context, since time.Time, data interface{}, cerr code.Error) {
+func DefaultLogFunc(logger *logrus.Logger, ctx *gin.Context, status int, since time.Time, data interface{}, cerr code.Error) {
 	l := logger.WithFields(logrus.Fields{
 		"method": ctx.Request.Method,
 		"path":   ctx.Request.URL.Path,
@@ -104,10 +380,10 @@ func DefaultLogFunc(logger *logrus.Logger, ctx *gin.Context, since time.Time, da
 // err 结果错误
 // ctx 本次请求的上下文(gin)
 // since 开始处理请求的时间
-type ReportFunc func(err code.Error, ctx *gin.Context, since time.Time)
+type ReportFunc func(err code.Error, ctx *gin.Context, status int, since time.Time)
 
 // DefaultReport 上报处理请求结果到Monitor，registPath为注册路径
-func DefaultReport(err code.Error, httpCtx *gin.Context, since time.Time) {
+func DefaultReport(err code.Error, httpCtx *gin.Context, status int, since time.Time) {
 	if nil == httpCtx || false == monitor.EnableReportMonitor() {
 		return
 	}
@@ -160,37 +436,62 @@ func DefaultReport(err code.Error, httpCtx *gin.Context, since time.Time) {
 // prefix 错误码前缀
 // cerr 处理错误
 // data 结果数据
-type WriteResultFunc func(ctx *gin.Context, prefix string, data interface{}, cerr code.Error)
+type WriteResultFunc func(ctx *gin.Context, marshal MarshalFunc, status int, prefix string, data interface{}, cerr code.Error)
 
 // DefaultWriteResultFunc 默认写结果
-func DefaultWriteResultFunc(ctx *gin.Context, prefix string, data interface{}, cerr code.Error) {
+func DefaultWriteResultFunc(ctx *gin.Context, marshal MarshalFunc, status int, prefix string, data interface{}, cerr code.Error) {
+	var resp map[string]interface{}
 	// 错误的返回
 	if cerr != nil {
 		if cerr.Mcode() != "" {
-			ctx.JSON(http.StatusOK, map[string]interface{}{
+			resp = map[string]interface{}{
 				"result":    false,
 				"mcode":     cerr.Mcode(),
 				"message":   cerr.Message(),
 				"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
-			})
-
+			}
 		} else {
 			mcode := fmt.Sprintf("%s_%d", prefix, cerr.Code())
-			ctx.JSON(http.StatusOK, map[string]interface{}{
+			resp = map[string]interface{}{
 				"result":    false,
 				"mcode":     mcode,
 				"message":   cerr.Message(),
 				"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
-			})
+			}
+		}
+
+		if data != nil {
+			resp["data"] = data
 		}
 	} else {
-		resp := map[string]interface{}{
+		resp = map[string]interface{}{
 			"result":    true,
 			"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
 		}
 		if data != nil {
 			resp["data"] = data
 		}
-		ctx.JSON(http.StatusOK, resp)
 	}
+
+	contentType, body := marshal(ctx, resp)
+	ctx.Data(status, contentType, body)
+}
+
+// MarshalFunc 序列化的函数
+// data 需要序列化的数据
+// 返回参数1：Content-Type的值
+// 返回参数2：body数据
+type MarshalFunc func(ctx *gin.Context, data interface{}) (string, []byte)
+
+// DefaultMarshalFunc 默认的序列化函数
+var DefaultMarshalFunc = JSONMarshalFunc
+
+// JSONMarshalFunc JSON的序列化函数
+func JSONMarshalFunc(ctx *gin.Context, data interface{}) (string, []byte) {
+	body := []byte{}
+	if data != nil {
+		body, _ = json.Marshal(data)
+	}
+
+	return "application/json", body
 }

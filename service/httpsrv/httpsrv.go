@@ -1,7 +1,7 @@
 package httpsrv
 
 import (
-	"sync"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -15,7 +15,8 @@ var (
 // Option 服务的配置选项
 type Option struct {
 	// 如果返回的错误码中只有code，就会使用prefix创建一个mcode，格式：<Prefix>_<code>
-	Prefix string
+	Prefix  string
+	GinRoot *gin.Engine
 
 	// 以下为自定义函数，可以根据自己的需要修改，但是出现panic需要自己负责
 	// 默认日志打印对象，不传就会使用logrus.StdLogger
@@ -30,6 +31,8 @@ type Option struct {
 	LogFunc LogFunc
 	// 将返回写到网络IO中
 	WriteResult WriteResultFunc
+	// 序列化函数
+	MarshalFunc func(ctx *gin.Context, data interface{}) (string, []byte)
 
 	// 不建议使用，自定义转换函数，修改本函数后会重新定义本函数后，其他的选项均不生效，需要使用者自己全部重写
 	// 使用者如果需要注册自定义的函数格式使使用
@@ -66,6 +69,15 @@ func (option *Option) useDefault() {
 	if option.WriteResult == nil {
 		option.WriteResult = DefaultWriteResultFunc
 	}
+
+	if option.GinRoot == nil {
+		option.GinRoot = gin.New()
+		option.GinRoot.Use(gin.Recovery())
+	}
+
+	if option.MarshalFunc == nil {
+		option.MarshalFunc = DefaultMarshalFunc
+	}
 }
 
 // Wrapper 用于对请求返回结果进行封装的类
@@ -73,14 +85,8 @@ type Wrapper struct {
 	// 错误码的前缀
 	// 比如 错误码为1001，前缀为ANYPROJECT_ANYSERVICE_,那么返回给调用者的错误码(mcode)就为:ANYPROJECT_ANYSERVICE_1001
 	mcodePrefix string
-	// 返回对象和回收，高并发场景下的内存重复利用 变[use->gc->allocate manager->use] 为 [use->pool->use]
-	pool sync.Pool
-	// 模式
-	mode string
 	// 服务名称
 	serviceName string
-	// 服务ID
-	serviceId string
 	// 日志打印对象
 	logger *logrus.Logger
 	// 请求熔断拦截
@@ -93,25 +99,29 @@ type Wrapper struct {
 	logFunc LogFunc
 	// 结果IO处理
 	writeResult WriteResultFunc
+	// 封装的gin.Engine对象
+	ginRoot *gin.Engine
+	// 序列化函数
+	marshal MarshalFunc
 }
 
 // New 创建一个新的wrapper
 func New(option *Option) *Wrapper {
-	option.useDefault()
+	if option == nil {
+		option = &Option{}
+	}
 
+	option.useDefault()
 	w := &Wrapper{
 		mcodePrefix: option.Prefix,
-		pool: sync.Pool{
-			New: func() interface{} {
-				return new(DefaultResponse)
-			},
-		},
 		snowSlide:   option.SnowSlide,
 		wrapFunc:    option.WrapFunc,
 		report:      option.Report,
 		logger:      option.Logger,
 		writeResult: option.WriteResult,
 		logFunc:     option.LogFunc,
+		ginRoot:     option.GinRoot,
+		marshal:     option.MarshalFunc,
 	}
 
 	if w.wrapFunc == nil {
@@ -126,44 +136,80 @@ type HttpServer interface {
 	Handle(string, string, ...gin.HandlerFunc) gin.IRoutes
 }
 
-// Handle Http-通用请求注册
-func (wrapper *Wrapper) Handle(method string, srv HttpServer, path string, f interface{}) {
-	srv.Handle(method, path, wrapper.wrapFunc(f))
+// ServeHTTP http.Handler 实现
+func (wrapper *Wrapper) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	wrapper.ginRoot.ServeHTTP(w, req)
+}
+
+// RunTLS 加密通信上运行HTTP服务
+// 正常运行会堵塞
+func (wrapper *Wrapper) RunTLS(address string, certFile string, keyFile string) error {
+	return wrapper.ginRoot.RunTLS(address, certFile, keyFile)
+}
+
+// Run 运行HTTP服务
+// 正常运行时会堵塞
+func (wrapper *Wrapper) Run(address string) error {
+	return wrapper.ginRoot.Run(address)
+}
+
+// GinEngine 返回gin.Engine对象
+func (wrapper *Wrapper) GinEngine() *gin.Engine {
+	return wrapper.ginRoot
+}
+
+// Group 构造一个组
+func (wrapper *Wrapper) Group(path string) GroupWrapper {
+	return &groupWrapper{
+		wrapper:     wrapper,
+		RouterGroup: wrapper.ginRoot.Group(path),
+	}
+}
+
+// Handle Http通用请求注册
+func (wrapper *Wrapper) Handle(method string, path string, f interface{}) {
+	debugPrintRoute(method, path, f)
+	wrapper.ginRoot.Handle(method, path, wrapper.wrapFunc(f))
 }
 
 // Get Http-GET请求注册
-func (wrapper *Wrapper) Get(srv HttpServer, path string, f interface{}) {
-	wrapper.Handle("GET", srv, path, f)
+func (wrapper *Wrapper) Get(path string, f interface{}) {
+	wrapper.Handle("GET", path, f)
 }
 
 // Patch Http-PATCH请求注册
-func (wrapper *Wrapper) Patch(srv HttpServer, path string, f interface{}) {
-	wrapper.Handle("PATCH", srv, path, f)
+func (wrapper *Wrapper) Patch(path string, f interface{}) {
+	wrapper.Handle("PATCH", path, f)
 }
 
 // Post Http-POST请求注册
-func (wrapper *Wrapper) Post(srv HttpServer, path string, f interface{}) {
-	wrapper.Handle("POST", srv, path, f)
+func (wrapper *Wrapper) Post(path string, f interface{}) {
+	wrapper.Handle("POST", path, f)
 }
 
 // Put Http-PUT请求注册
-func (wrapper *Wrapper) Put(srv HttpServer, path string, f interface{}) {
-	wrapper.Handle("PUT", srv, path, f)
+func (wrapper *Wrapper) Put(path string, f interface{}) {
+	wrapper.Handle("PUT", path, f)
 }
 
-// Options Http-Options请求注册
-func (wrapper *Wrapper) Options(srv HttpServer, path string, f interface{}) {
-	wrapper.Handle("OPTIONS", srv, path, f)
+// Options Http-OPTIONS请求注册
+func (wrapper *Wrapper) Options(path string, f interface{}) {
+	wrapper.Handle("OPTIONS", path, f)
 }
 
 // Head Http-HEADER请求注册
-func (wrapper *Wrapper) Head(srv HttpServer, path string, f interface{}) {
-	wrapper.Handle("HEAD", srv, path, f)
+func (wrapper *Wrapper) Head(path string, f interface{}) {
+	wrapper.Handle("HEAD", path, f)
 }
 
 // Delete Http-DELETE请求注册
-func (wrapper *Wrapper) Delete(srv HttpServer, path string, f interface{}) {
-	wrapper.Handle("DELETE", srv, path, f)
+func (wrapper *Wrapper) Delete(path string, f interface{}) {
+	wrapper.Handle("DELETE", path, f)
+}
+
+// Any Http-所有请求注册
+func (wrapper *Wrapper) Any(path string, f interface{}) {
+	wrapper.ginRoot.Any(path, wrapper.wrapFunc(f))
 }
 
 // DefaultResponse 默认的返回
