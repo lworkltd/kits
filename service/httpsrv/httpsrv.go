@@ -3,7 +3,9 @@ package httpsrv
 import (
 	"net/http"
 
+	"github.com/DeanThompson/ginpprof"
 	"github.com/gin-gonic/gin"
+	"github.com/lworkltd/kits/service/httpsrv/httpstat"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,6 +43,10 @@ type Option struct {
 
 // useDefault 补全配置
 func (option *Option) useDefault() {
+	if option.Prefix == "" {
+		option.Prefix = "SERVICE"
+	}
+
 	if option.SnowSlide == nil {
 		if option.SnowSlideLimit <= 0 {
 			option.SnowSlide = &snowSlide{
@@ -54,6 +60,7 @@ func (option *Option) useDefault() {
 			}
 		}
 	}
+
 	if option.Report == nil {
 		option.Report = DefaultReport
 	}
@@ -103,6 +110,8 @@ type Wrapper struct {
 	ginRoot *gin.Engine
 	// 序列化函数
 	marshal MarshalFunc
+	// 打开统计
+	enableStat bool
 }
 
 // New 创建一个新的wrapper
@@ -112,6 +121,7 @@ func New(option *Option) *Wrapper {
 	}
 
 	option.useDefault()
+
 	w := &Wrapper{
 		mcodePrefix: option.Prefix,
 		snowSlide:   option.SnowSlide,
@@ -134,6 +144,19 @@ func New(option *Option) *Wrapper {
 // HttpServer 抽象gin的Group和Root
 type HttpServer interface {
 	Handle(string, string, ...gin.HandlerFunc) gin.IRoutes
+}
+
+// HandlePprof 添加Pprof到处理列表
+func (wrapper *Wrapper) HandlePprof() {
+	debugPrintRoute(wrapper.logger, "PPROF", "/debug/pprof/.*", nil)
+	ginpprof.Wrapper(wrapper.ginRoot)
+}
+
+// HandleStat 启动统计
+func (wrapper *Wrapper) HandleStat() {
+	wrapper.enableStat = true
+	wrapper.Get("/debug/httpstat/delay", httpstat.StatDelay)
+	wrapper.Get("/debug/httpstat/result", httpstat.StatResult)
 }
 
 // ServeHTTP http.Handler 实现
@@ -166,9 +189,13 @@ func (wrapper *Wrapper) Group(path string) GroupWrapper {
 	}
 }
 
+func debugPrintRoute(logger *logrus.Logger, method, path string, f interface{}) {
+	logger.WithField("path", path).Debugf("Handle %s", method)
+}
+
 // Handle Http通用请求注册
 func (wrapper *Wrapper) Handle(method string, path string, f interface{}) {
-	debugPrintRoute(method, path, f)
+	debugPrintRoute(wrapper.logger, method, path, f)
 	wrapper.ginRoot.Handle(method, path, wrapper.wrapFunc(f))
 }
 
@@ -209,6 +236,7 @@ func (wrapper *Wrapper) Delete(path string, f interface{}) {
 
 // Any Http-所有请求注册
 func (wrapper *Wrapper) Any(path string, f interface{}) {
+	debugPrintRoute(wrapper.logger, "ANY", path, f)
 	wrapper.ginRoot.Any(path, wrapper.wrapFunc(f))
 }
 

@@ -1,9 +1,9 @@
 package httpsrv
 
 import (
-	"fmt"
-
+	"github.com/DeanThompson/ginpprof"
 	"github.com/gin-gonic/gin"
+	"github.com/lworkltd/kits/service/httpsrv/httpstat"
 )
 
 // GroupWrapper 组封装
@@ -18,6 +18,8 @@ type GroupWrapper interface {
 	Delete(path string, f interface{})
 	Any(path string, f interface{})
 	Handle(method, path string, f interface{})
+
+	HandlePprof()
 
 	Group(path string) GroupWrapper
 }
@@ -38,43 +40,51 @@ func (gwrapper *groupWrapper) Group(path string) GroupWrapper {
 	}
 }
 
+func (gwrapper *groupWrapper) HandlePprof() {
+	debugPrintRoute(gwrapper.wrapper.logger, "PPROF", gwrapper.RouterGroup.BasePath()+"/debug/pprof/.*", nil)
+	ginpprof.WrapGroup(gwrapper.RouterGroup)
+}
+
+func (gwrapper *groupWrapper) HandleStat() {
+	gwrapper.wrapper.enableStat = true
+	gwrapper.Get("/debug/httpstat/delay", httpstat.StatDelay)
+	gwrapper.Get("/debug/httpstat/result", httpstat.StatResult)
+}
+
 func (gwrapper *groupWrapper) Handle(method, path string, f interface{}) {
-	debugPrintRoute(method, path, f)
+	debugPrintRoute(gwrapper.wrapper.logger, method, path, f)
 	gwrapper.RouterGroup.Handle(method, path, gwrapper.wrapper.wrapFunc(f))
 }
 
 func (gwrapper *groupWrapper) Get(path string, f interface{}) {
-	gwrapper.RouterGroup.Handle("GET", path, gwrapper.wrapper.wrapFunc(f))
+	gwrapper.Handle("GET", path, f)
 }
 
 func (gwrapper *groupWrapper) Patch(path string, f interface{}) {
-	gwrapper.RouterGroup.Handle("PATCH", path, gwrapper.wrapper.wrapFunc(f))
+	gwrapper.Handle("PATCH", path, f)
 }
 
 func (gwrapper *groupWrapper) Post(path string, f interface{}) {
-	gwrapper.RouterGroup.Handle("POST", path, gwrapper.wrapper.wrapFunc(f))
+	gwrapper.Handle("POST", path, f)
 }
 
 func (gwrapper *groupWrapper) Put(path string, f interface{}) {
-	gwrapper.RouterGroup.Handle("PUT", path, gwrapper.wrapper.wrapFunc(f))
+	gwrapper.Handle("PUT", path, f)
 }
 
 func (gwrapper *groupWrapper) Options(path string, f interface{}) {
-	gwrapper.RouterGroup.Handle("OPTIONS", path, gwrapper.wrapper.wrapFunc(f))
+	gwrapper.Handle("OPTIONS", path, f)
 }
 
 func (gwrapper *groupWrapper) Head(path string, f interface{}) {
-	gwrapper.RouterGroup.Handle("HEAD", path, gwrapper.wrapper.wrapFunc(f))
+	gwrapper.Handle("HEAD", path, f)
 }
 
 func (gwrapper *groupWrapper) Delete(path string, f interface{}) {
-	gwrapper.RouterGroup.Handle("DELETE", path, gwrapper.wrapper.wrapFunc(f))
+	gwrapper.Handle("DELETE", path, f)
 }
 
 func (gwrapper *groupWrapper) Any(path string, f interface{}) {
-	gwrapper.RouterGroup.Any(path, gwrapper.wrapper.wrapFunc(f))
-}
-
-func debugPrintRoute(method, path string, f interface{}) {
-	fmt.Printf("%12s%s%s", method, path, f)
+	debugPrintRoute(gwrapper.wrapper.logger, "ANY", path, f)
+	gwrapper.Any(path, gwrapper.wrapper.wrapFunc(f))
 }

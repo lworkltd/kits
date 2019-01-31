@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lworkltd/kits/service/httpsrv/httpstat"
 	"github.com/lworkltd/kits/service/monitor"
 	"github.com/lworkltd/kits/service/restful/code"
 	"github.com/sirupsen/logrus"
@@ -55,6 +56,9 @@ func (wrapper *Wrapper) wrapperDataCodeerror(f func(ginCtx *gin.Context) (interf
 			wrapper.writeResult(httpCtx, wrapper.marshal, http.StatusOK, wrapper.mcodePrefix, data, cerr)
 			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, data, cerr)
 			wrapper.report(cerr, httpCtx, http.StatusOK, since)
+			if wrapper.enableStat {
+				httpstat.Stat(httpCtx, http.StatusOK, cerr, time.Now().Sub(since))
+			}
 		}()
 
 		// 过载保护
@@ -91,6 +95,9 @@ func (wrapper *Wrapper) wrapperDataError(f func(ginCtx *gin.Context) (interface{
 			wrapper.writeResult(httpCtx, wrapper.marshal, http.StatusOK, wrapper.mcodePrefix, data, cerr)
 			wrapper.report(cerr, httpCtx, http.StatusOK, since)
 			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, data, cerr)
+			if wrapper.enableStat {
+				httpstat.Stat(httpCtx, http.StatusOK, cerr, time.Now().Sub(since))
+			}
 		}()
 
 		// 过载保护
@@ -131,6 +138,9 @@ func (wrapper *Wrapper) wrapperNormal(f func(ginCtx *gin.Context)) func(httpCtx 
 
 			wrapper.report(cerr, httpCtx, http.StatusOK, since)
 			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, data, cerr)
+			if wrapper.enableStat {
+				httpstat.Stat(httpCtx, http.StatusOK, cerr, time.Now().Sub(since))
+			}
 		}()
 
 		// 过载保护
@@ -146,7 +156,7 @@ func (wrapper *Wrapper) wrapperNormal(f func(ginCtx *gin.Context)) func(httpCtx 
 }
 
 // wrapperError 注册函数类型为：func(ginCtx *gin.Context) error
-// 该注册函数认为没有数据需要返回
+// 该注册函数不向IO写回结果
 func (wrapper *Wrapper) wrapperError(f func(ginCtx *gin.Context) error) func(httpCtx *gin.Context) {
 	return func(httpCtx *gin.Context) {
 		since := time.Now()
@@ -167,6 +177,9 @@ func (wrapper *Wrapper) wrapperError(f func(ginCtx *gin.Context) error) func(htt
 			wrapper.writeResult(httpCtx, wrapper.marshal, http.StatusOK, wrapper.mcodePrefix, nil, cerr)
 			wrapper.report(cerr, httpCtx, http.StatusOK, since)
 			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, nil, cerr)
+			if wrapper.enableStat {
+				httpstat.Stat(httpCtx, http.StatusOK, cerr, time.Now().Sub(since))
+			}
 		}()
 
 		// 过载保护
@@ -206,6 +219,9 @@ func (wrapper *Wrapper) wrapperCodeError(f func(ginCtx *gin.Context) code.Error)
 			wrapper.writeResult(httpCtx, wrapper.marshal, http.StatusOK, wrapper.mcodePrefix, nil, cerr)
 			wrapper.report(cerr, httpCtx, http.StatusOK, since)
 			wrapper.logFunc(wrapper.logger, httpCtx, http.StatusOK, since, nil, cerr)
+			if wrapper.enableStat {
+				httpstat.Stat(httpCtx, http.StatusOK, cerr, time.Now().Sub(since))
+			}
 		}()
 
 		// 过载保护
@@ -253,6 +269,9 @@ func (wrapper *Wrapper) wrapperNoWrapperStatus(f func(ginCtx *gin.Context) (NoWr
 			}
 			wrapper.report(cerr, httpCtx, status, since)
 			wrapper.logFunc(wrapper.logger, httpCtx, status, since, nil, cerr)
+			if wrapper.enableStat {
+				httpstat.Stat(httpCtx, status, cerr, time.Now().Sub(since))
+			}
 		}()
 
 		// 过载保护
@@ -290,13 +309,16 @@ func (wrapper *Wrapper) wrapperNoWrapper(f func(ginCtx *gin.Context) NoWrapperRe
 
 			contentType, body := wrapper.marshal(httpCtx, data)
 			httpCtx.Data(status, contentType, body)
-
 			var cerr code.Error
 			if status != http.StatusOK {
 				cerr = code.NewMcode(fmt.Sprintf("HTTP_STATUS_%d", status), statusData)
 			}
+
 			wrapper.report(cerr, httpCtx, status, since)
 			wrapper.logFunc(wrapper.logger, httpCtx, status, since, nil, cerr)
+			if wrapper.enableStat {
+				httpstat.Stat(httpCtx, status, cerr, time.Now().Sub(since))
+			}
 		}()
 
 		// 过载保护
@@ -338,6 +360,7 @@ func (wrapper *Wrapper) DefaultWrap(fx interface{}) gin.HandlerFunc {
 	case func(ginCtx *gin.Context) NoWrapperResponse:
 		return wrapper.wrapperNoWrapper(fx.(func(ginCtx *gin.Context) NoWrapperResponse))
 	}
+
 	panic(fmt.Sprintf("Unsupport register function type:%v", reflect.TypeOf(fx).String()))
 }
 
@@ -438,7 +461,7 @@ func DefaultReport(err code.Error, httpCtx *gin.Context, status int, since time.
 // data 结果数据
 type WriteResultFunc func(ctx *gin.Context, marshal MarshalFunc, status int, prefix string, data interface{}, cerr code.Error)
 
-// DefaultWriteResultFunc 默认写结果
+// DefaultWriteResultFunc 默认写数据返回函数
 func DefaultWriteResultFunc(ctx *gin.Context, marshal MarshalFunc, status int, prefix string, data interface{}, cerr code.Error) {
 	var resp map[string]interface{}
 	// 错误的返回
