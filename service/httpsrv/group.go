@@ -20,6 +20,7 @@ type GroupWrapper interface {
 	Handle(method, path string, f interface{})
 
 	HandlePprof()
+	HandleStat()
 
 	Group(path string) GroupWrapper
 }
