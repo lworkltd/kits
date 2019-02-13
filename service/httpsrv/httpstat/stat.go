@@ -10,6 +10,18 @@ import (
 	"github.com/lworkltd/kits/service/restful/code"
 )
 
+type StatItem struct {
+	Method string
+	Path   string
+	Count  int
+}
+
+// DelayCounter 返回查询延迟统计的单个统计
+type DelayCounter struct {
+	Level string
+	Count int
+}
+
 var requestCostLevels = []time.Duration{
 	time.Second,          // < 1s
 	time.Second * 5,      // 1s  ~ 5s
@@ -42,6 +54,7 @@ func (stat *RequestStat) Reset() {
 
 // AddStat 添加一次统计数据
 func (stat *RequestStat) AddStat(mcode string, delay time.Duration) {
+	fmt.Println("AddStat")
 	if stat.delayLevels == nil {
 		stat.delayLevels = make(map[time.Duration]int, len(requestCostLevels))
 	}
@@ -65,9 +78,12 @@ func (stat *RequestStat) AddStat(mcode string, delay time.Duration) {
 }
 
 func (stat *RequestStat) delayItem() interface{} {
-	levels := []interface{}{}
+	levels := make([]*DelayCounter, 0, len(requestCostLevels))
 	for _, level := range requestCostLevels {
-		levels = append(levels, fmt.Sprintf("%v,%d", levelName(level), stat.delayLevels[level]))
+		levels = append(levels, &DelayCounter{
+			Level: level.String(),
+			Count: stat.delayLevels[level],
+		})
 	}
 	return levels
 }
@@ -103,6 +119,7 @@ func (statMgr *RequestStatMgr) AddStat(ctx *gin.Context, cerr code.Error, delay 
 	if statMgr.stats == nil {
 		statMgr.stats = make(map[string]*RequestStat, 10)
 	}
+
 	statName := statMgr.statName(ctx.Request.Method, ctx.Request.URL.Path)
 	stat, exist := statMgr.stats[statName]
 	if !exist {
@@ -188,6 +205,9 @@ func (statMgr *RequestStatMgr) handleStatResult(ctx *gin.Context) (interface{}, 
 
 // reset 重置
 func (statMgr *RequestStatMgr) reset() {
+	statMgr.Lock()
+	defer statMgr.Unlock()
+
 	statMgr.stats = nil
 }
 
@@ -216,5 +236,5 @@ func StatDelay(ctx *gin.Context) (interface{}, error) {
 
 // StatResult 统计处理结果
 func StatResult(ctx *gin.Context) (interface{}, error) {
-	return statMgr.handleStatDelay(ctx)
+	return statMgr.handleStatResult(ctx)
 }

@@ -12,7 +12,7 @@ func main() {
 	//testWrapperNormal()
 	//testwrapperError()
 	//testWrapperNoWrapperStatus()
-	testWrapperNoWrapper()
+	//testWrapperNoWrapper()
 }
 
 // 我们公司的默认版本#1
