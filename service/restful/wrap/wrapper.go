@@ -254,6 +254,10 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 				httpCtx.JSON(http.StatusOK, resp)
 			}
 
+			if Report != nil {
+				Report(cerr, httpCtx, http.StatusOK, since)
+			}
+
 			if cerr != nil {
 				l.WithFields(logrus.Fields{
 					"message": cerr.Message(),
