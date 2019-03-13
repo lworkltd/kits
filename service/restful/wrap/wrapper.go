@@ -14,12 +14,12 @@ import (
 	"io"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/lworkltd/kits/service/context"
 	"github.com/lworkltd/kits/service/monitor"
 	"github.com/lworkltd/kits/service/restful/code"
 	logutils "github.com/lworkltd/kits/utils/log"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -252,6 +252,10 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 					resp["data"] = data
 				}
 				httpCtx.JSON(http.StatusOK, resp)
+			}
+
+			if Report != nil {
+				Report(cerr, httpCtx, http.StatusOK, since)
 			}
 
 			if cerr != nil {
