@@ -7,7 +7,7 @@ import (
 	logutils "github.com/lworkltd/kits/utils/log"
 	"github.com/opentracing/opentracing-go/ext"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"golang.org/x/net/context"
 

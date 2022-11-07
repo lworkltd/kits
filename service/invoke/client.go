@@ -11,11 +11,11 @@ import (
 
 	"strconv"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/monitor"
 	"github.com/opentracing/opentracing-go"
+	"github.com/sirupsen/logrus"
 )
 
 const (

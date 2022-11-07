@@ -5,20 +5,20 @@ import (
 
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/plugins"
 	hystrixplugins "github.com/afex/hystrix-go/plugins"
 	"github.com/lworkltd/kits/helper/consul"
+	"github.com/lworkltd/kits/service/discovery"
+	"github.com/lworkltd/kits/service/invoke"
+	"github.com/lworkltd/kits/service/monitor"
+	"github.com/lworkltd/kits/service/profile"
 	"github.com/lworkltd/kits/utils/eval"
 	"github.com/lworkltd/kits/utils/ipnet"
 	"github.com/lworkltd/kits/utils/jsonize"
 	"github.com/lworkltd/kits/utils/log"
-	"github.com/lworkltd/kits/service/discovery"
-	"github.com/lworkltd/kits/service/invoke"
-	"github.com/lworkltd/kits/service/profile"
 	"github.com/opentracing/opentracing-go"
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
-	"github.com/lworkltd/kits/service/monitor"
+	"github.com/sirupsen/logrus"
 )
 
 type Profile struct {
@@ -146,12 +146,12 @@ func (pro *Profile) Init(tomlFile string) error {
 
 	// Invoker 服务调用初始化
 	invokeOption := &invoke.Option{
-		Discover:        discovery.Discover,
-		LoadBalanceMode: pro.Invoker.LoadBanlanceMode,
-		UseTracing:      pro.Invoker.TracingEnabled,
-		UseCircuit:      pro.Invoker.CircuitEnabled,
-		DoLogger:        pro.Invoker.LoggerEnabled,
-		DefaultTimeout:  pro.Hystrix.DefaultTimeout,
+		Discover:                     discovery.Discover,
+		LoadBalanceMode:              pro.Invoker.LoadBanlanceMode,
+		UseTracing:                   pro.Invoker.TracingEnabled,
+		UseCircuit:                   pro.Invoker.CircuitEnabled,
+		DoLogger:                     pro.Invoker.LoggerEnabled,
+		DefaultTimeout:               pro.Hystrix.DefaultTimeout,
 		DefaultMaxConcurrentRequests: pro.Hystrix.DefaultMaxConcurrentRequests,
 		DefaultErrorPercentThreshold: pro.Hystrix.DefaultErrorPercentThreshold,
 	}

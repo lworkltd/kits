@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/grpcsrv"
 	"github.com/lworkltd/kits/service/grpcsrv/example/echo/pb"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {

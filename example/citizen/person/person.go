@@ -3,12 +3,12 @@ package person
 import (
 	"context"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/example/citizen/model"
 	loc "github.com/lworkltd/kits/example/location/model"
 	"github.com/lworkltd/kits/service/invoke"
 	"github.com/lworkltd/kits/service/restful/code"
 	invokeutils "github.com/lworkltd/kits/utils/invoke"
+	"github.com/sirupsen/logrus"
 )
 
 type PersonReatimeInfo struct {

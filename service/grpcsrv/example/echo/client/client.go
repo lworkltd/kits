@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/grpcinvoke"
 	_ "github.com/lworkltd/kits/service/grpcinvoke/invokeimpl"
 	"github.com/lworkltd/kits/service/grpcsrv/example/echo/pb"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {

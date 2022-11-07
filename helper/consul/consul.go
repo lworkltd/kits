@@ -12,8 +12,8 @@ import (
 
 	"errors"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/hashicorp/consul/api"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -118,10 +118,10 @@ func (client *Client) registerHttp(option *RegisterOption) error {
 		Tags:    option.Tags, // 服务标签
 		Address: option.Ip,   // 服务地址
 		Check: &api.AgentServiceCheck{
-			HTTP:     option.CheckUrl,
-			TCP:      tcpStr,
-			Interval: option.CheckInterval,
-			Timeout:  option.CheckTimeout,
+			HTTP:                           option.CheckUrl,
+			TCP:                            tcpStr,
+			Interval:                       option.CheckInterval,
+			Timeout:                        option.CheckTimeout,
 			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
 		}, // 健康检测
 	})
@@ -158,9 +158,9 @@ func (client *Client) registerTcp(option *RegisterOption) error {
 		Tags:    option.Tags, // 服务标签
 		Address: option.Ip,   // 服务地址
 		Check: &api.AgentServiceCheck{
-			TCP:      tcpStr,
-			Interval: option.CheckInterval,
-			Timeout:  option.CheckTimeout,
+			TCP:                            tcpStr,
+			Interval:                       option.CheckInterval,
+			Timeout:                        option.CheckTimeout,
 			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
 		}, // 健康检测
 	})
@@ -224,9 +224,9 @@ func (client *Client) registerGrpc(option *RegisterOption) error {
 		Tags:    option.Tags,
 		Address: option.Ip,
 		Check: &api.AgentServiceCheck{
-			GRPC:     option.CheckUrl,
-			Interval: option.CheckInterval,
-			Timeout:  option.CheckTimeout,
+			GRPC:                           option.CheckUrl,
+			Interval:                       option.CheckInterval,
+			Timeout:                        option.CheckTimeout,
 			DeregisterCriticalServiceAfter: option.CheckDeregisterCriticalAfter,
 		}, // 健康检测
 	})

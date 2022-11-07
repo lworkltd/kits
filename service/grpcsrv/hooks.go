@@ -7,10 +7,10 @@ import (
 
 	context "golang.org/x/net/context"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/grpcsrv/grpccomm"
 	"github.com/lworkltd/kits/service/grpcsrv/report"
 	"github.com/lworkltd/kits/service/restful/code"
+	"github.com/sirupsen/logrus"
 )
 
 const (

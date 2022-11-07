@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/example/citizen/api/server"
 	"github.com/lworkltd/kits/example/citizen/conf"
 	"github.com/lworkltd/kits/example/citizen/model"
+	"github.com/sirupsen/logrus"
 	mgo "gopkg.in/mgo.v2"
 )
 

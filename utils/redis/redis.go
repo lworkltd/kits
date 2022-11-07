@@ -1,10 +1,11 @@
 package redis
 
 import (
-	"github.com/Sirupsen/logrus"
+	"strings"
+
 	"github.com/go-redis/redis"
 	"github.com/lworkltd/kits/service/profile"
-	"strings"
+	"github.com/sirupsen/logrus"
 )
 
 func validAddr(addr string) bool {
