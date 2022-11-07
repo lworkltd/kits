@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -125,7 +125,7 @@ func (sess *Session) DeclareQueue(name string, settings map[string]bool) (*amqp.
 
 	filterBooleanConfigs(&queueSettings, queueSettingPrefix, settings, false)
 	queue, err := sess.recvChannel.QueueDeclare(
-		name, // name
+		name,                             // name
 		queueSettings[settingDurable],    // durable
 		queueSettings[settingAutoDelete], // autoDelete
 		queueSettings[settingExclusive],  // exclusive

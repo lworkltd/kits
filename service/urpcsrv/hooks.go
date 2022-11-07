@@ -7,9 +7,9 @@ import (
 
 	context "golang.org/x/net/context"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/service/grpcsrv/report"
 	"github.com/lworkltd/kits/service/restful/code"
+	"github.com/sirupsen/logrus"
 
 	"github.com/lworkltd/kits/service/urpcsrv/urpccomm"
 )

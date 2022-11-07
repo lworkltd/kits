@@ -1,7 +1,7 @@
 package profile
 
 import (
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Profile 用于适配配置项目的接口，对于实现了此接口的配置项目，将在配置加载后执行Init

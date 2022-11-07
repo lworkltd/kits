@@ -3,9 +3,10 @@ package log
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/lworkltd/kits/service/profile"
 	"os"
+
+	"github.com/lworkltd/kits/service/profile"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -43,7 +44,7 @@ func InitLoggerWithProfile(cfg *profile.Logger) error {
 	}
 
 	if "" != cfg.LogFilePath {
-		file, err := os.OpenFile(cfg.LogFilePath, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0660)
+		file, err := os.OpenFile(cfg.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
 		if nil != err {
 			return fmt.Errorf("Open log file failed, err:%v, log file path:%v", err, cfg.LogFilePath)
 		}

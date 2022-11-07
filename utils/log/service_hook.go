@@ -5,8 +5,8 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/Sirupsen/logrus"
 	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/sirupsen/logrus"
 )
 
 // ServiceTagHook 是一个自定义的logrus.Hook实现，目的是为日志添加服务名称，服务ID和环境名称

@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/lworkltd/kits/helper/consul"
 	"github.com/lworkltd/kits/service/discovery"
 	"github.com/lworkltd/kits/service/profile"
+	"github.com/sirupsen/logrus"
 )
 
 // RegisterServerWithProfile Register the service with profile

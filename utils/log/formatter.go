@@ -1,6 +1,6 @@
 package log
 
-import "github.com/Sirupsen/logrus"
+import "github.com/sirupsen/logrus"
 
 // This is to not silently overwrite `time`, `msg` and `level` fields when
 // dumping it. If this code wasn't there doing:

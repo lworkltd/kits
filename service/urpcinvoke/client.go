@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/golang/protobuf/proto"
 	"github.com/lworkltd/kits/service/monitor"
 	"github.com/lworkltd/kits/service/restful/code"
 	"github.com/lworkltd/kits/service/urpcsrv/urpccomm"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/status"
 )
 

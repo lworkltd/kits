@@ -11,12 +11,12 @@ import (
 
 	opentracing "github.com/opentracing/opentracing-go"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/lworkltd/kits/service/invoke"
 	"github.com/lworkltd/kits/service/restful/code"
 	logutils "github.com/lworkltd/kits/utils/log"
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
+	"github.com/sirupsen/logrus"
 )
 
 func TestContextDebug(t *testing.T) {
