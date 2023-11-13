@@ -45,6 +45,8 @@ type Wrapper struct {
 	serviceLogWriter io.Writer
 
 	snowSlide *SnowSlide
+
+	logFn func(entry *logrus.Entry, level logrus.Level, msg string)
 }
 
 type Option struct {
@@ -64,7 +66,7 @@ func New(option *Option) *Wrapper {
 	if "" != option.LogFilePath {
 		file, err := os.OpenFile(option.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
 		if nil != err {
-			fmt.Errorf("Open log file failed, err:%v, log file path:%v", err, option.LogFilePath)
+			panic(fmt.Errorf("Open log file failed, err:%v, log file path:%v", err, option.LogFilePath))
 		} else {
 			logWriter = file
 		}
@@ -75,7 +77,7 @@ func New(option *Option) *Wrapper {
 	if option.LogLevel != "" {
 		logLevelParse, err := logrus.ParseLevel(option.LogLevel)
 		if err != nil {
-			fmt.Errorf("cannot parse logger level %s", option.LogLevel)
+			panic(fmt.Errorf("cannot parse logger level %s", option.LogLevel))
 		} else {
 			logLevel = logLevelParse
 		}
@@ -101,6 +103,9 @@ func New(option *Option) *Wrapper {
 			},
 		},
 		snowSlide: snowSlide,
+		logFn: func(entry *logrus.Entry, level logrus.Level, msg string) {
+			entry.Log(level, msg)
+		},
 	}
 
 	return w
@@ -254,13 +259,21 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 				httpCtx.JSON(http.StatusOK, resp)
 			}
 
+			var level logrus.Level
+			var msg string
+
 			if cerr != nil {
-				l.WithFields(logrus.Fields{
+				l = l.WithFields(logrus.Fields{
 					"message": cerr.Message(),
-				}).Error("HTTP request failed")
+				})
+				msg = "HTTP request failed"
+				level = logrus.ErrorLevel
 			} else {
-				l.Info("HTTP request done")
+				msg = "HTTP request done"
+				level = logrus.InfoLevel
 			}
+
+			wrapper.logFn(l, level, msg)
 		}()
 
 		// 过载保护
@@ -308,4 +321,8 @@ func (wrapper *Wrapper) Head(srv HttpServer, path string, f WrappedFunc) {
 
 func (wrapper *Wrapper) Delete(srv HttpServer, path string, f WrappedFunc) {
 	wrapper.Handle("DELETE", srv, path, f)
+}
+
+func (wrapper *Wrapper) SetLogger(logFn func(entry *logrus.Entry, level logrus.Level, msg string)) {
+	wrapper.logFn = logFn
 }
