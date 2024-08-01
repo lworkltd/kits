@@ -66,7 +66,7 @@ func New(option *Option) *Wrapper {
 	if "" != option.LogFilePath {
 		file, err := os.OpenFile(option.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
 		if nil != err {
-			panic(fmt.Errorf("Open log file failed, err:%v, log file path:%v", err, option.LogFilePath))
+			panic(fmt.Errorf("Open log file failed, err:%w, log file path:%v", err, option.LogFilePath))
 		} else {
 			logWriter = file
 		}
@@ -118,7 +118,7 @@ type HttpServer interface {
 	Handle(string, string, ...gin.HandlerFunc) gin.IRoutes
 }
 
-//上报处理请求结果到Monitor，registPath为注册路径
+// 上报处理请求结果到Monitor，registPath为注册路径
 func reportProcessResultToMonitor(err code.Error, httpCtx *gin.Context, beginTime time.Time, registPath string) {
 	if nil == httpCtx || false == monitor.EnableReportMonitor() {
 		return
@@ -249,6 +249,13 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 					})
 				}
 			} else {
+				if data != nil {
+					switch data.(type) {
+					case *HijackedResponse:
+						return
+					}
+				}
+
 				resp := map[string]interface{}{
 					"result":    true,
 					"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
