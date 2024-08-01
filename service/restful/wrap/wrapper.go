@@ -27,7 +27,7 @@ var (
 	DefaultSnowSlideLimit int32 = 20000
 )
 
-var ReturnNilDataHijack = true
+var ReturnNilDataHijack = false
 
 // Wrapper 用于对请求返回结果进行封装的类
 // TODO:需要增加单元测试 wrapper_test.go
