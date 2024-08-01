@@ -27,6 +27,8 @@ var (
 	DefaultSnowSlideLimit int32 = 20000
 )
 
+var ReturnNilDataHijack = true
+
 // Wrapper 用于对请求返回结果进行封装的类
 // TODO:需要增加单元测试 wrapper_test.go
 type Wrapper struct {
@@ -254,6 +256,8 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 					case *HijackedResponse:
 						return
 					}
+				} else if ReturnNilDataHijack {
+					return
 				}
 
 				resp := map[string]interface{}{
