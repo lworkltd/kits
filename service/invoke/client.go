@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 
@@ -24,6 +25,21 @@ const (
 	HTTP_HEADER_CONTENT_TYPE_JSON = "application/json"
 )
 
+var DefaultTransport http.RoundTripper = &http.Transport{
+	Proxy: http.ProxyFromEnvironment,
+	DialContext: (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          1024, // 100-> 512
+	MaxIdleConnsPerHost:   1024, // 2  -> 512
+	MaxConnsPerHost:       1024,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+}
+
 type client struct {
 	service      Service
 	path         string
@@ -35,6 +51,8 @@ type client struct {
 	scheme        string
 	serverid      string
 	circuitConfig hystrix.CommandConfig
+	timeout       time.Duration
+	client        *http.Client
 
 	headers map[string]string
 	queries map[string][]string
@@ -52,7 +70,7 @@ func (client *client) circuitName() string {
 	return client.serverid
 }
 
-//未设置hytrix参数，或者参数不合理，使用默认熔断策略
+// 未设置hytrix参数，或者参数不合理，使用默认熔断策略
 func (client *client) hytrixCommand() string {
 	return client.serverid + client.method + client.path
 }
@@ -91,6 +109,11 @@ func (client *client) Fallback(func(error) error) Client {
 	if client.errInProcess != nil {
 		return client
 	}
+	return client
+}
+
+func (client *client) Timeout(dur time.Duration) Client {
+	client.timeout = dur
 	return client
 }
 
@@ -442,7 +465,7 @@ func (client *client) reportSuccessToMonitor(beginTime time.Time) {
 	monitor.ReportSuccessAvgTime(&succAvgTimeReport, (timeNow.UnixNano()-beginTime.UnixNano())/1e3) //耗时单位为微秒
 }
 
-//处理Response函数的http请求结果monitor上报
+// 处理Response函数的http请求结果monitor上报
 func (client *client) processResponseMonitorReport(resp *http.Response, beginTime time.Time) {
 	if monitor.EnableReportMonitor() == false {
 		return
@@ -461,7 +484,7 @@ func (client *client) processResponseMonitorReport(resp *http.Response, beginTim
 	}
 }
 
-//处理Exec函数http请求结果的monitor上报
+// 处理Exec函数http请求结果的monitor上报
 func (client *client) processExecMonitorReport(code int, err error, beginTime time.Time) {
 	if monitor.EnableReportMonitor() == false {
 		return
@@ -474,6 +497,10 @@ func (client *client) processExecMonitorReport(code int, err error, beginTime ti
 		//请求成功，上报成功计数和成功平均耗时
 		client.reportSuccessToMonitor(beginTime)
 	}
+}
+func (client *client) HttpClient(c *http.Client) Client {
+	client.client = c
+	return client
 }
 
 func (client *client) exec(out interface{}, cancel *context.CancelFunc) (int, error) {
@@ -489,7 +516,17 @@ func (client *client) exec(out interface{}, cancel *context.CancelFunc) (int, er
 		return 0, err
 	}
 
-	cli := &http.Client{}
+	cli := client.client
+	if cli == nil {
+		cli = &http.Client{
+			Transport: DefaultTransport,
+		}
+	}
+
+	if client.timeout != 0 {
+		cli.Timeout = client.timeout
+	}
+
 	resp, err := cli.Do(request)
 	if err != nil {
 		client.logFields["error"] = err
@@ -537,7 +574,16 @@ func (client *client) getResp(cancel *context.CancelFunc) (*http.Response, error
 		return nil, err
 	}
 
-	cli := &http.Client{}
+	cli := client.client
+	if cli == nil {
+		cli = &http.Client{
+			Transport: DefaultTransport,
+		}
+	}
+
+	if client.timeout != 0 {
+		cli.Timeout = client.timeout
+	}
 	resp, err := cli.Do(request)
 	if err != nil {
 		client.logFields["error"] = err

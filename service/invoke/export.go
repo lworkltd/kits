@@ -3,6 +3,7 @@ package invoke
 import (
 	"context"
 	"net/http"
+	"time"
 )
 
 var (
@@ -69,6 +70,8 @@ type (
 		Fallback(func(error) error) Client                                // 失败触发器
 		Exec(interface{}) (int, error)                                    // 执行请求
 		Response() (*http.Response, error)                                // 执行请求，返回标准的http.Response
+		Timeout(time.Duration) Client
+		HttpClient(*http.Client) Client
 	}
 )
 
