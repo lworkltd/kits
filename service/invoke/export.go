@@ -32,6 +32,12 @@ type (
 		DefaultErrorPercentThreshold int
 	}
 
+	LogModeOptions struct {
+		DoLogger   *bool
+		LogSuccess *bool
+		LogError   *bool
+	}
+
 	// Engine 引擎
 	Engine interface {
 		Service(string) Service // 获取一个服务
@@ -72,6 +78,7 @@ type (
 		Response() (*http.Response, error)                                // 执行请求，返回标准的http.Response
 		Timeout(time.Duration) Client
 		HttpClient(*http.Client) Client
+		LogMode(logOptions *LogModeOptions) Client
 	}
 )
 
