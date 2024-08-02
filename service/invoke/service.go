@@ -112,6 +112,9 @@ func newRest(service Service, circuitConfig hystrix.CommandConfig, method string
 		useTracing:    service.UseTracing(),
 		useCircuit:    service.UseCircuit(),
 		circuitConfig: circuitConfig,
+		logSuccess:    true,
+		logError:      true,
+		doLogger:      doLogger,
 	}
 
 	return client

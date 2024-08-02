@@ -64,6 +64,10 @@ type client struct {
 	useTracing bool
 	useCircuit bool
 	fallback   func(error) error
+
+	logSuccess bool
+	logError   bool
+	doLogger   bool
 }
 
 func (client *client) circuitName() string {
@@ -335,7 +339,7 @@ func (client *client) Exec(out interface{}) (int, error) {
 	}
 	client.processExecMonitorReport(status, err, beginTime)
 
-	if doLogger {
+	if client.doLogger {
 		fileds := logrus.Fields{
 			"service":    client.service.Name(),
 			"service_id": client.serverid,
@@ -353,9 +357,13 @@ func (client *client) Exec(out interface{}) (int, error) {
 		}
 
 		if err != nil {
-			logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
+			if client.logError {
+				logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
+			}
 		} else {
-			logrus.WithFields(fileds).Error("Invoke service done")
+			if client.logSuccess {
+				logrus.WithFields(fileds).Error("Invoke service done")
+			}
 		}
 	}
 
@@ -629,7 +637,7 @@ func (client *client) Response() (*http.Response, error) {
 	}
 	client.processResponseMonitorReport(resp, beginTime) //若resp为nil则上报错误，否则添加请求信息到header待进一步上报monitor数据
 
-	if doLogger {
+	if client.doLogger {
 		fileds := logrus.Fields{
 			"service":  client.service.Name(),
 			"method":   client.method,
@@ -665,12 +673,30 @@ func (client *client) Response() (*http.Response, error) {
 		}
 
 		if err != nil {
-			logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
-		} else {
+			if client.logError {
+				logrus.WithFields(fileds).WithError(err).Error("Invoke service failed")
+			}
+		} else if client.logSuccess {
 			logrus.WithFields(fileds).Info("Invoke service done")
 		}
 	}
 
 	return resp, err
 
+}
+
+func (client *client) LogMode(logOptions *LogModeOptions) Client {
+	if logOptions.DoLogger != nil {
+		client.doLogger = *logOptions.DoLogger
+	}
+
+	if logOptions.LogSuccess != nil {
+		client.logSuccess = *logOptions.LogSuccess
+	}
+
+	if logOptions.LogError != nil {
+		client.logError = *logOptions.LogError
+	}
+
+	return client
 }
