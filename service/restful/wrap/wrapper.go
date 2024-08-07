@@ -221,6 +221,7 @@ func (wrapper *Wrapper) Wrap(f WrappedFunc, registPath string) gin.HandlerFunc {
 			l := serviceCtx.WithFields(logrus.Fields{
 				"method": httpCtx.Request.Method,
 				"path":   httpCtx.Request.URL.Path,
+				"query":  httpCtx.Request.URL.RawQuery,
 				"delay":  time.Since(since),
 			})
 
