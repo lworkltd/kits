@@ -197,7 +197,6 @@ func (client *client) Queries(queryValues map[string][]string) Client {
 
 	if client.queries == nil {
 		client.queries = make(map[string][]string, len(queryValues))
-		return client
 	}
 
 	for key, queryValueSlice := range queryValues {
